@@ -491,9 +491,11 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                       children: [
                         Icon(Icons.star_rounded, size: 16, color: Color(0xFF8E24AA)),
                         SizedBox(width: 6),
-                        Text(
-                          'Key Highlights & Benefits:',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF6A1B9A)),
+                        Expanded(
+                          child: Text(
+                            'Key Highlights & Benefits:',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF6A1B9A)),
+                          ),
                         ),
                       ],
                     ),
@@ -517,9 +519,11 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                       children: [
                         Icon(Icons.folder_shared_rounded, size: 16, color: Color(0xFF1565C0)),
                         SizedBox(width: 6),
-                        Text(
-                          'Complete Required Documents Checklist:',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1)),
+                        Expanded(
+                          child: Text(
+                            'Complete Required Documents Checklist:',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1)),
+                          ),
                         ),
                       ],
                     ),
@@ -544,9 +548,11 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                       children: [
                         Icon(Icons.directions_walk_rounded, size: 16, color: Color(0xFF2E7D32)),
                         SizedBox(width: 6),
-                        Text(
-                          'Village & Offline Step-by-Step Application Guide:',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1B5E20)),
+                        Expanded(
+                          child: Text(
+                            'Village & Offline Step-by-Step Application Guide:',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1B5E20)),
+                          ),
                         ),
                       ],
                     ),
