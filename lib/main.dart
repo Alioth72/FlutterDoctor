@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/health_profile_provider.dart';
 import 'providers/appointment_provider.dart';
+import 'providers/schemes_provider.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
 
@@ -22,6 +23,9 @@ class PatientApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => AppointmentProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => SchemesProvider()..loadSavedProfile(),
         ),
       ],
       child: MaterialApp(

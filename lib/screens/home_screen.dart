@@ -3,6 +3,7 @@ import 'tabs/home_tab.dart';
 import 'tabs/appointments_tab.dart';
 import 'tabs/schemes_tab.dart';
 import 'tabs/profile_tab.dart';
+import '../widgets/patient_drawer.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,19 +23,74 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   final List<String> _titles = const [
-    'Patient Home',
+    'Patient Portal',
     'Appointments',
     'Govt Schemes',
-    'Patient Profile',
+    'Personal Profile',
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const PatientDrawer(),
       appBar: AppBar(
-        title: Text(_titles[_currentIndex]),
-        centerTitle: false,
         elevation: 0,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        leading: Builder(
+          builder: (ctx) => IconButton(
+            icon: const Icon(
+              Icons.menu_rounded,
+              size: 30,
+              color: Colors.black87,
+            ),
+            tooltip: 'Open Menu',
+            onPressed: () => Scaffold.of(ctx).openDrawer(),
+          ),
+        ),
+        title: Text(
+          _titles[_currentIndex],
+          style: const TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 18,
+            color: Colors.black87,
+          ),
+        ),
+        actions: [
+          // Logo Space Container (as in drawing)
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0, top: 8.0, bottom: 8.0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.black.withValues(alpha: 0.8), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    offset: const Offset(1, 2),
+                    blurRadius: 3,
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.local_hospital_rounded, size: 16, color: Color(0xFF00796B)),
+                  SizedBox(width: 4),
+                  Text(
+                    'logo',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
       body: IndexedStack(
         index: _currentIndex,

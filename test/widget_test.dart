@@ -4,12 +4,18 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sih_project/models/appointment.dart';
 import 'package:sih_project/models/health_profile.dart';
+import 'package:sih_project/models/scheme_eligibility_profile.dart';
 import 'package:sih_project/providers/appointment_provider.dart';
 import 'package:sih_project/providers/health_profile_provider.dart';
+import 'package:sih_project/providers/schemes_provider.dart';
 import 'package:sih_project/screens/appointments/appointment_receipt_screen.dart';
 import 'package:sih_project/screens/appointments/book_appointment_screen.dart';
 import 'package:sih_project/screens/home_screen.dart';
+import 'package:sih_project/screens/schemes/eligibility_form_screen.dart';
+import 'package:sih_project/screens/schemes/scheme_detail_screen.dart';
+import 'package:sih_project/screens/schemes/schemes_results_screen.dart';
 import 'package:sih_project/screens/signup_screen.dart';
+import 'package:sih_project/screens/tabs/schemes_tab.dart';
 
 void main() {
   setUp(() {
@@ -36,6 +42,26 @@ void main() {
       expect(deserialized.age, 32);
       expect(deserialized.gender, 'Male');
       expect(deserialized.phoneNumber, '9876543210');
+    });
+
+    test('SchemeEligibilityProfile converts to and from JSON correctly', () {
+      const schemeProfile = SchemeEligibilityProfile(
+        age: 22,
+        state: 'Delhi',
+        incomeRange: '1 - 2.5 Lakh',
+        gender: 'Female',
+      );
+
+      final json = schemeProfile.toJson();
+      expect(json['age'], 22);
+      expect(json['state'], 'Delhi');
+      expect(json['income_range'], '1 - 2.5 Lakh');
+      expect(json['gender'], 'Female');
+
+      final deserialized = SchemeEligibilityProfile.fromJson(json);
+      expect(deserialized.age, 22);
+      expect(deserialized.state, 'Delhi');
+      expect(deserialized.summaryText, 'Age: 22 • Delhi • 1 - 2.5 Lakh income');
     });
 
     test('Appointment converts to and from JSON correctly with 0 fee', () {
@@ -66,13 +92,14 @@ void main() {
     });
   });
 
-  group('Signup and Onboarding Flow Tests', () {
+  group('Signup and Dashboard Tests', () {
     testWidgets('SignupScreen validates required fields on Continue', (WidgetTester tester) async {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
             ChangeNotifierProvider(create: (_) => HealthProfileProvider()),
             ChangeNotifierProvider(create: (_) => AppointmentProvider()),
+            ChangeNotifierProvider(create: (_) => SchemesProvider()),
           ],
           child: const MaterialApp(
             home: SignupScreen(),
@@ -92,15 +119,17 @@ void main() {
       expect(find.text('Please enter your phone number'), findsOneWidget);
     });
 
-    testWidgets('Filling Signup form navigates to HomeScreen', (WidgetTester tester) async {
+    testWidgets('Filling Signup form navigates to Wireframe Dashboard', (WidgetTester tester) async {
       final profileProvider = HealthProfileProvider();
       final appointmentProvider = AppointmentProvider();
+      final schemesProvider = SchemesProvider();
 
       await tester.pumpWidget(
         MultiProvider(
           providers: [
             ChangeNotifierProvider.value(value: profileProvider),
             ChangeNotifierProvider.value(value: appointmentProvider),
+            ChangeNotifierProvider.value(value: schemesProvider),
           ],
           child: const MaterialApp(
             home: SignupScreen(),
@@ -121,62 +150,98 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(HomeScreen), findsOneWidget);
-      expect(find.text('Sneha Reddy'), findsOneWidget);
-      expect(find.text('29 yrs'), findsOneWidget);
-      expect(find.text('Female'), findsOneWidget);
+      expect(find.text('NEWS FLASH'), findsOneWidget);
+      expect(find.text('REMINDER'), findsOneWidget);
+      expect(find.text('BUY MEDICINES'), findsOneWidget);
+      expect(find.text('AI ASSISTANT'), findsOneWidget);
+      expect(find.text('EMERGENCY'), findsOneWidget);
+      expect(find.text('LAng'), findsOneWidget);
+      expect(find.text('contact\ndoctor'), findsOneWidget);
+      expect(find.text('voice'), findsOneWidget);
+    });
+  });
+
+  group('Government Schemes Module Tests', () {
+    testWidgets('First time Schemes tab shows Eligibility Form', (WidgetTester tester) async {
+      final schemesProvider = SchemesProvider();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: schemesProvider),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: SchemesTab()),
+          ),
+        ),
+      );
+
+      expect(find.byType(EligibilityFormScreen), findsOneWidget);
+      expect(find.text('Find Government Health Benefits'), findsOneWidget);
+      expect(find.text('Tell us a little about yourself so we can find schemes you may be eligible for.'), findsOneWidget);
+      expect(find.text('Find My Schemes'), findsOneWidget);
+      expect(find.text('Your information is used to find relevant government health benefits.'), findsOneWidget);
     });
 
-    testWidgets('HomeScreen bottom navigation switches tabs', (WidgetTester tester) async {
-      final profileProvider = HealthProfileProvider();
-      final appointmentProvider = AppointmentProvider();
+    testWidgets('Submitting Eligibility Form saves profile and displays Schemes Results', (WidgetTester tester) async {
+      final schemesProvider = SchemesProvider();
 
-      await profileProvider.saveProfile(
-        HealthProfile(
-          name: 'Vikram Singh',
-          age: 45,
-          gender: 'Male',
-          phoneNumber: '9876543210',
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: schemesProvider),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: SchemesTab()),
+          ),
         ),
+      );
+
+      // Enter age
+      await tester.enterText(find.widgetWithText(TextFormField, 'Your Age *'), '22');
+
+      // Tap Find My Schemes
+      await tester.tap(find.text('Find My Schemes'));
+      await tester.pumpAndSettle();
+
+      // Verify Schemes Results Screen
+      expect(find.byType(SchemesResultsScreen), findsOneWidget);
+      expect(find.text('Based on your profile'), findsOneWidget);
+      expect(find.text('Government Health Benefits'), findsOneWidget);
+      expect(find.text('Update'), findsOneWidget);
+      expect(find.textContaining('🟢 You May Be Eligible'), findsWidgets);
+    });
+
+    testWidgets('Tapping View Details opens SchemeDetailScreen', (WidgetTester tester) async {
+      final schemesProvider = SchemesProvider();
+      await schemesProvider.saveProfileAndEvaluate(
+        const SchemeEligibilityProfile(age: 25, state: 'Delhi', incomeRange: '< 1 Lakh'),
       );
 
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            ChangeNotifierProvider.value(value: profileProvider),
-            ChangeNotifierProvider.value(value: appointmentProvider),
+            ChangeNotifierProvider.value(value: schemesProvider),
           ],
           child: const MaterialApp(
-            home: HomeScreen(),
+            home: Scaffold(body: SchemesTab()),
           ),
         ),
       );
 
-      expect(find.text('Patient Home'), findsOneWidget);
-      expect(find.text('Vikram Singh'), findsOneWidget);
-
-      // Switch to Appointments tab
-      await tester.tap(find.descendant(
-        of: find.byType(NavigationBar),
-        matching: find.text('Appointments'),
-      ));
       await tester.pumpAndSettle();
-      expect(find.text('No Appointments Yet'), findsOneWidget);
 
-      // Switch to Schemes tab
-      await tester.tap(find.descendant(
-        of: find.byType(NavigationBar),
-        matching: find.text('Schemes'),
-      ));
+      expect(find.byType(SchemesResultsScreen), findsOneWidget);
+      final viewDetailsButton = find.text('View Details').first;
+      await tester.tap(viewDetailsButton);
       await tester.pumpAndSettle();
-      expect(find.text('Government Health Schemes Shell'), findsOneWidget);
 
-      // Switch to Profile tab
-      await tester.tap(find.descendant(
-        of: find.byType(NavigationBar),
-        matching: find.text('Profile'),
-      ));
-      await tester.pumpAndSettle();
-      expect(find.text('Personal Information'), findsOneWidget);
+      expect(find.byType(SchemeDetailScreen), findsOneWidget);
+      expect(find.text('ABOUT'), findsOneWidget);
+      expect(find.text('BENEFITS'), findsOneWidget);
+      expect(find.text('DOCUMENTS REQUIRED'), findsOneWidget);
+      expect(find.text('HOW TO APPLY'), findsOneWidget);
+      expect(find.text('Apply / Official Website →'), findsOneWidget);
     });
   });
 
@@ -184,6 +249,7 @@ void main() {
     testWidgets('Booking an appointment generates online receipt with Token and 0 fee', (WidgetTester tester) async {
       final profileProvider = HealthProfileProvider();
       final appointmentProvider = AppointmentProvider();
+      final schemesProvider = SchemesProvider();
 
       await profileProvider.saveProfile(
         HealthProfile(
@@ -199,6 +265,7 @@ void main() {
           providers: [
             ChangeNotifierProvider.value(value: profileProvider),
             ChangeNotifierProvider.value(value: appointmentProvider),
+            ChangeNotifierProvider.value(value: schemesProvider),
           ],
           child: const MaterialApp(
             home: BookAppointmentScreen(),

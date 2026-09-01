@@ -1,264 +1,345 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../providers/health_profile_provider.dart';
 import '../appointments/book_appointment_screen.dart';
+import '../../widgets/patient_action_sheets.dart';
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final profileProvider = Provider.of<HealthProfileProvider>(context);
-    final profile = profileProvider.profile;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Patient Welcome Banner
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  colorScheme.primary,
-                  colorScheme.primaryContainer,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Hello,',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: colorScheme.onPrimary.withValues(alpha: 0.85),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16.0, 6.0, 16.0, 16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 1. NEWS FLASH & REMINDER Top Banners (as in sketch)
+                  Row(
+                    children: [
+                      // NEWS FLASH Banner
+                      Expanded(
+                        flex: 3,
+                        child: Container(
+                          height: 56,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFCDD2), // Soft pink/coral as in drawing
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.black.withValues(alpha: 0.8), width: 1.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                offset: const Offset(1, 2),
+                                blurRadius: 3,
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.campaign_rounded, size: 24, color: Colors.black87),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text(
+                                      'NEWS FLASH',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.1,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Free health camp this Sunday...',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.black.withValues(alpha: 0.7),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+
+                      // REMINDER Pill
+                      Expanded(
+                        flex: 2,
+                        child: InkWell(
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Next Reminder: Blood Pressure check at 06:00 PM'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            height: 56,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFCDD2), // Soft pink/coral
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.black.withValues(alpha: 0.8), width: 1.5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.06),
+                                  offset: const Offset(1, 2),
+                                  blurRadius: 3,
+                                ),
+                              ],
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.notifications_active_outlined, size: 18, color: Colors.black87),
+                                SizedBox(width: 6),
+                                Text(
+                                  'REMINDER',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.0,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Text(
-                            profile?.name ?? 'Patient',
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // 2. 2x2 Grid of Big Service Cards (Spacious & Vertically Balanced)
+                  Column(
+                    children: [
+                      // Row 1: Book Appointment + Buy Medicines
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 160,
+                              child: _buildBigServiceCard(
+                                context,
+                                title: 'BOOK\nAPPOINTMENT',
+                                icon: Icons.calendar_month_rounded,
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => const BookAppointmentScreen(),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: SizedBox(
+                              height: 160,
+                              child: _buildBigServiceCard(
+                                context,
+                                title: 'BUY MEDICINES',
+                                icon: Icons.shopping_bag_outlined,
+                                onTap: () => PatientActionSheets.showBuyMedicines(context),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    CircleAvatar(
-                      radius: 26,
-                      backgroundColor: colorScheme.onPrimary.withValues(alpha: 0.2),
-                      child: Icon(
-                        Icons.person,
-                        size: 32,
-                        color: colorScheme.onPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Divider(color: Colors.white24),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildInfoChip(
-                      icon: Icons.cake_outlined,
-                      label: '${profile?.age ?? "--"} yrs',
-                      textColor: colorScheme.onPrimary,
-                    ),
-                    _buildInfoChip(
-                      icon: Icons.people_outline,
-                      label: profile?.gender ?? 'Not set',
-                      textColor: colorScheme.onPrimary,
-                    ),
-                    _buildInfoChip(
-                      icon: Icons.phone_outlined,
-                      label: profile != null ? '+91 ${profile.phoneNumber}' : '--',
-                      textColor: colorScheme.onPrimary,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
+                      const SizedBox(height: 14),
 
-          // Onboarding status card
-          Card(
-            elevation: 0,
-            color: colorScheme.secondaryContainer.withValues(alpha: 0.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-              side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    color: colorScheme.primary,
-                    size: 28,
+                      // Row 2: AI Assistant + Emergency
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 160,
+                              child: _buildBigServiceCard(
+                                context,
+                                title: 'AI ASSISTANT',
+                                icon: Icons.smart_toy_outlined,
+                                onTap: () => PatientActionSheets.showAiAssistant(context),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: SizedBox(
+                              height: 160,
+                              child: _buildBigServiceCard(
+                                context,
+                                title: 'EMERGENCY',
+                                icon: Icons.emergency_rounded,
+                                isEmergency: true,
+                                onTap: () => PatientActionSheets.showEmergency(context),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Profile Active',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Your health profile is active and ready for appointments and services.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 18),
+
+                  // 3. Bottom 3 Circular Quick-Action Buttons (Lang, contact doctor, voice)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // Lang Circle
+                      _buildCircleActionButton(
+                        context,
+                        label: 'LAng',
+                        icon: Icons.translate_rounded,
+                        onTap: () => PatientActionSheets.showLanguageSelector(context),
+                      ),
+
+                      // Contact Doctor Circle (Center prominent)
+                      _buildCircleActionButton(
+                        context,
+                        label: 'contact\ndoctor',
+                        icon: Icons.support_agent_rounded,
+                        isCenter: true,
+                        onTap: () => PatientActionSheets.showContactDoctorSheet(context),
+                      ),
+
+                      // Voice Circle
+                      _buildCircleActionButton(
+                        context,
+                        label: 'voice',
+                        icon: Icons.mic_rounded,
+                        onTap: () => PatientActionSheets.showVoiceAssistant(context),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 24),
-
-          // Upcoming Patient Services Placeholder Grid
-          Text(
-            'Patient Services',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              _buildFeaturePlaceholder(
-                context,
-                icon: Icons.calendar_month_outlined,
-                title: 'Appointments',
-                subtitle: 'Book doctor visits',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const BookAppointmentScreen(),
-                    ),
-                  );
-                },
-              ),
-              _buildFeaturePlaceholder(
-                context,
-                icon: Icons.shield_outlined,
-                title: 'Govt Schemes',
-                subtitle: 'Check eligibility',
-              ),
-              _buildFeaturePlaceholder(
-                context,
-                icon: Icons.medication_outlined,
-                title: 'Medicines',
-                subtitle: 'Prescriptions & lookup',
-              ),
-              _buildFeaturePlaceholder(
-                context,
-                icon: Icons.emergency_outlined,
-                title: 'SOS & Ambulance',
-                subtitle: 'Emergency care',
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildInfoChip({
-    required IconData icon,
-    required String label,
-    required Color textColor,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: textColor.withValues(alpha: 0.9)),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: textColor,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFeaturePlaceholder(
+  /// Big 2x2 Service Card (Hand-drawn look with clean border & subtle shadow)
+  Widget _buildBigServiceCard(
     BuildContext context, {
-    required IconData icon,
     required String title,
-    required String subtitle,
-    VoidCallback? onTap,
+    required IconData icon,
+    required VoidCallback onTap,
+    bool isEmergency = false,
   }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: colorScheme.primary, size: 28),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isEmergency ? const Color(0xFFFFEBEE) : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isEmergency ? Colors.red.shade700 : Colors.black.withValues(alpha: 0.85),
+            width: isEmergency ? 2.0 : 1.8,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.07),
+              offset: const Offset(2, 4),
+              blurRadius: 6,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 44,
+              color: isEmergency ? Colors.red.shade700 : const Color(0xFF00796B),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.1,
+                color: isEmergency ? Colors.red.shade900 : Colors.black87,
+                height: 1.25,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Bottom Circular Action Buttons
+  Widget _buildCircleActionButton(
+    BuildContext context, {
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+    bool isCenter = false,
+  }) {
+    final size = isCenter ? 88.0 : 78.0;
+
+    return InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFFFFCDD2), // Soft coral/pink matching the wireframe
+          border: Border.all(color: Colors.black.withValues(alpha: 0.85), width: 1.8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              offset: const Offset(2, 3),
+              blurRadius: 5,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: isCenter ? 26 : 22, color: Colors.black87),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: isCenter ? 11 : 11,
+                fontWeight: FontWeight.w900,
+                color: Colors.black87,
+                height: 1.1,
+              ),
+            ),
+          ],
         ),
       ),
     );
