@@ -13,7 +13,22 @@ class AppointmentProvider with ChangeNotifier {
   bool _isLoading = false;
   bool _isInitialized = false;
 
-  List<Appointment> get appointments => List.unmodifiable(_appointments);
+  /// Comparator that sorts appointments with the latest calendar date & booking at the top
+  static int _sortAppointments(Appointment a, Appointment b) {
+    // 1. Primary: Sort by scheduled appointment calendar date & time descending (latest date at top, oldest at bottom)
+    final dateCompare = b.scheduledDateTime.compareTo(a.scheduledDateTime);
+    if (dateCompare != 0) return dateCompare;
+    // 2. Secondary fallback: Sort by bookedAt timestamp descending (most recently booked first)
+    return b.bookedAt.compareTo(a.bookedAt);
+  }
+
+  /// Returns appointments sorted with the most recently booked/scheduled first
+  List<Appointment> get appointments {
+    final list = List<Appointment>.from(_appointments);
+    list.sort(_sortAppointments);
+    return List.unmodifiable(list);
+  }
+
   bool get isLoading => _isLoading;
   bool get isInitialized => _isInitialized;
 
@@ -32,6 +47,7 @@ class AppointmentProvider with ChangeNotifier {
       if (jsonListString != null && jsonListString.isNotEmpty) {
         final List<dynamic> decoded = jsonDecode(jsonListString);
         _appointments = decoded.map((item) => Appointment.fromJson(item)).toList();
+        _appointments.sort(_sortAppointments);
       }
     } catch (e) {
       _appointments = [];
@@ -39,6 +55,23 @@ class AppointmentProvider with ChangeNotifier {
 
     _isInitialized = true;
     _isLoading = false;
+    notifyListeners();
+  }
+
+  /// Clear all stored appointments data completely from disk and memory
+  Future<void> clearAllAppointments() async {
+    _appointments.clear();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_storageKey);
+    } catch (_) {}
+    notifyListeners();
+  }
+
+  /// Delete a single appointment
+  Future<void> deleteAppointment(String appointmentId) async {
+    _appointments.removeWhere((a) => a.id == appointmentId);
+    await _persist();
     notifyListeners();
   }
 
@@ -88,7 +121,9 @@ class AppointmentProvider with ChangeNotifier {
       bookedAt: DateTime.now(),
     );
 
+    // Insert at top and persist
     _appointments.insert(0, newAppointment);
+    _appointments.sort(_sortAppointments);
     await _persist();
 
     _isLoading = false;

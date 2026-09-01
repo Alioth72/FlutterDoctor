@@ -341,8 +341,14 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
   }
 
   Widget _buildBulletItem(String text, {required IconData icon, required Color color}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200, width: 1.0),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -351,7 +357,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(fontSize: 14, height: 1.35, color: Colors.black87),
+              style: const TextStyle(fontSize: 13, height: 1.4, fontWeight: FontWeight.w600, color: Colors.black87),
             ),
           ),
         ],
@@ -389,16 +395,25 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
   }
 
   Widget _buildNumberedStep(int stepNum, String stepText) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10.0),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFBBF7D0), width: 1.0),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 12,
-            backgroundColor: const Color(0xFF00796B),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF00796B),
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Text(
-              '$stepNum',
+              'Step $stepNum',
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
@@ -406,7 +421,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
           Expanded(
             child: Text(
               stepText,
-              style: const TextStyle(fontSize: 14, height: 1.35, color: Colors.black87),
+              style: const TextStyle(fontSize: 13, height: 1.45, fontWeight: FontWeight.w500, color: Colors.black87),
             ),
           ),
         ],
@@ -433,15 +448,17 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                 child: Icon(Icons.auto_awesome_rounded, size: 18, color: Colors.white),
               ),
               SizedBox(width: 10),
-              Text(
-                'AI Scheme Explainer (Grounded)',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF6A1B9A)),
+              Expanded(
+                child: Text(
+                  'AI Scheme Explainer (Rural & Offline Guide)',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF6A1B9A)),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 8),
           const Text(
-            'Get a simple-language summary of this scheme grounded exclusively in verified database facts.',
+            'Get a simple-language explanation of this scheme, exhaustive document checklist, and step-by-step village-level application guide.',
             style: TextStyle(fontSize: 12, color: Colors.black87),
           ),
           const SizedBox(height: 12),
@@ -451,29 +468,111 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
               icon: _isAiLoading
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.psychology_rounded),
-              label: Text(_isAiLoading ? 'Analyzing Scheme Data...' : 'Explain in Simple Language'),
+              label: Text(_isAiLoading ? 'Analyzing Scheme with Gemini AI...' : 'Explain in Simple Language (Rural Guide)'),
             ),
           ] else ...[
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE1BEE7)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     _aiExplanation!.explanation,
-                    style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
+                    style: const TextStyle(fontSize: 13, height: 1.45, color: Colors.black87),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Key Takeaways:',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF6A1B9A)),
-                  ),
-                  ..._aiExplanation!.keyHighlights.map((h) => Text('• $h', style: const TextStyle(fontSize: 12))),
-                  const SizedBox(height: 6),
+                  if (_aiExplanation!.keyHighlights.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    const Row(
+                      children: [
+                        Icon(Icons.star_rounded, size: 16, color: Color(0xFF8E24AA)),
+                        SizedBox(width: 6),
+                        Text(
+                          'Key Highlights & Benefits:',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF6A1B9A)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ..._aiExplanation!.keyHighlights.map(
+                      (h) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8E24AA))),
+                            Expanded(child: Text(h, style: const TextStyle(fontSize: 12, height: 1.3))),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (_aiExplanation!.requiredDocuments.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    const Row(
+                      children: [
+                        Icon(Icons.folder_shared_rounded, size: 16, color: Color(0xFF1565C0)),
+                        SizedBox(width: 6),
+                        Text(
+                          'Complete Required Documents Checklist:',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ..._aiExplanation!.requiredDocuments.map(
+                      (d) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.check_circle_outline_rounded, size: 15, color: Color(0xFF1976D2)),
+                            const SizedBox(width: 6),
+                            Expanded(child: Text(d, style: const TextStyle(fontSize: 12, height: 1.35, color: Colors.black87))),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (_aiExplanation!.nextSteps.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    const Row(
+                      children: [
+                        Icon(Icons.directions_walk_rounded, size: 16, color: Color(0xFF2E7D32)),
+                        SizedBox(width: 6),
+                        Text(
+                          'Village & Offline Step-by-Step Application Guide:',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1B5E20)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ..._aiExplanation!.nextSteps.asMap().entries.map(
+                      (entry) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              radius: 9,
+                              backgroundColor: const Color(0xFF2E7D32),
+                              child: Text(
+                                '${entry.key + 1}',
+                                style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(entry.value, style: const TextStyle(fontSize: 12, height: 1.35, color: Colors.black87))),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
                   Text(
                     'Source: ${_aiExplanation!.source}',
                     style: const TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: Colors.grey),

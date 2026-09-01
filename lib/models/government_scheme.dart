@@ -110,6 +110,89 @@ class SchemeDetail {
   });
 
   factory SchemeDetail.fromJson(Map<String, dynamic> json) {
+    final rawDocs = json['documents'] as String? ?? '';
+    final rawApp = json['application_process'] as String? ?? '';
+    final rawBenefits = json['benefits'] as String? ?? '';
+
+    // Smart documents parser into points
+    List<String> parsedDocs = (json['documents_list'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    if (parsedDocs.isEmpty || parsedDocs.length <= 1) {
+      final cleanedDocs = rawDocs.replaceAll(RegExp(r'^(?:Copies of the following documents[^:-]*[:-]|Documents required[^:-]*[:-]|Following documents are required[^:-]*[:-])\s*', caseSensitive: false), '');
+      final parts = cleanedDocs.split(RegExp(r'(?:\.\s+|\n+|•|;\s*)'));
+      parsedDocs = parts
+          .map((p) => p.trim())
+          .where((p) => p.length > 3 && !p.toLowerCase().startsWith('note') && !p.toLowerCase().startsWith('for registration') && !p.toLowerCase().startsWith('for the application'))
+          .toList();
+      if (parsedDocs.isEmpty && rawDocs.isNotEmpty) {
+        parsedDocs = [rawDocs];
+      }
+    }
+
+    // Smart application steps parser
+    List<String> parsedSteps = (json['application_steps'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    if (parsedSteps.isEmpty || parsedSteps.length <= 1) {
+      final cleanedApp = rawApp.replaceAll(RegExp(r'[\ufeff\r\t]+'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+      final stagePattern = RegExp(r'\s*(?:\b(?:Registration Process|Application Process of the Welfare Scheme|Application Process|Processing at [A-Za-z\s]+Secretariat|Processing at [A-Za-z\s]+|Payment Procedure|Track Application Status|Check Your Application Status|Pay Annual Contribution|Verification Process)\b:?\s*)', caseSensitive: false);
+      final stages = cleanedApp.split(stagePattern);
+
+      final rawChunks = <String>[];
+      for (final stage in stages) {
+        final stageClean = stage.replaceAll(RegExp(r'^[ .:-•]+|[ .:-•]+$'), '');
+        if (stageClean.isEmpty) continue;
+        final stepItems = stageClean.split(RegExp(r'(?:\bStep\s*\d+[:.]?|\bStep\s*[A-Za-z][:.]?|(?<=[.!?])\s+(?=[A-Z0-9]\.\s+|\d+\.\s+))', caseSensitive: false));
+        for (final item in stepItems) {
+          final itemClean = item.replaceAll(RegExp(r'^[ .:-•]+|[ .:-•]+$'), '');
+          if (itemClean.length > 10) rawChunks.add(itemClean);
+        }
+      }
+
+      final finalSteps = <String>[];
+      for (final chunk in rawChunks) {
+        final sentences = chunk.split(RegExp(r'(?<=[.!?])\s+(?=(?:Visit|Click|Upload|Save|Provide|Select|Once|After|Payment|Track|Download|Submit|Now|Revisit|Keep)\b)'));
+        String buffer = '';
+        for (final s in sentences) {
+          final sClean = s.replaceAll(RegExp(r'^[ .:-•]+|[ .:-•]+$'), '');
+          if (sClean.isEmpty) continue;
+          if (buffer.isEmpty) {
+            buffer = sClean;
+          } else if (buffer.length + sClean.length < 160 && !buffer.endsWith('http://') && !buffer.endsWith('https://')) {
+            buffer += '. $sClean';
+          } else {
+            finalSteps.add(buffer.endsWith('.') ? buffer : '$buffer.');
+            buffer = sClean;
+          }
+        }
+        if (buffer.isNotEmpty) {
+          finalSteps.add(buffer.endsWith('.') ? buffer : '$buffer.');
+        }
+      }
+
+      parsedSteps = [];
+      for (final s in finalSteps) {
+        if (parsedSteps.isNotEmpty && s.length < 40 && !s.toLowerCase().startsWith('step')) {
+          final last = parsedSteps.removeLast();
+          final cleanLast = last.endsWith('.') ? last.substring(0, last.length - 1) : last;
+          parsedSteps.add('$cleanLast. $s');
+        } else {
+          parsedSteps.add(s);
+        }
+      }
+
+      if (parsedSteps.isEmpty && rawApp.isNotEmpty) {
+        parsedSteps = [rawApp];
+      }
+    }
+
+    // Smart benefits parser
+    List<String> parsedBenefits = (json['benefits_list'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    if (parsedBenefits.isEmpty || parsedBenefits.length <= 1) {
+      parsedBenefits = rawBenefits
+          .split(RegExp(r'[\n•;.]'))
+          .map((b) => b.trim())
+          .where((b) => b.length > 8)
+          .toList();
+    }
+
     return SchemeDetail(
       schemeId: json['scheme_id'] as String? ?? '',
       schemeName: json['scheme_name'] as String? ?? '',
@@ -117,13 +200,13 @@ class SchemeDetail {
       state: json['state'] as String?,
       schemeCategory: json['scheme_category'] as String?,
       details: json['details'] as String? ?? '',
-      benefits: json['benefits'] as String? ?? '',
-      benefitsList: (json['benefits_list'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      benefits: rawBenefits,
+      benefitsList: parsedBenefits,
       eligibilityText: json['eligibility_text'] as String? ?? '',
-      applicationProcess: json['application_process'] as String? ?? '',
-      applicationSteps: (json['application_steps'] as List?)?.map((e) => e.toString()).toList() ?? [],
-      documents: json['documents'] as String? ?? '',
-      documentsList: (json['documents_list'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      applicationProcess: rawApp,
+      applicationSteps: parsedSteps,
+      documents: rawDocs,
+      documentsList: parsedDocs,
       tags: (json['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
       officialUrl: json['official_url'] as String?,
       evaluation: json['evaluation'] != null

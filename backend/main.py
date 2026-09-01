@@ -158,7 +158,7 @@ def get_schemes(
 @app.post("/schemes/check-eligibility", response_model=EligibilityCheckResponse)
 def check_eligibility(
     profile: PatientProfileInput,
-    limit: int = Query(100, le=300),
+    limit: int = Query(1000, le=5000),
     db: Session = Depends(get_db)
 ):
     """
@@ -195,7 +195,7 @@ def check_eligibility(
 
     # Sort results: Likely Eligible first, then Verification Required, then Likely Not
     sorted_results = likely_eligible + verification_req + likely_not
-    max_limit = int(limit) if isinstance(limit, (int, float)) else 100
+    max_limit = int(limit) if isinstance(limit, (int, float)) and limit > 0 else len(sorted_results)
     limited_results = sorted_results[:max_limit]
 
     profile_summary = f"Age: {profile.age} • {profile.state} • {profile.income_range} Income"
@@ -238,22 +238,65 @@ def get_scheme_detail(
         )
         evaluation = EligibilityEngine.evaluate_scheme(scheme, patient)
 
-    # Clean bullet points for benefits, steps, documents
-    benefits_list = [b.strip() for b in re.split(r'[\n•;]', scheme.benefits or "") if len(b.strip()) > 8][:6]
-    steps_list = [s.strip() for s in re.split(r'(?:Step \d+:|\n\d+\.|\n•)', scheme.application_process or "") if len(s.strip()) > 8][:6]
-    if not steps_list:
-        steps_list = [
-            "Check and verify eligibility criteria.",
-            "Gather required identity and income proofs.",
-            "Visit the nearest CSC / District Health Centre / Hospital Desk or Official Portal.",
-            "Submit the application form and biometric / document verification.",
-            "Receive beneficiary health card / scheme approval."
-        ]
+    # Smart documents parser into points
+    raw_docs = scheme.documents or ""
+    cleaned_docs = re.sub(r'^(?:Copies of the following documents[^:-]*[:-]|Documents required[^:-]*[:-]|Following documents are required[^:-]*[:-])\s*', '', raw_docs, flags=re.IGNORECASE)
+    docs_list = [
+        d.strip(' .:-•\t\r\n') for d in re.split(r'(?:\.\s+|\n+|•|;\s*)', cleaned_docs)
+        if len(d.strip(' .:-•\t\r\n')) > 3 and not d.strip().lower().startswith(('note', 'for registration', 'for the application'))
+    ]
+    if not docs_list and raw_docs:
+        docs_list = [raw_docs]
 
-    docs_list = [d.strip() for d in re.split(r'[\n•,;]', scheme.documents or "") if len(d.strip()) > 3][:6]
-    if not docs_list:
-        docs_list = ["Aadhaar Card", "Income Certificate / BPL Card", "State Domicile / Residence Proof", "Passport Size Photograph"]
+    # Smart application steps parser
+    raw_app = scheme.application_process or ""
+    cleaned_app = re.sub(r'[\ufeff\r\t]+', ' ', raw_app)
+    cleaned_app = re.sub(r'\s+', ' ', cleaned_app).strip()
 
+    stage_pattern = r'\s*(?:\b(?:Registration Process|Application Process of the Welfare Scheme|Application Process|Processing at [A-Za-z\s]+Secretariat|Processing at [A-Za-z\s]+|Payment Procedure|Track Application Status|Check Your Application Status|Pay Annual Contribution|Verification Process)\b:?\s*)'
+    stages = re.split(stage_pattern, cleaned_app, flags=re.IGNORECASE)
+
+    raw_chunks = []
+    for stage in stages:
+        stage_clean = stage.strip(' .:-•')
+        if not stage_clean:
+            continue
+        step_items = re.split(r'(?:\bStep\s*\d+[:.]?|\bStep\s*[A-Za-z][:.]?|(?<=[.!?])\s+(?=[A-Z0-9]\.\s+|\d+\.\s+))', stage_clean, flags=re.IGNORECASE)
+        for item in step_items:
+            item_clean = item.strip(' .:-•')
+            if len(item_clean) > 10:
+                raw_chunks.append(item_clean)
+
+    final_steps = []
+    for chunk in raw_chunks:
+        sentences = re.split(r'(?<=[.!?])\s+(?=(?:Visit|Click|Upload|Save|Provide|Select|Once|After|Payment|Track|Download|Submit|Now|Revisit|Keep)\b)', chunk)
+        buffer = ''
+        for s in sentences:
+            s_clean = s.strip(' .:-•')
+            if not s_clean:
+                continue
+            if not buffer:
+                buffer = s_clean
+            elif len(buffer) + len(s_clean) < 160 and not buffer.endswith(('http://', 'https://')):
+                buffer += '. ' + s_clean
+            else:
+                final_steps.append(buffer + ('' if buffer.endswith('.') else '.'))
+                buffer = s_clean
+        if buffer:
+            final_steps.append(buffer + ('' if buffer.endswith('.') else '.'))
+
+    steps_list = []
+    for s in final_steps:
+        if steps_list and len(s) < 40 and not s.lower().startswith('step'):
+            steps_list[-1] = steps_list[-1].rstrip('.') + '. ' + s
+        else:
+            steps_list.append(s)
+
+    if not steps_list and raw_app:
+        steps_list = [raw_app]
+
+    # Clean bullet points for benefits
+    benefits_list = [b.strip() for b in re.split(r'[\n•;.]', scheme.benefits or "") if len(b.strip()) > 8]
     tags_list = [t.strip() for t in (scheme.tags or "").split(",") if t.strip()][:5]
 
     return SchemeDetailResponse(

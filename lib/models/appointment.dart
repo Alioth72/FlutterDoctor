@@ -70,4 +70,37 @@ class Appointment {
           : DateTime.now(),
     );
   }
+
+  DateTime get scheduledDateTime {
+    try {
+      final clean = appointmentDate.replaceAll(',', '').trim();
+      final parts = clean.split(' ');
+      // Format: "Wed 02 Sep 2026" -> parts: ["Wed", "02", "Sep", "2026"]
+      if (parts.length >= 4) {
+        final day = int.tryParse(parts[1]) ?? 1;
+        const months = {
+          'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+          'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+        };
+        final month = months[parts[2]] ?? 1;
+        final year = int.tryParse(parts[3]) ?? DateTime.now().year;
+
+        int hour = 9;
+        int minute = 0;
+        if (timeSlot.isNotEmpty) {
+          final tParts = timeSlot.split(' ');
+          final hm = tParts[0].split(':');
+          hour = int.tryParse(hm[0]) ?? 9;
+          minute = int.tryParse(hm[1]) ?? 0;
+          if (tParts.length > 1 && tParts[1].toUpperCase() == 'PM' && hour < 12) {
+            hour += 12;
+          } else if (tParts.length > 1 && tParts[1].toUpperCase() == 'AM' && hour == 12) {
+            hour = 0;
+          }
+        }
+        return DateTime(year, month, day, hour, minute);
+      }
+    } catch (_) {}
+    return bookedAt;
+  }
 }

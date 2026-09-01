@@ -8,6 +8,7 @@ import 'package:sih_project/models/scheme_eligibility_profile.dart';
 import 'package:sih_project/providers/appointment_provider.dart';
 import 'package:sih_project/providers/health_profile_provider.dart';
 import 'package:sih_project/providers/schemes_provider.dart';
+import 'package:sih_project/services/mock_doctor_service.dart';
 import 'package:sih_project/screens/appointments/appointment_receipt_screen.dart';
 import 'package:sih_project/screens/appointments/book_appointment_screen.dart';
 import 'package:sih_project/screens/home_screen.dart';
@@ -297,6 +298,37 @@ void main() {
       expect(find.text('Dr. Ananya Sharma'), findsOneWidget);
       expect(find.text('Rahul Sharma'), findsOneWidget);
       expect(find.text('₹0 (Free Consultation)'), findsOneWidget);
+    });
+
+    test('Latest appointment booked is sorted first at the top of the appointments list', () async {
+      final appointmentProvider = AppointmentProvider();
+      final doctors = await MockDoctorService().getDoctors();
+      final doctor = doctors.first;
+      final patient = HealthProfile(name: 'Test Patient', age: 25, gender: 'Male', phoneNumber: '9876543210');
+
+      // Book first appointment
+      final apt1 = await appointmentProvider.bookAppointment(
+        doctor: doctor,
+        patient: patient,
+        appointmentDate: 'Wed, 02 Sep 2026',
+        timeSlot: '09:00 AM',
+      );
+
+      // Wait 10ms so timestamps differ
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      // Book second appointment (later)
+      final apt2 = await appointmentProvider.bookAppointment(
+        doctor: doctor,
+        patient: patient,
+        appointmentDate: 'Thu, 03 Sep 2026',
+        timeSlot: '11:00 AM',
+      );
+
+      final list = appointmentProvider.appointments;
+      expect(list.length, 2);
+      expect(list.first.id, apt2.id, reason: 'Latest booked appointment (apt2) should be at index 0');
+      expect(list.last.id, apt1.id, reason: 'Earlier appointment (apt1) should be after the latest one');
     });
   });
 }

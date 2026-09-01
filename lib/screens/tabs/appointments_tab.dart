@@ -14,6 +14,18 @@ class AppointmentsTab extends StatelessWidget {
     final appointments = appointmentProvider.appointments;
 
     return Scaffold(
+      appBar: appointments.isNotEmpty
+          ? AppBar(
+              title: const Text('My Appointments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              actions: [
+                IconButton(
+                  tooltip: 'Clear All Appointments',
+                  icon: const Icon(Icons.delete_sweep_outlined, color: Colors.red),
+                  onPressed: () => _confirmClearAll(context),
+                ),
+              ],
+            )
+          : null,
       body: appointments.isEmpty
           ? _buildEmptyState(context)
           : _buildAppointmentsList(context, appointments),
@@ -228,6 +240,13 @@ class AppointmentsTab extends StatelessWidget {
                         icon: const Icon(Icons.cancel_outlined, color: Colors.red),
                         onPressed: () => _confirmCancel(context, apt),
                       ),
+                    ] else ...[
+                      const SizedBox(width: 8),
+                      IconButton.outlined(
+                        tooltip: 'Delete From History',
+                        icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                        onPressed: () => _confirmDelete(context, apt),
+                      ),
                     ],
                   ],
                 ),
@@ -265,6 +284,68 @@ class AppointmentsTab extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Appointment cancelled successfully.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDelete(BuildContext context, Appointment appointment) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Appointment?'),
+        content: const Text('Do you want to permanently remove this appointment from your history?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      final provider = Provider.of<AppointmentProvider>(context, listen: false);
+      await provider.deleteAppointment(appointment.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Appointment deleted.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmClearAll(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear All Appointments?'),
+        content: const Text('This will delete all appointment records from your phone. You can book fresh test appointments anytime.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      final provider = Provider.of<AppointmentProvider>(context, listen: false);
+      await provider.clearAllAppointments();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All appointments cleared.')),
         );
       }
     }

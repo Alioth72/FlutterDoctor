@@ -168,7 +168,7 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                   child: Row(
                     children: [
                       _buildFilterChip(
-                        label: 'All (${results?.schemes.length ?? 0})',
+                        label: 'All (${results?.totalEvaluated ?? results?.schemes.length ?? 0})',
                         value: 'all',
                         isSelected: provider.selectedFilter == 'all',
                         onTap: () => provider.setFilter('all'),
