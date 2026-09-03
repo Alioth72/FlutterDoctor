@@ -277,12 +277,12 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
                             Icon(
                               _showOptionalFields ? Icons.tune_rounded : Icons.add_circle_outline_rounded,
                               size: 18,
-                              color: const Color(0xFF00796B),
+                              color: colorScheme.primary,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               _showOptionalFields ? 'Hide Optional Details' : 'Add Optional Details (Better Matching)',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF00796B)),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.primary),
                             ),
                           ],
                         ),
@@ -387,7 +387,7 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
                 FilledButton(
                   onPressed: provider.isLoading ? null : _submitForm,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF00796B),
+                    backgroundColor: colorScheme.primary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),

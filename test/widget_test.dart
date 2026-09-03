@@ -153,12 +153,12 @@ void main() {
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(find.text('NEWS FLASH'), findsOneWidget);
       expect(find.text('REMINDER'), findsOneWidget);
-      expect(find.text('BUY MEDICINES'), findsOneWidget);
-      expect(find.text('AI ASSISTANT'), findsOneWidget);
+      expect(find.text('Buy\nMedicines'), findsOneWidget);
+      expect(find.text('AI\nAssistant'), findsOneWidget);
       expect(find.text('EMERGENCY'), findsOneWidget);
-      expect(find.text('LAng'), findsOneWidget);
-      expect(find.text('contact\ndoctor'), findsOneWidget);
-      expect(find.text('voice'), findsOneWidget);
+      expect(find.text('LANG'), findsOneWidget);
+      expect(find.text('CONTACT\nDOCTOR'), findsOneWidget);
+      expect(find.text('VOICE'), findsOneWidget);
     });
   });
 

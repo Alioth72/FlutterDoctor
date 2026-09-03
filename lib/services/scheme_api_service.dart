@@ -21,49 +21,66 @@ class SchemeApiService {
 
   /// Check personalized eligibility via REST API with offline fallback
   Future<EligibilityCheckResult> checkEligibility(SchemeEligibilityProfile profile) async {
-    try {
-      final url = Uri.parse('$baseUrl/schemes/check-eligibility');
-      final response = await http
-          .post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(profile.toJson()),
-          )
-          .timeout(const Duration(seconds: 4));
+    final candidateUrls = [
+      '$baseUrl/schemes/check-eligibility',
+      if (Platform.isAndroid && baseUrl.contains('10.0.2.2'))
+        'http://127.0.0.1:8000/schemes/check-eligibility',
+    ];
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
-        return EligibilityCheckResult.fromJson(data as Map<String, dynamic>);
+    for (final urlStr in candidateUrls) {
+      try {
+        final url = Uri.parse(urlStr);
+        final response = await http
+            .post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(profile.toJson()),
+            )
+            .timeout(const Duration(seconds: 4));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(utf8.decode(response.bodyBytes));
+          return EligibilityCheckResult.fromJson(data as Map<String, dynamic>);
+        }
+      } catch (e) {
+        debugPrint('Backend connection attempt failed on $urlStr: $e');
       }
-    } catch (e) {
-      debugPrint('FastAPI backend connection error ($e). Using local deterministic engine.');
     }
 
     // Offline / Local Deterministic Engine Fallback
+    debugPrint('Using local deterministic engine fallback.');
     return _localDeterministicCheck(profile);
   }
 
   /// Get detailed scheme information
   Future<SchemeDetail> getSchemeDetail(String schemeId, {SchemeEligibilityProfile? profile}) async {
-    try {
-      final queryParams = <String, String>{};
-      if (profile != null) {
-        queryParams['age'] = profile.age.toString();
-        queryParams['state'] = profile.state;
-        queryParams['income_range'] = profile.incomeRange;
-        if (profile.gender != null) queryParams['gender'] = profile.gender!;
-        if (profile.socialCategory != null) queryParams['category'] = profile.socialCategory!;
-      }
+    final queryParams = <String, String>{};
+    if (profile != null) {
+      queryParams['age'] = profile.age.toString();
+      queryParams['state'] = profile.state;
+      queryParams['income_range'] = profile.incomeRange;
+      if (profile.gender != null) queryParams['gender'] = profile.gender!;
+      if (profile.socialCategory != null) queryParams['category'] = profile.socialCategory!;
+    }
 
-      final url = Uri.parse('$baseUrl/schemes/$schemeId').replace(queryParameters: queryParams);
-      final response = await http.get(url).timeout(const Duration(seconds: 4));
+    final candidateUrls = [
+      '$baseUrl/schemes/$schemeId',
+      if (Platform.isAndroid && baseUrl.contains('10.0.2.2'))
+        'http://127.0.0.1:8000/schemes/$schemeId',
+    ];
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
-        return SchemeDetail.fromJson(data as Map<String, dynamic>);
+    for (final urlStr in candidateUrls) {
+      try {
+        final url = Uri.parse(urlStr).replace(queryParameters: queryParams);
+        final response = await http.get(url).timeout(const Duration(seconds: 4));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(utf8.decode(response.bodyBytes));
+          return SchemeDetail.fromJson(data as Map<String, dynamic>);
+        }
+      } catch (e) {
+        debugPrint('Scheme detail fetch attempt failed on $urlStr: $e');
       }
-    } catch (e) {
-      debugPrint('FastAPI scheme detail fetch error ($e). Using fallback details.');
     }
 
     return _localSchemeDetail(schemeId, profile);

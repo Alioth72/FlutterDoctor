@@ -246,6 +246,7 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
     Color? activeColor,
     Color? activeBorder,
   }) {
+    final theme = Theme.of(context);
     return ChoiceChip(
       label: Text(
         label,
@@ -256,9 +257,9 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
         ),
       ),
       selected: isSelected,
-      selectedColor: activeColor ?? const Color(0xFFE0F2F1),
+      selectedColor: activeColor ?? theme.colorScheme.primaryContainer,
       side: BorderSide(
-        color: isSelected ? (activeBorder ?? const Color(0xFF00796B)) : Colors.grey.shade300,
+        color: isSelected ? (activeBorder ?? theme.colorScheme.primary) : Colors.grey.shade300,
         width: isSelected ? 1.5 : 1.0,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -303,7 +304,7 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.local_hospital_rounded, color: Color(0xFF00796B), size: 22),
+                Icon(Icons.local_hospital_rounded, color: theme.colorScheme.primary, size: 22),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -360,12 +361,12 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE0F2F1),
+                      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       '• $benefit',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF004D40)),
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: theme.colorScheme.primary),
                     ),
                   );
                 }).toList(),
@@ -378,7 +379,7 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF00796B),
+                  foregroundColor: theme.colorScheme.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 ),
                 onPressed: () {

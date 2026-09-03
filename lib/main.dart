@@ -33,12 +33,20 @@ class PatientApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
+          scaffoldBackgroundColor: const Color(0xFFF9FAFC),
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF00796B), // Medical Teal
+            seedColor: const Color(0xFF6D28D9), // Vibrant Deep Royal Purple
+            primary: const Color(0xFF6D28D9),
             brightness: Brightness.light,
           ),
           appBarTheme: const AppBarTheme(
             centerTitle: true,
+            elevation: 0,
+            backgroundColor: Color(0xFFF9FAFC),
+          ),
+          floatingActionButtonTheme: const FloatingActionButtonThemeData(
+            backgroundColor: Color(0xFF6D28D9),
+            foregroundColor: Colors.white,
           ),
           inputDecorationTheme: InputDecorationTheme(
             filled: true,

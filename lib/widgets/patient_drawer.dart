@@ -108,7 +108,7 @@ class PatientDrawer extends StatelessWidget {
     final profile = profileProvider.profile;
 
     return Drawer(
-      backgroundColor: const Color(0xFFE8F5E9), // Light soothing healthcare green as shown in wireframe
+      backgroundColor: const Color(0xFFF9FAFC),
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -130,18 +130,19 @@ class PatientDrawer extends StatelessWidget {
                         ),
                       );
                     },
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF81C784), // Vivid pastel green card
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.black.withValues(alpha: 0.8), width: 1.5),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF5B21B6), Color(0xFF7C3AED)],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            offset: const Offset(2, 3),
-                            blurRadius: 4,
+                            color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+                            offset: const Offset(0, 6),
+                            blurRadius: 14,
                           ),
                         ],
                       ),
@@ -152,13 +153,13 @@ class PatientDrawer extends StatelessWidget {
                             height: 52,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.white,
-                              border: Border.all(color: Colors.black.withValues(alpha: 0.8), width: 1.5),
+                              color: Colors.white.withValues(alpha: 0.2),
+                              border: Border.all(color: Colors.white, width: 1.5),
                             ),
                             child: const Icon(
                               Icons.person_rounded,
                               size: 32,
-                              color: Colors.black87,
+                              color: Colors.white,
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -169,10 +170,10 @@ class PatientDrawer extends StatelessWidget {
                                 const Text(
                                   'PROFILE',
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: 1.2,
-                                    color: Colors.black87,
+                                    color: Color(0xFFDDD6FE),
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -181,22 +182,22 @@ class PatientDrawer extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
                                   ),
                                 ),
                                 Text(
                                   profile != null ? '+91 ${profile.phoneNumber}' : '',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 12,
-                                    color: Colors.black.withValues(alpha: 0.7),
+                                    color: Color(0xFFEDE9FE),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.black87),
+                          const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.white),
                         ],
                       ),
                     ),
@@ -207,6 +208,7 @@ class PatientDrawer extends StatelessWidget {
                   _buildDrawerButton(
                     context,
                     title: 'FAMILY DATA',
+                    icon: Icons.family_restroom_rounded,
                     onTap: () => _showInfoModal(
                       context,
                       title: 'Family Members Health Data',
@@ -214,12 +216,13 @@ class PatientDrawer extends StatelessWidget {
                       icon: Icons.family_restroom_rounded,
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
 
                   // 3. GOVT SCHEMES Card
                   _buildDrawerButton(
                     context,
                     title: 'GOVT SCHEMES',
+                    icon: Icons.health_and_safety_rounded,
                     onTap: () {
                       Navigator.of(context).pop();
                       Navigator.of(context).push(
@@ -232,12 +235,13 @@ class PatientDrawer extends StatelessWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
 
                   // 4. VACCINATION Card
                   _buildDrawerButton(
                     context,
                     title: 'VACCINATION',
+                    icon: Icons.vaccines_rounded,
                     onTap: () => _showInfoModal(
                       context,
                       title: 'Vaccination Services & Tracking',
@@ -245,7 +249,7 @@ class PatientDrawer extends StatelessWidget {
                       icon: Icons.vaccines_rounded,
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
 
                   // 5. CHRONIC REMINDER Card (Dialysis, Medicine Tracking, Diabetes etc)
                   InkWell(
@@ -257,39 +261,57 @@ class PatientDrawer extends StatelessWidget {
                     ),
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF66BB6A), // Deeper distinct green
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.black.withValues(alpha: 0.8), width: 1.5),
+                        border: Border.all(color: const Color(0xFFEDE9FE), width: 1.2),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            offset: const Offset(2, 3),
-                            blurRadius: 4,
+                            color: Colors.black.withValues(alpha: 0.03),
+                            offset: const Offset(0, 2),
+                            blurRadius: 6,
                           ),
                         ],
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          const Text(
-                            'CHRONIC REMINDER',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.1,
-                              color: Colors.black87,
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F3FF),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.monitor_heart_rounded,
+                              color: Color(0xFF7C3AED),
+                              size: 24,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '(DIALYSIS, MEDICINE TRACKING, DIABETES ETC)',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              height: 1.3,
-                              color: Colors.black.withValues(alpha: 0.85),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'CHRONIC REMINDER',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.8,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Dialysis, Medicine & BP Tracking',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -306,7 +328,7 @@ class PatientDrawer extends StatelessWidget {
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: colorScheme.error,
-                  side: BorderSide(color: colorScheme.error.withValues(alpha: 0.7), width: 1.5),
+                  side: BorderSide(color: colorScheme.error.withValues(alpha: 0.5), width: 1.2),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -327,6 +349,7 @@ class PatientDrawer extends StatelessWidget {
   Widget _buildDrawerButton(
     BuildContext context, {
     required String title,
+    required IconData icon,
     required VoidCallback onTap,
   }) {
     return InkWell(
@@ -335,25 +358,42 @@ class PatientDrawer extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFF81C784), // Pastel green as in drawing
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.8), width: 1.5),
+          border: Border.all(color: const Color(0xFFEDE9FE), width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              offset: const Offset(2, 3),
-              blurRadius: 4,
+              color: Colors.black.withValues(alpha: 0.03),
+              offset: const Offset(0, 2),
+              blurRadius: 6,
             ),
           ],
         ),
-        child: Text(
-          title,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.1,
-            color: Colors.black87,
-          ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F3FF),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: const Color(0xFF7C3AED),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.8,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -86,7 +86,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
         child: SafeArea(
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF00796B),
+              backgroundColor: Theme.of(context).colorScheme.primary,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
@@ -135,13 +135,13 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE0F2F1),
+                          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.local_hospital_rounded,
                           size: 32,
-                          color: Color(0xFF00796B),
+                          color: theme.colorScheme.primary,
                         ),
                       ),
                       const SizedBox(width: 14),
@@ -153,19 +153,16 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                               scheme?.schemeName ?? widget.basicScheme?.schemeName ?? 'Government Health Scheme',
                               style: theme.textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.w900,
-                                height: 1.25,
+                                height: 1.2,
                               ),
                             ),
                             const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.blueGrey.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                '${scheme?.level ?? 'Central'} Government Scheme',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            Text(
+                              '${scheme?.level ?? "National"} • ${scheme?.schemeCategory ?? "Health & Family Welfare"}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.primary,
                               ),
                             ),
                           ],
@@ -179,12 +176,12 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                   if (eval != null) _buildStatusBanner(eval),
                   const SizedBox(height: 22),
 
-                  // 1. ABOUT Section
+                  // 1. DETAILS Section
                   _buildSectionHeader(context, title: 'ABOUT', icon: Icons.info_outline_rounded),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Text(
-                    scheme?.details ?? widget.basicScheme?.shortDescription ?? '',
-                    style: theme.textTheme.bodyMedium?.copyWith(height: 1.5, color: Colors.black87),
+                    scheme?.details ?? 'Detailed information regarding the scheme and clinical subsidies.',
+                    style: const TextStyle(fontSize: 14, height: 1.45, color: Colors.black87),
                   ),
                   const SizedBox(height: 22),
 
@@ -192,7 +189,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                   _buildSectionHeader(context, title: 'BENEFITS', icon: Icons.verified_rounded),
                   const SizedBox(height: 10),
                   if (scheme != null && scheme.benefitsList.isNotEmpty)
-                    ...scheme.benefitsList.map((b) => _buildBulletItem(b, icon: Icons.check_circle_outline, color: const Color(0xFF00796B)))
+                    ...scheme.benefitsList.map((b) => _buildBulletItem(b, icon: Icons.check_circle_outline, color: theme.colorScheme.primary))
                   else
                     Text(scheme?.benefits ?? 'Comprehensive healthcare coverage.'),
                   const SizedBox(height: 22),
@@ -249,7 +246,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                   const SizedBox(height: 10),
                   if (scheme != null && scheme.applicationSteps.isNotEmpty)
                     ...scheme.applicationSteps.asMap().entries.map((entry) {
-                      return _buildNumberedStep(entry.key + 1, entry.value);
+                      return _buildNumberedStep(context, entry.key + 1, entry.value);
                     })
                   else
                     Text(scheme?.applicationProcess ?? 'Apply online or visit your local health centre.'),
@@ -325,7 +322,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
   Widget _buildSectionHeader(BuildContext context, {required String title, required IconData icon}) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: const Color(0xFF00796B)),
+        Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 8),
         Text(
           title,
@@ -394,14 +391,15 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
     );
   }
 
-  Widget _buildNumberedStep(int stepNum, String stepText) {
+  Widget _buildNumberedStep(BuildContext context, int stepNum, String stepText) {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 10.0),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFBBF7D0), width: 1.0),
+        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.25), width: 1.0),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -409,7 +407,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xFF00796B),
+              color: theme.colorScheme.primary,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
