@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "119360388202",
+    "project_id": "sih-teleconsultation",
+    "storage_bucket": "sih-teleconsultation.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:119360388202:android:49006863c47c1f3a191e13",
+        "android_client_info": {
+          "package_name": "in.sih.doctor_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuIamOiXGsM1BS9d-sjLDmb9bdcX-0WNI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:119360388202:android:d34c59090b568490191e13",
+        "android_client_info": {
+          "package_name": "in.sih.patient_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuIamOiXGsM1BS9d-sjLDmb9bdcX-0WNI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

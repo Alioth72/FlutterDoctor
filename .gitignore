@@ -1,0 +1,7 @@
+# Local TURN/model secrets and large research artifacts
+*.env
+**/assets/models/*.onnx
+
+# Flutter build output
+**/.dart_tool/
+**/build/
