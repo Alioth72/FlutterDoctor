@@ -1,169 +1,228 @@
-# Doctor Teleconsult
+# Teleconsultation — Doctor and Patient Apps
 
-A doctor-side Flutter application for assisted teleconsultations in rural and
-underserved public-health settings. It was built for a Smart India Hackathon
-problem focused on improving healthcare access, continuity, and quality.
+Two standalone Flutter mobile apps that demonstrate a focused
+doctor-to-patient teleconsultation flow for rural and underserved public-health
+settings. The project was built for a Smart India Hackathon problem concerning
+healthcare access, continuity, and quality.
 
-This repository currently implements only the doctor teleconsultation flow. It
-uses an in-memory mock repository and the Jitsi Meet Flutter SDK; no backend or
-patient application is included.
+The apps intentionally implement only teleconsultation. They use in-memory mock
+repositories and the Jitsi Meet Flutter SDK; there is no backend, authentication,
+appointment-booking system, or broader healthcare platform in this repository.
 
-## What the app does
+## Repository layout
 
-- Shows today's mock patient queue in queue-position order.
-- Enables the Join action only for the first waiting patient.
-- Presents the patient's summary and requires practitioner consent.
-- Starts a native Jitsi meeting on `https://meet.jit.si` using room name
-  `consult_<appointmentId>`.
-- Tracks call start, end, duration, errors, and appointment status.
-- Collects clinical notes, repeatable prescription rows, and an optional
-  referral after the call.
-- Returns to the refreshed dashboard so the next waiting patient can be joined.
-
-The mock data contains two appointments: `apt_001` for Ramesh Kumar and
-`apt_002` for Sunita Devi. All data resets when the application restarts.
-
-## Project structure
-
-| Path | Purpose |
+| Path | App |
 | --- | --- |
-| `lib/models/` | Appointment, consent, call-log, prescription, and consultation-note models |
-| `lib/data/appointment_repository.dart` | Repository contract and in-memory mock implementation |
-| `lib/screens/` | Dashboard, pre-call consent, and post-call form screens |
-| `lib/services/jitsi_call_service.dart` | Jitsi configuration, lifecycle listeners, and post-call navigation |
-| `test/widget_test.dart` | Queue-gating and post-call form widget tests |
+| `doctor_app/` | Doctor queue, consent, Jitsi call, clinical notes, prescriptions, and referral |
+| `patient_app/` | Patient appointment, call-readiness details, Jitsi call, and call summary |
+| `doctor_app_teleconsult_plan.md` | Original doctor-side implementation plan |
 
-State is intentionally managed with `StatefulWidget` and `setState`. The only
-data abstraction is `AppointmentRepository`, which can later be implemented by
-a real backend.
+Each app is an independent Flutter project with its own `pubspec.yaml`, Android
+project, iOS project, source code, tests, and build output.
+
+## Shared call contract
+
+Both apps use the mock appointment ID `apt_001` and independently compute the
+same Jitsi room:
+
+```text
+https://meet.jit.si/consult_apt_001
+```
+
+The doctor joins as `Dr. Ananya Sharma`, and the patient joins as `Ramesh
+Kumar`. Because the repositories are in-memory and independent, status changes
+are not synchronized between apps; Jitsi room membership is the only shared
+runtime behavior in this prototype.
+
+Both apps disable Jitsi chat, invitations, adding people, calendar, live
+streaming, recording, meeting name/password, raise hand, and tile view. The
+prejoin page is disabled, while picture-in-picture remains enabled.
+
+## Doctor app flow
+
+1. Display today's two mock appointments in queue order.
+2. Enable Join only for the first waiting patient.
+3. Show patient details and require the doctor's consent.
+4. Join `consult_apt_001` and log call lifecycle/status changes.
+5. Open the post-call form automatically when Jitsi closes.
+6. Save notes, repeatable prescription rows, and an optional referral.
+7. Return to the dashboard with the first appointment completed and the next
+   appointment enabled.
+
+The doctor app uses an `AppointmentRepository` interface with an in-memory mock
+implementation so a backend can replace it later without changing the UI.
+
+## Patient app flow
+
+1. Display Ramesh Kumar's consultation with Dr. Ananya Sharma.
+2. Show the consultation time, reason, and device/readiness guidance.
+3. Join the same `consult_apt_001` Jitsi room using the patient's display name.
+4. Log call lifecycle/status changes in the patient mock repository.
+5. Open a call-complete screen automatically and show the call duration.
+6. Return to the patient home screen.
 
 ## Supported platforms
 
 - Android API 26 or newer.
 - iOS 15.1 or newer.
 
-Jitsi Meet does not support this app's Flutter Web or Windows desktop targets.
-Do not run it with `-d chrome` or `-d windows`.
+The Jitsi Meet Flutter SDK does not support this project's Flutter Web or
+Windows desktop targets. Do not run either app with `-d chrome` or `-d windows`.
 
 Android API 26 is required because the native Jitsi 13.1.1 artifact declares
-that minimum, even though the Flutter wrapper currently documents API 24. The
-root Android Gradle configuration also compiles library modules with SDK 36
-through Gradle's `finalizeDsl` hook. This works around Jitsi 13.1.1 compiling
-its plugin at SDK 34 while its Media3 1.8 dependencies require SDK 35 or newer.
-Neither setting changes the app's target SDK at runtime.
+that minimum. Both apps also use a Gradle `finalizeDsl` hook to compile Android
+library modules with SDK 36. This works around Jitsi 13.1.1 compiling its plugin
+at SDK 34 while its Media3 1.8 dependencies require SDK 35 or newer. It does not
+change the apps' minimum or target SDK at runtime.
+
+Kotlin incremental compilation is disabled in both Android projects because the
+repository is on `D:` while the shared Pub cache is on `C:`. Without this setting,
+the Jitsi plugin's Kotlin compiler cannot create relocatable incremental-cache
+paths across Windows drives.
 
 ## Prerequisites
 
-- Flutter on the stable channel. The project was verified with Flutter 3.47.2
-  and Dart 3.13.2.
-- Android Studio or the Android command-line tools, including Android SDK 36.
+- Flutter stable. The projects were created with Flutter 3.47.2 and Dart
+  3.13.2.
 - Java 17 or newer.
-- An Android emulator/device running API 26+, or a macOS machine with Xcode and
-  CocoaPods for iOS development.
-- A working internet connection for dependency downloads and Jitsi calls.
-- Camera and microphone access on the test device.
+- Android Studio or Android command-line tools with Android SDK 36.
+- Two Android emulators/devices running API 26+ for app-to-app testing.
+- A macOS machine with Xcode and CocoaPods for iOS builds.
+- Camera, microphone, and internet access on call-testing devices.
 
-Check the local environment before continuing:
+Check the development environment:
 
 ```shell
 flutter doctor
 flutter devices
 ```
 
-## Setup and run
+## Install dependencies
 
-From the repository root:
+Dependencies must be resolved separately for each app:
 
 ```shell
+cd doctor_app
 flutter pub get
-flutter run -d <android-device-id>
+cd ../patient_app
+flutter pub get
+cd ..
 ```
 
-Replace `<android-device-id>` with an ID listed by `flutter devices`. For camera
-testing on an Android emulator, enable webcam passthrough in the emulator's
-extended controls. A physical Android device generally gives more reliable
-camera, microphone, and picture-in-picture testing.
+## Run the apps
 
-On macOS, the iOS flow can be prepared and run with:
+List device IDs first:
 
 ```shell
+flutter devices
+```
+
+Run the doctor app on one Android device:
+
+```shell
+cd doctor_app
+flutter run -d <doctor-device-id>
+```
+
+In a second terminal, run the patient app on another Android device:
+
+```shell
+cd patient_app
+flutter run -d <patient-device-id>
+```
+
+For emulator camera testing, enable webcam passthrough in the emulator's
+extended controls. Physical devices generally provide more reliable camera,
+microphone, and picture-in-picture behavior.
+
+### iOS
+
+On macOS, prepare each app independently. For example:
+
+```shell
+cd doctor_app
 flutter pub get
 cd ios
 pod install
 cd ..
-flutter run -d <ios-device-id>
+flutter run -d <doctor-ios-device-id>
 ```
 
-Camera and microphone usage descriptions are already configured in
-`ios/Runner/Info.plist`.
+Repeat from `patient_app/` for the patient device. Camera and microphone usage
+descriptions and the iOS 15.1 deployment target are configured in both apps.
 
 ## Automated checks
 
-Run static analysis and widget tests from the repository root:
+Run analysis and tests in both apps:
 
 ```shell
+cd doctor_app
+flutter analyze
+flutter test
+
+cd ../patient_app
 flutter analyze
 flutter test
 ```
 
-The widget suite verifies that:
+Doctor tests cover queue gating, patient details, consent gating, call duration,
+repeatable prescriptions, referral fields, note saving, and completion status.
 
-- only `apt_001` initially has an enabled Join action;
-- the correct patient summary opens;
-- the Start consultation button is gated by consent;
-- call duration is displayed;
-- prescription rows can be added;
-- referral fields appear when enabled; and
-- saving records the note and completes the appointment.
+Patient tests cover the ready appointment, consultation details, join action,
+call duration, and returning from the call-complete screen.
 
-The Jitsi call itself is native functionality and is not exercised by Flutter
-widget tests.
+Native Jitsi calls are not exercised by Flutter widget tests and require manual
+device testing.
 
-## Build an Android APK
+## Build Android APKs
 
-Create a debug APK with:
+Build each app from its directory:
 
 ```shell
+cd doctor_app
+flutter build apk --debug
+
+cd ../patient_app
 flutter build apk --debug
 ```
 
-The generated file is:
+Outputs:
 
 ```text
-build/app/outputs/flutter-apk/app-debug.apk
+doctor_app/build/app/outputs/flutter-apk/app-debug.apk
+patient_app/build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-The universal debug APK is large (approximately 280 MB) because it includes
-debug symbols, Flutter artifacts, Jitsi, and binaries for multiple Android
-architectures. This is expected for development builds.
+Universal debug APKs are large because they include debug artifacts, Jitsi, and
+native binaries for multiple Android architectures.
 
-## Test a real consultation
+## Manual end-to-end test
 
-1. Launch the app on an Android emulator or physical device.
-2. Tap Join for Ramesh Kumar.
-3. Confirm the patient details and select the consent checkbox.
-4. Tap Start consultation and grant camera/microphone permissions.
-5. On another device or desktop browser, open
-   `https://meet.jit.si/consult_apt_001`. Using a different network is useful
-   for confirming that the call connects beyond the local environment.
-6. Confirm that both participants can see and hear each other.
-7. End the call from Jitsi. The app should automatically open the post-call
-   form and display a non-zero duration.
-8. Enter notes/prescription details, optionally enable a referral, and save.
-9. Confirm that Ramesh is completed and Sunita now has the enabled Join action.
+1. Launch the doctor app and patient app on different devices.
+2. In the doctor app, select Ramesh Kumar, accept the consent statement, and tap
+   Start consultation.
+3. In the patient app, open the appointment and tap Join consultation.
+4. Grant camera and microphone permissions on both devices.
+5. Confirm both participants can see and hear each other.
+6. End the call on both devices.
+7. Confirm the doctor app opens the clinical form and the patient app opens the
+   call-complete screen with a non-zero duration.
+8. Save the doctor form and verify that Sunita Devi becomes the next enabled
+   appointment.
 
-Also verify that the Jitsi toolbar does not expose chat, invitations, adding
-people, calendar, live streaming, recording, meeting name/password, raise hand,
-or tile view, and that no prejoin screen appears.
+If only one mobile device is available, run either app and open
+`https://meet.jit.si/consult_apt_001` in a desktop browser as the other
+participant.
 
 ## Current limitations and security notice
 
-- Records are mock, in-memory data and are not persisted.
+- All records and status changes are in-memory and reset on restart.
+- There is no backend synchronization between the apps.
 - Rooms use predictable appointment IDs on the public `meet.jit.si` service.
-- There is no JWT/JaaS authentication or assigned-doctor enforcement.
-- There is no patient-side app, backend, push notification, ABHA, or FHIR
-  integration.
-- iOS configuration is present but has not been built on this Windows machine.
+- There is no JWT/JaaS authentication or assigned-user enforcement.
+- There are no push notifications, persistent records, ABHA, FHIR, diagnostics,
+  or booking features.
+- iOS configuration is included but was not built on this Windows machine.
 - Jitsi 13.1.1 emits a non-blocking warning about future Flutter support for
   plugins that apply the Kotlin Gradle Plugin directly. Reassess the Gradle
   workaround when upgrading Flutter or Jitsi.
