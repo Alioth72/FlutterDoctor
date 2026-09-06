@@ -220,6 +220,33 @@ Implement `MockAppointmentRepository` in each app with `debugPrint` stand-ins fo
 
 ## 9. Build order
 
+**Current implementation status (6 September 2026):** steps 1–6 have passed on
+two real devices using different networks. Step 7 is implemented in the doctor
+app. Its first Realme Narzo 60 Pro 5G test produced 2.8 fps, 323 ms/frame, and an
+89% detection hit rate. Periodic face-box refresh was then added to remove ML Kit
+from most frame ticks. A retest reached 3.5 face fps and 100% detection, still
+below the target, so the patient stream was reduced from the plugin's 1280×720
+default to 640×480 and stage-specific timing diagnostics were added. That
+reached 5.4 fps at 480×640 incoming resolution, so a final 320×240 constraint
+was applied to target at least 8 fps. The final optimised cadence is awaiting
+the repeat APK test in `SETUP.md` Step 15. The official ME-rPPG weights/state
+have been located and inspected, but model inference remains deliberately
+gated on that check.
+
+**Step 8 update (7 September 2026):** the 320×240 retest passed at 8.3 face fps
+and 97% detection. The official ONNX model is now bundled with a lossless compact
+version of its 36 recurrent states. Timestamp-aware streaming inference and raw
+BVP diagnostics are implemented and awaiting the two-minute device test in
+`SETUP.md` Step 16. BPM conversion remains disabled until that test passes.
+
+**Steps 9–10 update (7 September 2026):** raw inference passed on-device at
+about 79 ms with 787 finite BVP samples. The app now resamples using real frame
+timestamps, applies a 0.7 Hz high-pass and sample-rate-safe low-pass, calculates
+a Hann-windowed Welch-style spectrum, combines spectral concentration with
+normalized autocorrelation for confidence, suppresses stale/low-confidence
+numbers, and charts only accepted readings. Device validation is in `SETUP.md`
+Step 17.
+
 1. Firebase project set up, both apps registered, Firestore enabled.
 2. Open Relay account created; write and test the `fetchIceServers()` function in isolation (just print the result) before wiring it into a call.
 3. Data models + mock repositories in both apps.

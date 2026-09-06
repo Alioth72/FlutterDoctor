@@ -1,0 +1,419 @@
+{
+  "format": "float32-little-endian",
+  "tensorCount": 36,
+  "totalBytes": 1532928,
+  "tensors": [
+    {
+      "name": "onnx::Mul_1",
+      "shape": [
+        1,
+        1,
+        36,
+        36,
+        32
+      ],
+      "offsetBytes": 0,
+      "elementCount": 41472
+    },
+    {
+      "name": "onnx::Mul_2",
+      "shape": [
+        1,
+        1,
+        36,
+        36,
+        32
+      ],
+      "offsetBytes": 165888,
+      "elementCount": 41472
+    },
+    {
+      "name": "onnx::Gather_3",
+      "shape": [
+        1,
+        1,
+        4,
+        32,
+        128
+      ],
+      "offsetBytes": 331776,
+      "elementCount": 16384
+    },
+    {
+      "name": "onnx::Slice_4",
+      "shape": [
+        1,
+        4,
+        384
+      ],
+      "offsetBytes": 397312,
+      "elementCount": 1536
+    },
+    {
+      "name": "onnx::Mul_5",
+      "shape": [
+        1,
+        1,
+        36,
+        36,
+        32
+      ],
+      "offsetBytes": 403456,
+      "elementCount": 41472
+    },
+    {
+      "name": "onnx::Mul_6",
+      "shape": [
+        1,
+        1,
+        36,
+        36,
+        32
+      ],
+      "offsetBytes": 569344,
+      "elementCount": 41472
+    },
+    {
+      "name": "onnx::Gather_7",
+      "shape": [
+        1,
+        1,
+        4,
+        32,
+        128
+      ],
+      "offsetBytes": 735232,
+      "elementCount": 16384
+    },
+    {
+      "name": "onnx::Slice_8",
+      "shape": [
+        1,
+        4,
+        384
+      ],
+      "offsetBytes": 800768,
+      "elementCount": 1536
+    },
+    {
+      "name": "onnx::Mul_9",
+      "shape": [
+        1,
+        1,
+        18,
+        18,
+        32
+      ],
+      "offsetBytes": 806912,
+      "elementCount": 10368
+    },
+    {
+      "name": "onnx::Mul_10",
+      "shape": [
+        1,
+        1,
+        18,
+        18,
+        32
+      ],
+      "offsetBytes": 848384,
+      "elementCount": 10368
+    },
+    {
+      "name": "onnx::Gather_11",
+      "shape": [
+        1,
+        1,
+        4,
+        32,
+        128
+      ],
+      "offsetBytes": 889856,
+      "elementCount": 16384
+    },
+    {
+      "name": "onnx::Slice_12",
+      "shape": [
+        1,
+        4,
+        384
+      ],
+      "offsetBytes": 955392,
+      "elementCount": 1536
+    },
+    {
+      "name": "onnx::Mul_13",
+      "shape": [
+        1,
+        1,
+        18,
+        18,
+        32
+      ],
+      "offsetBytes": 961536,
+      "elementCount": 10368
+    },
+    {
+      "name": "onnx::Mul_14",
+      "shape": [
+        1,
+        1,
+        18,
+        18,
+        32
+      ],
+      "offsetBytes": 1003008,
+      "elementCount": 10368
+    },
+    {
+      "name": "onnx::Gather_15",
+      "shape": [
+        1,
+        1,
+        4,
+        32,
+        128
+      ],
+      "offsetBytes": 1044480,
+      "elementCount": 16384
+    },
+    {
+      "name": "onnx::Slice_16",
+      "shape": [
+        1,
+        4,
+        384
+      ],
+      "offsetBytes": 1110016,
+      "elementCount": 1536
+    },
+    {
+      "name": "onnx::Mul_17",
+      "shape": [
+        1,
+        1,
+        9,
+        9,
+        32
+      ],
+      "offsetBytes": 1116160,
+      "elementCount": 2592
+    },
+    {
+      "name": "onnx::Mul_18",
+      "shape": [
+        1,
+        1,
+        9,
+        9,
+        32
+      ],
+      "offsetBytes": 1126528,
+      "elementCount": 2592
+    },
+    {
+      "name": "onnx::Gather_19",
+      "shape": [
+        1,
+        1,
+        4,
+        32,
+        128
+      ],
+      "offsetBytes": 1136896,
+      "elementCount": 16384
+    },
+    {
+      "name": "onnx::Slice_20",
+      "shape": [
+        1,
+        4,
+        384
+      ],
+      "offsetBytes": 1202432,
+      "elementCount": 1536
+    },
+    {
+      "name": "onnx::Mul_21",
+      "shape": [
+        1,
+        1,
+        9,
+        9,
+        32
+      ],
+      "offsetBytes": 1208576,
+      "elementCount": 2592
+    },
+    {
+      "name": "onnx::Mul_22",
+      "shape": [
+        1,
+        1,
+        9,
+        9,
+        32
+      ],
+      "offsetBytes": 1218944,
+      "elementCount": 2592
+    },
+    {
+      "name": "onnx::Gather_23",
+      "shape": [
+        1,
+        1,
+        4,
+        32,
+        128
+      ],
+      "offsetBytes": 1229312,
+      "elementCount": 16384
+    },
+    {
+      "name": "onnx::Slice_24",
+      "shape": [
+        1,
+        4,
+        384
+      ],
+      "offsetBytes": 1294848,
+      "elementCount": 1536
+    },
+    {
+      "name": "onnx::Mul_25",
+      "shape": [
+        1,
+        1,
+        5,
+        5,
+        32
+      ],
+      "offsetBytes": 1300992,
+      "elementCount": 800
+    },
+    {
+      "name": "onnx::Mul_26",
+      "shape": [
+        1,
+        1,
+        5,
+        5,
+        32
+      ],
+      "offsetBytes": 1304192,
+      "elementCount": 800
+    },
+    {
+      "name": "onnx::Gather_27",
+      "shape": [
+        1,
+        1,
+        4,
+        32,
+        128
+      ],
+      "offsetBytes": 1307392,
+      "elementCount": 16384
+    },
+    {
+      "name": "onnx::Slice_28",
+      "shape": [
+        1,
+        4,
+        384
+      ],
+      "offsetBytes": 1372928,
+      "elementCount": 1536
+    },
+    {
+      "name": "onnx::Mul_29",
+      "shape": [
+        1,
+        1,
+        5,
+        5,
+        32
+      ],
+      "offsetBytes": 1379072,
+      "elementCount": 800
+    },
+    {
+      "name": "onnx::Mul_30",
+      "shape": [
+        1,
+        1,
+        5,
+        5,
+        32
+      ],
+      "offsetBytes": 1382272,
+      "elementCount": 800
+    },
+    {
+      "name": "onnx::Gather_31",
+      "shape": [
+        1,
+        1,
+        4,
+        32,
+        128
+      ],
+      "offsetBytes": 1385472,
+      "elementCount": 16384
+    },
+    {
+      "name": "onnx::Slice_32",
+      "shape": [
+        1,
+        4,
+        384
+      ],
+      "offsetBytes": 1451008,
+      "elementCount": 1536
+    },
+    {
+      "name": "onnx::Gather_33",
+      "shape": [
+        1,
+        1,
+        2,
+        32,
+        128
+      ],
+      "offsetBytes": 1457152,
+      "elementCount": 8192
+    },
+    {
+      "name": "onnx::Slice_34",
+      "shape": [
+        1,
+        4,
+        320
+      ],
+      "offsetBytes": 1489920,
+      "elementCount": 1280
+    },
+    {
+      "name": "onnx::Gather_35",
+      "shape": [
+        1,
+        1,
+        2,
+        32,
+        128
+      ],
+      "offsetBytes": 1495040,
+      "elementCount": 8192
+    },
+    {
+      "name": "onnx::Slice_36",
+      "shape": [
+        1,
+        4,
+        320
+      ],
+      "offsetBytes": 1527808,
+      "elementCount": 1280
+    }
+  ]
+}

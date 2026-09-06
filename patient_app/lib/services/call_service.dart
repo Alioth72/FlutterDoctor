@@ -32,6 +32,7 @@ class CallService {
   MediaStream? _localStream;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _callSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _candidateSub;
+  Timer? _connectionFailureTimer;
   String? _sessionId;
   bool _closed = false;
   bool _remoteDescriptionSet = false;
@@ -81,7 +82,16 @@ class CallService {
     onStatus('Requesting camera and microphone…');
     _localStream = await navigator.mediaDevices.getUserMedia(<String, dynamic>{
       'audio': true,
-      'video': <String, dynamic>{'facingMode': 'user'},
+      // flutter_webrtc otherwise defaults to 1280x720. A 320x240 patient
+      // stream retains ample facial detail for the 36x36 ME-rPPG input when
+      // the face is kept close, while making doctor-side JPEG capture cheap
+      // enough for the required sampling cadence.
+      'video': <String, dynamic>{
+        'facingMode': 'user',
+        'width': 320,
+        'height': 240,
+        'frameRate': 20,
+      },
     });
 
     _peerConnection = await createPeerConnection(<String, dynamic>{
@@ -107,14 +117,28 @@ class CallService {
       }
     };
     _peerConnection!.onConnectionState = (state) {
+      _connectionFailureTimer?.cancel();
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+          state ==
+              RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
+        onStatus(
+          state == RTCPeerConnectionState.RTCPeerConnectionStateFailed
+              ? 'Finding another network route…'
+              : 'Reconnecting…',
+        );
+        _connectionFailureTimer = Timer(const Duration(seconds: 8), () {
+          if (!_closed &&
+              _peerConnection?.connectionState !=
+                  RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+            onStatus('Connection failed');
+          }
+        });
+        return;
+      }
       onStatus(switch (state) {
         RTCPeerConnectionState.RTCPeerConnectionStateConnected => 'Connected',
         RTCPeerConnectionState.RTCPeerConnectionStateConnecting =>
           'Connecting…',
-        RTCPeerConnectionState.RTCPeerConnectionStateDisconnected =>
-          'Connection interrupted…',
-        RTCPeerConnectionState.RTCPeerConnectionStateFailed =>
-          'Connection failed',
         RTCPeerConnectionState.RTCPeerConnectionStateClosed => 'Call ended',
         _ => 'Preparing call…',
       });
@@ -242,6 +266,7 @@ class CallService {
   Future<void> hangUp() async {
     if (_closed) return;
     _closed = true;
+    _connectionFailureTimer?.cancel();
     await _callSub?.cancel();
     await _candidateSub?.cancel();
     try {

@@ -1,6 +1,7 @@
 # Local TURN/model secrets and large research artifacts
 *.env
 **/assets/models/*.onnx
+!doctor_app/assets/models/me_rppg_model.onnx
 
 # Flutter build output
 **/.dart_tool/

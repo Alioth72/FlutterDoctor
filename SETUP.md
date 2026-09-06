@@ -710,19 +710,192 @@ Run `flutter clean` in the app that you are not currently building and free at
 least 5 GB on C:. This exact machine encountered that issue during the initial
 doctor build.
 
-## What happens after these steps
+## Step 15 — test BPM frame capture and face preparation
 
-Only after the two-device video call is stable should BPM work begin. The next
-phase will be:
+The call milestone is complete. The first BPM pipeline stage is now implemented
+in the **doctor app only**. It captures the incoming patient's WebRTC video,
+detects the largest face on-device, and prepares a normalized 36×36 RGB crop.
+It does not calculate or display BPM yet.
 
-1. capture timestamped frames from the doctor's incoming patient video;
-2. detect/crop the face and measure capture/hit rates;
-3. obtain the exact ME-rPPG model and recurrent-state configuration;
-4. add ONNX inference;
-5. add timing-aware BPM extraction, confidence gating, and the rolling chart.
+Build fresh APKs from the same PowerShell window in which your private Metered
+URL is set:
 
-Do not download an arbitrary file named `model.onnx`. The correct model must have
-known input/output tensor names, shapes, preprocessing, recurrent state layout,
-and a license that permits use. Once the video-call milestone passes, provide
-the intended ME-rPPG repository or paper implementation link and Codex can help
-verify or convert the checkpoint safely.
+```powershell
+cd C:\Users\Faaiz\Desktop\SIH_v2
+$env:TURN_CREDENTIALS_URL = 'YOUR_EXISTING_COMPLETE_METERED_URL'
+.\build_test_apks.ps1
+```
+
+Do not paste that URL into chat or commit it. Install the new APKs from
+`test_apks` on both phones. If Android refuses to update an existing install,
+uninstall that app first and install the fresh APK again.
+
+Start a call normally. On the doctor screen, the **AI-assisted vitals** card now
+shows:
+
+- a 36×36 preview of the detected patient face;
+- the actual frame capture rate in frames per second (`fps`);
+- face-detection hit percentage (`hit`);
+- total captured frames and processing time per frame;
+- a short orange error if capture or detection fails.
+
+Test for at least 60 seconds in bright, even light. The patient should keep one
+face visible, reasonably still, and large enough to occupy roughly one quarter
+of the video height. Then briefly turn away, cover the camera, and return to the
+same position; the hit rate should fall and recover rather than inventing data.
+
+For this checkpoint, a useful result is:
+
+- the frame count rises continuously;
+- the face preview resembles the patient's face and has sensible colour;
+- steady-face hit rate is usually at least 70%;
+- capture rate is at least 3 fps, preferably 6 fps or more;
+- there is no repeated orange error or call instability.
+
+Send Codex this result before model inference is added:
+
+```text
+Doctor phone model and Android version:
+Capture rate after 60 seconds:
+Face hit percentage after 60 seconds:
+Typical milliseconds/frame:
+Face preview looks correctly cropped and coloured: yes/no
+Rate/hit recovers after face leaves and returns: yes/no
+Any orange error text:
+Call audio/video remained stable: yes/no
+```
+
+A capture rate below 3 fps does not mean the experiment has failed. It means the
+PNG polling or per-frame face detection needs optimisation before ONNX inference;
+adding the model first would make that bottleneck harder to diagnose.
+
+### Step 15 first device result and optimisation
+
+On a Realme Narzo 60 Pro 5G running Android 15, the initial implementation
+measured about 2.8 fps after 521 frames (4.2 fps briefly at startup), 323 ms per
+frame, and an 89% face-detection hit rate. Detection quality passed, but the
+model-ready cadence was marginal.
+
+The doctor app now runs ML Kit periodically and reuses the most recent face box
+for intermediate frames. The card separately reports raw capture fps and `face
+fps` (the rate of 36×36 model-ready inputs). Rebuild both APKs and repeat the
+60-second test. Report both rates; `face fps` is the important ONNX input rate.
+
+The first optimised retest reached 3.5 capture/face fps with 100% detection, but
+the periodic detection frame took about 697 ms. The patient app now requests a
+640×480, 20 fps camera stream instead of flutter_webrtc's 1280×720, 30 fps
+Android default. This preserves much more detail than the model's final 36×36
+input while reducing remote JPEG capture work by roughly two thirds.
+
+The diagnostics now show `capture`, `detect`, and `prepare` milliseconds plus
+the actual incoming frame dimensions. In the next 60-second retest, send a
+screenshot from an ordinary frame and another when the `detect` time has just
+updated. The incoming dimensions should be approximately 640×480 or 480×640,
+depending on phone orientation.
+
+That retest reached 5.4 capture/face fps, 100% detection, 150 ms capture, 114 ms
+detection, and 59 ms preparation at 480×640. This is a substantial improvement
+but remains below the 8 fps minimum needed to sample the full 0.7–4 Hz analysis
+band without aliasing. The patient stream is therefore now 320×240 at 20 fps;
+the next incoming frame should be about 240×320 in portrait. Keep the patient's
+face fairly close and occupying at least one quarter of the frame height.
+
+The call status also now allows a transient failed/disconnected ICE route eight
+seconds to recover. During this grace period it shows **Finding another network
+route…** or **Reconnecting…**. It only displays **Connection failed** if no route
+recovers, avoiding the misleading failure message observed before a successful
+connection.
+
+## Remaining BPM stages
+
+After Step 15 passes:
+
+1. bundle the verified official ME-rPPG model and recurrent state — complete;
+2. run recurrent, timestamp-aware ONNX inference and inspect raw BVP — ready
+   for Step 16 testing;
+3. implement timing-aware BPM extraction and signal-quality gating;
+4. add the reliable-reading overlay, rolling chart, and post-call summary;
+5. repeat the two-device/different-network end-to-end test.
+
+The official source supplied for this project has been checked: its model input
+is a 36×36 RGB face image scaled to 0–1, and inference carries 36 state tensors
+plus a real elapsed-time input between frames. Keep the medical limitation clear:
+this is an experimental screening estimate from compressed call video, not a
+diagnostic or clinical-grade measurement.
+
+## Step 16 — test ME-rPPG raw BVP inference
+
+The 320×240 capture retest passed with 8.3 model-ready face fps, 97% detection,
+36 ms capture time, and 240×320 incoming frames on the Realme Narzo 60 Pro 5G.
+The official ME-rPPG model and its 36 recurrent states are now integrated into
+the doctor app. Only the doctor APK needs to change for this step.
+
+Rebuild using `build_test_apks.ps1` and reinstall the doctor APK. During a call,
+the diagnostics should progress from **Loading ME-rPPG model…** to **Raw BVP
+active**. The card will show:
+
+- the latest raw BVP value;
+- ONNX inference time in milliseconds;
+- total BVP samples processed;
+- frames dropped while the model was loading or busy.
+
+Run the call for at least two minutes. Keep the patient's head and lighting
+steady for the first minute, then make a small head movement and return to the
+original position. Confirm that the BVP sample count rises continuously and the
+raw BVP value changes without `NaN`, `Infinity`, crashes, or an orange model
+error. Do **not** interpret the BVP number as heart rate; this checkpoint only
+validates recurrent inference.
+
+Send Codex:
+
+```text
+Status reaches Raw BVP active: yes/no
+Typical ONNX inference time:
+BVP samples after two minutes:
+Dropped frames after two minutes:
+Face fps while inference is active:
+Raw BVP changes and remains finite: yes/no
+Any orange ME-rPPG error:
+Call audio/video remained stable: yes/no
+```
+
+Once this passes, the next implementation adds the timestamp-aware signal
+window, BPM extraction, confidence gating, and rolling chart.
+
+## Step 17 — test confidence-gated BPM and chart
+
+The Step 16 device test passed with 8.5 face fps, 91% face-detection hits,
+approximately 79 ms ONNX inference, 787 finite BVP samples, and a stable call.
+Timing-aware BPM extraction is now enabled in the doctor app.
+
+Rebuild and reinstall the doctor APK. Start a call with the patient seated,
+reasonably still, their face close to the phone, and even front lighting. The
+doctor card will collect 20 seconds of raw BVP before attempting an estimate.
+After that:
+
+- a BPM number appears only when confidence is at least 50%;
+- low-quality or stale input shows **Measuring BPM…** instead of retaining a
+  potentially misleading number;
+- the displayed `BVP fps` is calculated from real capture timestamps;
+- `range ≤… BPM` reports the highest rate resolvable at that sample cadence;
+- the bottom chart contains only confidence-approved readings from the latest
+  60 seconds.
+
+Test for three minutes. Remain steady for the first minute. For the next 15
+seconds, turn away or cover the camera and confirm the number disappears. Return
+to the original position and allow a fresh analysis window to form. If a pulse
+oximeter is available, record its reading only as a rough comparison; do not
+treat agreement in one test as clinical validation.
+
+Send Codex:
+
+```text
+First BPM appeared after approximately how many seconds:
+Displayed BPM and confidence while steady:
+Displayed BVP fps and resolvable range:
+Chart updated: yes/no
+BPM disappeared after face was removed: yes/no
+BPM recovered after returning: yes/no
+Approximate pulse-oximeter/manual reference, if available:
+Any crash, orange error, or call degradation:
+```
