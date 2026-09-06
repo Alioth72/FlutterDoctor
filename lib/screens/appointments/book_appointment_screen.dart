@@ -70,8 +70,19 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       if (_selectedDoctor == null && doctors.isNotEmpty) {
         _selectedDoctor = doctors.first;
       }
-      if (_selectedDoctor != null && _selectedDoctor!.availableTimeSlots.isNotEmpty) {
-        _selectedTimeSlot ??= _selectedDoctor!.availableTimeSlots.first;
+      if (_selectedDoctor != null) {
+        if (!_selectedDoctor!.isAvailableOn(_selectedDate)) {
+          for (int i = 1; i <= 7; i++) {
+            final nextDate = DateTime.now().add(Duration(days: i));
+            if (_selectedDoctor!.isAvailableOn(nextDate)) {
+              _selectedDate = nextDate;
+              break;
+            }
+          }
+        }
+        if (_selectedDoctor!.availableTimeSlots.isNotEmpty) {
+          _selectedTimeSlot ??= _selectedDoctor!.availableTimeSlots.first;
+        }
       }
     });
   }

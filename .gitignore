@@ -50,6 +50,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+android/build/
+.gradle/
+testing_website_heartrate/
 
 # Widget Preview related
 .widget_preview/

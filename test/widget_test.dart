@@ -159,6 +159,7 @@ void main() {
       expect(find.text('LANG'), findsOneWidget);
       expect(find.text('CONTACT\nDOCTOR'), findsOneWidget);
       expect(find.text('VOICE'), findsOneWidget);
+      expect(find.text('Measure Live Heart Rate'), findsOneWidget);
     });
   });
 

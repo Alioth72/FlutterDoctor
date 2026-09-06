@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/health_profile_provider.dart';
 import '../appointments/book_appointment_screen.dart';
 import '../../widgets/patient_action_sheets.dart';
+import '../rppg_screen.dart';
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
@@ -370,11 +371,31 @@ class HomeTab extends StatelessWidget {
                               trailing: Text('98% (Normal)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                             ),
                             const SizedBox(height: 16),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.of(ctx).pop();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const RppgScreen(),
+                                  ),
+                                );
+                              },
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size.fromHeight(48),
+                                side: const BorderSide(color: Color(0xFF6D28D9), width: 1.5),
+                                foregroundColor: const Color(0xFF6D28D9),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              icon: const Icon(Icons.monitor_heart_rounded),
+                              label: const Text('Scan Live Heart Rate (Camera rPPG)', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(height: 10),
                             FilledButton(
                               onPressed: () => Navigator.of(ctx).pop(),
                               style: FilledButton.styleFrom(
                                 minimumSize: const Size.fromHeight(48),
                                 backgroundColor: const Color(0xFF6D28D9),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                               child: const Text('Close'),
                             ),
@@ -403,7 +424,128 @@ class HomeTab extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 14),
+
+          // 4b. LIVE HEART-RATE MONITOR (rPPG Camera Detection Card)
+          InkWell(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const RppgScreen(),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFEDE9FE), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF6D28D9).withValues(alpha: 0.08),
+                    offset: const Offset(0, 6),
+                    blurRadius: 16,
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6D28D9), Color(0xFF8B5CF6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF6D28D9).withValues(alpha: 0.3),
+                          offset: const Offset(0, 4),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.monitor_heart_rounded,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'LIVE VITALS',
+                              style: TextStyle(
+                                color: Color(0xFF6D28D9),
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            SizedBox(width: 6),
+                            Text('•', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
+                            SizedBox(width: 6),
+                            Text(
+                              'rPPG CAMERA',
+                              style: TextStyle(
+                                color: Color(0xFF64748B),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.6,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 3),
+                        Text(
+                          'Measure Live Heart Rate',
+                          style: TextStyle(
+                            color: Color(0xFF0F172A),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Instant pulse scan via on-device AI camera',
+                          style: TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F3FF),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFDDD6FE)),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward_rounded,
+                      color: Color(0xFF6D28D9),
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
 
           // 5. BOTTOM DOCK (LANG, CONTACT DOCTOR, VOICE)
           Row(
