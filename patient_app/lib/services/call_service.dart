@@ -9,6 +9,7 @@ import 'app_config.dart';
 
 typedef CallStatusCallback = void Function(String status);
 typedef RemoteStreamCallback = void Function(MediaStream stream);
+typedef CallErrorCallback = void Function(Object error);
 
 class CallService {
   CallService({
@@ -17,6 +18,7 @@ class CallService {
     required this.isCaller,
     required this.onStatus,
     required this.onRemoteStream,
+    required this.onError,
   });
 
   final FirebaseFirestore firestore;
@@ -24,6 +26,7 @@ class CallService {
   final bool isCaller;
   final CallStatusCallback onStatus;
   final RemoteStreamCallback onRemoteStream;
+  final CallErrorCallback onError;
 
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
@@ -119,10 +122,14 @@ class CallService {
     _peerConnection!.onIceCandidate = (candidate) async {
       if (candidate.candidate == null || _sessionId == null || _closed) return;
       final side = isCaller ? 'patientCandidates' : 'doctorCandidates';
-      await _callDoc.collection(side).add(<String, dynamic>{
-        ...candidate.toMap(),
-        'sessionId': _sessionId,
-      });
+      try {
+        await _callDoc.collection(side).add(<String, dynamic>{
+          ...candidate.toMap(),
+          'sessionId': _sessionId,
+        });
+      } catch (error) {
+        onError(error);
+      }
     };
   }
 
@@ -150,7 +157,7 @@ class CallService {
       if (answer is Map && !_remoteDescriptionSet) {
         await _setRemoteDescription(Map<String, dynamic>.from(answer));
       }
-    });
+    }, onError: onError);
   }
 
   Future<void> _waitForOffer() async {
@@ -180,7 +187,7 @@ class CallService {
         'answeredAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       onStatus('Connecting…');
-    });
+    }, onError: onError);
   }
 
   Future<void> _setRemoteDescription(Map<String, dynamic> data) async {
@@ -215,7 +222,7 @@ class CallService {
               _pendingCandidates.add(candidate);
             }
           }
-        });
+        }, onError: onError);
   }
 
   void setMicrophoneEnabled(bool enabled) {

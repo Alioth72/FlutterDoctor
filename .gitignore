@@ -5,3 +5,4 @@
 # Flutter build output
 **/.dart_tool/
 **/build/
+/test_apks/

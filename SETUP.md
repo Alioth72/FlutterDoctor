@@ -12,7 +12,8 @@ must first work between two real Android phones on different networks.
 ## Current progress — updated 6 September 2026
 
 - [x] Firebase project `sih-teleconsultation` created.
-- [ ] Confirm the Firebase Console shows the Cloud Firestore **Data** tab (Step 2).
+- [x] Cloud Firestore default database and **Data** tab confirmed.
+- [x] Prototype signaling rules deployed from `firestore.rules`.
 - [x] Firebase CLI and FlutterFire CLI setup completed.
 - [x] Patient Android app registered as `in.sih.patient_app`.
 - [x] Doctor Android app registered as `in.sih.doctor_app`.
@@ -20,12 +21,13 @@ must first work between two real Android phones on different networks.
 - [x] Both apps pass `flutter analyze` and widget tests.
 - [x] Doctor APK builds with Firebase; the patient Google Services task also
   completes successfully.
-- [ ] Metered/Open Relay credential setup.
+- [x] Metered/Open Relay credential setup completed by the participant.
+- [ ] Build the two TURN-enabled shareable APKs (Step 10).
 - [ ] Two-phone same-network call test.
 - [ ] Two-phone different-network call test.
 
-**Continue at Step 8.** Steps 1–7 are complete and should not be repeated unless
-the Firebase project or Android application IDs change.
+**Continue at Step 9.** Steps 1–8 are complete and should not be repeated unless
+the Firebase project, Android application IDs, or TURN credential changes.
 
 ## What these services mean
 
@@ -448,10 +450,10 @@ Official references:
 - [Open Relay credential endpoint](https://www.metered.ca/tools/openrelay/)
 - [Create TURN credentials](https://www.metered.ca/docs/turn-server-service/creating-turn-credentials/)
 
-## Step 9 — keep the TURN URL out of source code
+## Step 9 — set the TURN URL for the APK build
 
-Do not paste the completed TURN URL into a Dart file or commit it. Set it only in
-each terminal used to run an app:
+Do not paste the completed TURN URL into a Dart file or commit it. Open a new
+PowerShell window and set it only for that window:
 
 ```powershell
 $env:TURN_CREDENTIALS_URL = 'PASTE_THE_COMPLETE_URL_HERE'
@@ -466,72 +468,81 @@ if ($env:TURN_CREDENTIALS_URL) { 'TURN URL is set' } else { 'TURN URL is missing
 Do not run `Write-Output $env:TURN_CREDENTIALS_URL` during screen sharing because
 that displays the credential API key.
 
-The variable lasts only for the current PowerShell window. Repeat the assignment
-in every new terminal used to run an app.
+The variable lasts only for the current PowerShell window. The APK build embeds
+the credential-scoped frontend key because the app must fetch TURN servers at
+runtime. Never use Metered's account-level Secret Key here.
 
-## Step 10 — prepare two Android phones
+## Step 10 — build two shareable APKs
 
-Use two physical phones. An emulator is not sufficient for validating a rural
-mobile-network video call or the later remote-video frame capture.
+The repository includes `build_test_apks.ps1`. It validates that the environment
+variable looks like the expected Metered endpoint, builds the apps sequentially
+to limit disk/memory usage, and copies them to clearly named output files.
 
-On each phone:
-
-1. Open **Settings → About phone**.
-2. Tap **Build number** seven times. Some brands place it under
-   **Software information**.
-3. Enter the phone PIN if requested.
-4. Return to Settings and open **Developer options**.
-5. Enable **USB debugging**.
-6. Connect the phone to the computer with a data-capable USB cable.
-7. Accept the **Allow USB debugging** prompt on the phone.
-
-Check detection:
+In the **same PowerShell window** where Step 9 set the TURN URL, run:
 
 ```powershell
-flutter devices
+cd C:\Users\Faaiz\Desktop\SIH_v2
+.\build_test_apks.ps1
 ```
 
-You should see two Android device IDs. Record which ID belongs to the patient
-phone and which belongs to the doctor phone. If a phone says `unauthorized`,
-unlock it and accept the USB debugging prompt. On Windows, some phone brands
-also require their OEM USB driver.
+The builds run one after the other. They can take several minutes even when the
+terminal is quiet. With 9.12 GB free on C:, there should be enough room for both,
+but do not start other large downloads during the build.
 
-Official references:
+Successful output files:
 
-- [Flutter: set up a physical Android device](https://docs.flutter.dev/platform-integration/android/setup#set-up-an-android-device)
-- [Android: run apps on a hardware device](https://developer.android.com/studio/run/device)
+```text
+C:\Users\Faaiz\Desktop\SIH_v2\test_apks\Swasthya-Patient-debug.apk
+C:\Users\Faaiz\Desktop\SIH_v2\test_apks\Swasthya-Doctor-debug.apk
+```
 
-## Step 11 — run both apps
+The `test_apks` directory is ignored by Git. Do not upload these development APKs
+to the public repository because the TURN credential-scoped key is embedded in
+them. They are suitable for controlled hackathon testing, not production release.
 
-Complete this section only after Codex has wired the generated Firebase options
-and confirmed the checks pass.
-
-### Terminal A: patient app
-
-Open PowerShell:
+If PowerShell blocks the script itself, run only this temporary command in that
+window and retry:
 
 ```powershell
-cd C:\Users\Faaiz\Desktop\SIH_v2\patient_app
-$env:TURN_CREDENTIALS_URL = 'PASTE_THE_COMPLETE_URL_HERE'
-flutter run -d PATIENT_DEVICE_ID --dart-define="TURN_CREDENTIALS_URL=$env:TURN_CREDENTIALS_URL"
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\build_test_apks.ps1
 ```
 
-Replace `PATIENT_DEVICE_ID` with the exact ID printed by `flutter devices`.
+`-Scope Process` affects only the current PowerShell process and reverts when the
+window closes.
 
-### Terminal B: doctor app
+## Step 11 — share and install the APKs without USB debugging
 
-Open a second PowerShell window:
+USB debugging is not required for this test. Use two physical Android phones;
+an emulator is not sufficient for validating mobile-network behavior or the
+later remote-video frame capture.
 
-```powershell
-cd C:\Users\Faaiz\Desktop\SIH_v2\doctor_app
-$env:TURN_CREDENTIALS_URL = 'PASTE_THE_COMPLETE_URL_HERE'
-flutter run -d DOCTOR_DEVICE_ID --dart-define="TURN_CREDENTIALS_URL=$env:TURN_CREDENTIALS_URL"
-```
+Share the files using Google Drive, Quick Share, email, a messaging service, or a
+normal USB file transfer:
 
-Replace `DOCTOR_DEVICE_ID` with the doctor phone's ID.
+1. Send `Swasthya-Patient-debug.apk` to the patient phone.
+2. Send `Swasthya-Doctor-debug.apk` to the doctor phone.
+3. On each phone, open the downloaded APK.
+4. If Android blocks it, open the shown settings page and enable **Allow from
+   this source** for the app that opened the APK (for example Files or Drive).
+5. Return to the installer and tap **Install**.
+6. If Android reports a conflicting signature or refuses to update an older
+   test build, uninstall that app and install the new APK again.
+7. Open each app and allow Camera and Microphone **while using the app**.
 
-When Android asks for camera and microphone permissions, choose **Allow while
-using the app** on both phones.
+The apps have different Android package IDs, so installing one does not overwrite
+the other. Make sure each phone receives the correct role-specific APK.
+
+Keep the APK files private within the test team. Anyone holding a debug APK can
+extract its client-side configuration, which is expected for mobile apps but is
+another reason this prototype must not contain real patient data.
+
+### Limitation of APK-only testing
+
+APK-only installation is convenient, but the computer will not receive live
+Flutter logs. First use the on-screen status and Firestore Data tab. If a call
+fails without a clear message, connect only the affected phone by USB later and
+collect logs; USB is a debugging fallback, not a prerequisite.
 
 ## Step 12 — perform the first same-network test
 
@@ -569,12 +580,10 @@ After the same-Wi-Fi call works:
 
 1. Leave one phone on Wi-Fi.
 2. Turn Wi-Fi off on the other phone and use mobile data.
-3. Keep USB connected; USB debugging does not force the phone to use the
-   computer's internet connection.
-4. Repeat the complete `apt_001` call.
-5. Test at least two minutes of audio/video, mute, camera toggle, remote hang-up,
+3. Repeat the complete `apt_001` call using the already-installed APKs.
+4. Test at least two minutes of audio/video, mute, camera toggle, remote hang-up,
    and a second call.
-6. Put each app in the background briefly and record what happens when it
+5. Put each app in the background briefly and record what happens when it
    returns. Do not claim reconnection works unless you observed it.
 
 A successful different-network call validates real ICE negotiation, but it does
@@ -651,14 +660,33 @@ two `main.dart` files. Stop and return to Codex after Step 7.
 
 ### Firestore reports `permission-denied`
 
-Check **Firestore Database → Rules** in the Firebase Console. Confirm this is the
-test project and that its temporary test-mode access has not expired. Never make
-a production healthcare database public.
+The project now stores its signaling rules in the root `firestore.rules` file.
+They allow unauthenticated prototype access only to `teleconsult_calls` and its
+patient/doctor ICE-candidate subcollections; all unrelated paths remain denied.
+
+The rules were deployed to `sih-teleconsultation` on 6 September 2026. If they
+are changed in the Firebase Console later, keep the local file synchronized to
+avoid overwriting those edits. To redeploy the checked-in rules deliberately:
+
+```powershell
+cd C:\Users\Faaiz\Desktop\SIH_v2
+firebase.cmd deploy --only firestore:rules --project sih-teleconsultation
+```
+
+Rules may take a short time to affect new listeners. Force-close both apps and
+reopen them before retesting. Never use these unauthenticated prototype rules or
+real patient information in a production healthcare deployment.
 
 ### The call says `TURN_CREDENTIALS_URL is missing`
 
-The environment variable was not passed to that app. Set it again in the same
-terminal and include the `--dart-define` argument in `flutter run`.
+That APK was built without the required define. Uninstall it, set the environment
+variable, rerun `build_test_apks.ps1`, and install the newly generated APK.
+
+### Android says “App not installed”
+
+An older copy may have the same package ID but a different signing certificate.
+Uninstall the old patient/doctor test app, then install the new APK. Also confirm
+the phone has enough free storage and permits installation from the file source.
 
 ### One app stays on “Waiting for patient/doctor”
 

@@ -71,6 +71,13 @@ class _DoctorCallScreenState extends State<DoctorCallScreen> {
       onRemoteStream: (stream) {
         if (mounted) setState(() => _remoteRenderer.srcObject = stream);
       },
+      onError: (error) {
+        if (!mounted) return;
+        setState(() {
+          _status = 'Signaling error';
+          _error = error.toString();
+        });
+      },
     );
     _callService = service;
     try {
