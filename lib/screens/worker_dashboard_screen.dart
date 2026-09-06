@@ -29,11 +29,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     _hospital = HospitalAdminRepository.getHospitalDetails(_hospitalId);
   }
 
-  void _refreshData() {
-    setState(() {
-      _hospital = HospitalAdminRepository.getHospitalDetails(_hospitalId);
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -151,7 +146,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                 onPressed: () {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(builder: (context) => const QRWorkflowScreen()),
+                                    MaterialPageRoute(builder: (context) => const QrWorkflowScreen()),
                                   );
                                 },
                               ),
@@ -1017,7 +1012,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const QRWorkflowScreen()),
+                  MaterialPageRoute(builder: (context) => const QrWorkflowScreen()),
                 );
               },
             ),
@@ -1035,7 +1030,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               title: const Text('Toggle Field Duty Status'),
               trailing: Switch(
                 value: _isOnFieldDuty,
-                activeColor: const Color(0xFF10B981),
+                activeThumbColor: const Color(0xFF10B981),
                 onChanged: (val) {
                   setState(() => _isOnFieldDuty = val);
                   Navigator.pop(context);

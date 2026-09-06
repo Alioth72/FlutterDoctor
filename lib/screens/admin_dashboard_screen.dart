@@ -542,7 +542,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             ),
                             Switch(
                               value: doc.isOnDuty,
-                              activeColor: const Color(0xFF10B981),
+                              activeThumbColor: const Color(0xFF10B981),
                               onChanged: (val) {
                                 setState(() {
                                   HospitalAdminRepository.toggleStaffDuty(doc.id, true);
@@ -706,7 +706,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         ),
                         Switch(
                           value: worker.isOnDuty,
-                          activeColor: const Color(0xFF10B981),
+                          activeThumbColor: const Color(0xFF10B981),
                           onChanged: (val) {
                             setState(() {
                               HospitalAdminRepository.toggleStaffDuty(worker.id, false);
