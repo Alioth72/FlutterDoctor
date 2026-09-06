@@ -70,13 +70,21 @@ const ready = () => modelReady && stateReady && welchReady && hrReady;
 //     // return !('requestVideoFrameCallback' in HTMLVideoElement.prototype);
 // };
 
+// Pre-allocated reusable canvas for 36x36 model inputs to eliminate per-frame GC allocations
+const resizedCanvas = document.createElement("canvas");
+resizedCanvas.width = 36;
+resizedCanvas.height = 36;
+const resizedCtx = resizedCanvas.getContext("2d", { willReadFrequently: true });
+resizedCtx.imageSmoothingEnabled = true;
+resizedCtx.imageSmoothingQuality = "high";
+
+// Detect whether modern requestVideoFrameCallback (RVFC) is supported.
+// Android Chromium supports RVFC; only Safari on iOS falls back to requestAnimationFrame.
 const isApplePlatform = () => {
-    const supportsRVFC = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
-      const isWindows = /Win(dows|32|64|NT|10|CE)/i.test(navigator.userAgent);
-      return !isWindows || !supportsRVFC;
+    return !('requestVideoFrameCallback' in HTMLVideoElement.prototype);
 };
 
-console.log(`isApplePlatform: ${!!isApplePlatform()}`);
+console.log(`Using requestAnimationFrame fallback: ${isApplePlatform()}`);
 
 //const isApplePlatform = () => true
 
@@ -130,6 +138,8 @@ let isCameraOn = false;
 let rafHandle = null;
 
 let timestampArray = [];
+let frameDetectionCounter = 0;
+let lastBoundingBox = null;
 
 async function initFaceDetector() {
     if (!faceDetector){
@@ -140,40 +150,11 @@ async function initFaceDetector() {
 
 initFaceDetector().then();
 
-// function startCamera() {
-//     try {
-//         dropCount = 30;
-//         navigator.mediaDevices.getUserMedia({
-//             video: {
-//                 deviceId: {
-//                     exact: cameraSelect.value ?? "default",
-//                 },
-//                 width: {
-//                     ideal: 640,
-//                 },
-//                 height: {
-//                     ideal: 480,
-//                 },
-//                 frameRate: 30,
-//             },
-//             audio: false,
-//         }).then((mediaStream) => {
-//             stream = mediaStream;
-//             video.srcObject = stream;
-//             isCameraOn = true;
-//             cameraButton.textContent = "Stop";
-//             rafHandle = video.requestVideoFrameCallback(processFrame);
-//         });
-//     } catch (error) {
-//         console.error("Error accessing camera:", error);
-//         alert("Unable to start camera");
-//     }
-// }
-
-
 function stopCamera() {
     console.log("stop");
     isCameraOn = false;
+    frameDetectionCounter = 0;
+    lastBoundingBox = null;
     if (stream) {
         stream.getTracks().forEach(track => {
             track.stop();
@@ -181,16 +162,17 @@ function stopCamera() {
         });
         stream = null;
     }
-    video.pause();
-    plotWorker.postMessage({output: null});
-    video.cancelVideoFrameCallback(rafHandle);
-    if (stream) {
-        stream.getTracks().forEach((track) => {
-            track.stop();
-            track.enabled = false;
-        });
+    if (video) {
+        video.pause();
+        if (typeof video.cancelVideoFrameCallback === 'function' && rafHandle) {
+            try { video.cancelVideoFrameCallback(rafHandle); } catch (e) {}
+        } else if (rafHandle) {
+            try { cancelAnimationFrame(rafHandle); } catch (e) {}
+        }
+        video.srcObject = null;
     }
-    video.srcObject = null;
+    rafHandle = null;
+    plotWorker.postMessage({output: null});
     cameraButton.textContent = "Start";
     previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
     const overlayCtx = overlayCanvas.getContext("2d");
@@ -386,7 +368,7 @@ welchWorker.onmessage = (event) => {
         return;
     }
     let { hr } = event.data;
-    if (timestampArray.length > 300){
+    if (timestampArray.length > 300) {
         const recentTimestamps = timestampArray.slice(-301);
 
         let totalDuration = 0;
@@ -395,18 +377,20 @@ welchWorker.onmessage = (event) => {
         for (let i = 1; i < recentTimestamps.length; i++) {
             const delta = recentTimestamps[i] - recentTimestamps[i - 1];
             
-            if (delta <= 0.5) {
+            if (delta > 0 && delta <= 0.5) {
                 totalDuration += delta;
                 validIntervals++;
             }
         }
 
-        const averageFps = totalDuration > 0 
+        const averageFps = (totalDuration > 0 && validIntervals > 50) 
             ? (validIntervals / totalDuration)
-            : 0;
+            : 30.0;
 
-        console.log(averageFps)
-        hr = (hr / 30) * averageFps;
+        console.log("Measured averageFps:", averageFps);
+        // Clamp to realistic range to prevent halving from emulator camera bottlenecks or transient pauses
+        const effectiveFps = Math.max(20.0, Math.min(35.0, averageFps));
+        hr = (hr / 30) * effectiveFps;
     } else {
         heartRateValue.style.color = "blue";
     }
@@ -433,44 +417,28 @@ welchWorker.onmessage = (event) => {
 }
 
 function cropAndResizeUsingBoundingBox(canvas, boundingBox) {
-
     const x = Math.max(0, boundingBox.originX);
     const y = Math.max(0, boundingBox.originY);
     const width = Math.min(boundingBox.width, canvas.width - x);
     const height = Math.min(boundingBox.height, canvas.height - y);
 
-    faceCanvas.width = width;
-    faceCanvas.height = height;
-    faceCtx.drawImage(canvas, x, y, width, height, 0, 0, width, height);
+    if (width <= 0 || height <= 0) return null;
 
-    const resizedCanvas = document.createElement("canvas");
-    resizedCanvas.width = 36;
-    resizedCanvas.height = 36;
-    const resizedCtx = resizedCanvas.getContext("2d");
-    resizedCtx.imageSmoothingEnabled = true;
-    resizedCtx.imageSmoothingQuality = "high";
-    resizedCtx.drawImage(faceCanvas, 0, 0, width, height, 0, 0, 36, 36);
+    // Single-pass direct GPU crop and resize into pre-allocated 36x36 canvas (zero GC allocations)
+    resizedCtx.drawImage(canvas, x, y, width, height, 0, 0, 36, 36);
     return resizedCanvas;
 }
 
 let lastTime = 0;
 let mediaTime = 0;
 async function processFrame(now, metadata) {
-    // lastTime = metadata.mediaTime;
     if (!isCameraOn) {
-        console.log('Camera not on');
         return;
     }
-    //console.log('New frame', lastTime, metadata.mediaTime);
-    if (isApplePlatform()) {
-        mediaTime = now / 1000;
-    } else {
-        //lastTime = metadata.mediaTime;
-        mediaTime = performance.now()/1000
-    }
+    // High-resolution presentation timestamp
+    mediaTime = (typeof now === 'number' && now > 0) ? (now / 1000) : (performance.now() / 1000);
     lastTime = mediaTime;
-    if (inputQueueCount<5){
-        //console.log(lastTime)
+    if (inputQueueCount < 5) {
         timestampArray.push(lastTime);
         if (timestampArray.length > 301) {
             timestampArray.shift();
@@ -479,39 +447,50 @@ async function processFrame(now, metadata) {
 
         if (!faceDetector) return;
 
-        const startTimeMs = performance.now();
-        const result = faceDetector.detectForVideo(video, startTimeMs);
-        const detections = result.detections;
+        frameDetectionCounter++;
+        // Run heavy MediaPipe FaceDetector every 3 frames if face is already tracked,
+        // or every frame during initial acquisition / when face is lost
+        const shouldRunDetector = !lastBoundingBox || (frameDetectionCounter % 3 === 0);
 
-        if (detections && detections.length > 0) {
-            const detection = detections[0];
-            const rawBoundingBox = detection.boundingBox;
-            if (!kfOriginX){
-                const processNoise = 1e-2;
-                const measurementNoise = 5e-1;
-                kfOriginX = new KalmanFilter1D(processNoise, measurementNoise, rawBoundingBox.originX, 1);
-                kfOriginY = new KalmanFilter1D(processNoise, measurementNoise, rawBoundingBox.originY, 1);
-                kfWidth = new KalmanFilter1D(processNoise, measurementNoise, rawBoundingBox.width, 1);
-                kfHeight = new KalmanFilter1D(processNoise, measurementNoise, rawBoundingBox.height, 1);
-            }else{
-                kfOriginX.update(rawBoundingBox.originX);
-                kfOriginY.update(rawBoundingBox.originY);
-                kfWidth.update(rawBoundingBox.width);
-                kfHeight.update(rawBoundingBox.height);
+        if (shouldRunDetector) {
+            const startTimeMs = performance.now();
+            const result = faceDetector.detectForVideo(video, startTimeMs);
+            const detections = result.detections;
+
+            if (detections && detections.length > 0) {
+                const rawBoundingBox = detections[0].boundingBox;
+                if (!kfOriginX) {
+                    const processNoise = 1e-2;
+                    const measurementNoise = 5e-1;
+                    kfOriginX = new KalmanFilter1D(processNoise, measurementNoise, rawBoundingBox.originX, 1);
+                    kfOriginY = new KalmanFilter1D(processNoise, measurementNoise, rawBoundingBox.originY, 1);
+                    kfWidth = new KalmanFilter1D(processNoise, measurementNoise, rawBoundingBox.width, 1);
+                    kfHeight = new KalmanFilter1D(processNoise, measurementNoise, rawBoundingBox.height, 1);
+                } else {
+                    kfOriginX.update(rawBoundingBox.originX);
+                    kfOriginY.update(rawBoundingBox.originY);
+                    kfWidth.update(rawBoundingBox.width);
+                    kfHeight.update(rawBoundingBox.height);
+                }
+                const filteredBoundingBox = {
+                    originX: kfOriginX.estimate,
+                    originY: kfOriginY.estimate,
+                    width: kfWidth.estimate,
+                    height: kfHeight.estimate
+                };
+                filteredBoundingBox.height *= 1.2;
+                filteredBoundingBox.originY -= filteredBoundingBox.height * 0.2;
+                lastBoundingBox = filteredBoundingBox;
+            } else {
+                lastBoundingBox = null;
             }
-            const filteredBoundingBox = {
-                originX: kfOriginX.estimate,
-                originY: kfOriginY.estimate,
-                width: kfWidth.estimate,
-                height: kfHeight.estimate
-            };
-            filteredBoundingBox.height *= 1.2;
-            filteredBoundingBox.originY -= filteredBoundingBox.height * 0.2;
-            detection.boundingBox = filteredBoundingBox;
-            const faceImage = cropAndResizeUsingBoundingBox(previewCanvas, detection.boundingBox);
-            drawBoundingBox(detection.boundingBox);
-            const ctx = faceImage.getContext("2d");
-            const imageData = ctx.getImageData(0, 0, 36, 36);
+        }
+
+        if (lastBoundingBox) {
+            const faceImage = cropAndResizeUsingBoundingBox(previewCanvas, lastBoundingBox);
+            if (!faceImage) return;
+            drawBoundingBox(lastBoundingBox);
+            const imageData = resizedCtx.getImageData(0, 0, 36, 36);
             const input = new Float32Array(36 * 36 * 3);
 
             for (let i = 0; i < imageData.data.length; i += 4) {

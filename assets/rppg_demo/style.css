@@ -1,24 +1,25 @@
 /* ==========================================================================
-   ME-rPPG In-App Cleaned Stylesheet
-   Visually hides non-essential web demo elements while preserving DOM IDs
+   ME-rPPG Light & Modern Purple Theme
+   Clean white background with vibrant royal purple accents
    ========================================================================== */
 
 :root {
     --primary-color: #6D28D9;
     --primary-hover: #5B21B6;
-    --background: #0f172a;
-    --card-bg: #1e293b;
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --accent: #a78bfa;
+    --primary-light: #F5F3FF;
+    --primary-border: #EDE9FE;
+    --background: #FFFFFF;
+    --card-bg: #FFFFFF;
+    --text-primary: #0F172A;
+    --text-secondary: #64748B;
+    --accent: #7C3AED;
 }
 
-/* Base Body Setup */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     margin: 0;
-    padding: 8px 12px 20px;
-    background-color: transparent;
+    padding: 10px 14px 20px;
+    background-color: #FFFFFF;
     color: var(--text-primary);
     box-sizing: border-box;
     overflow-x: hidden;
@@ -37,7 +38,6 @@ body {
     display: none !important;
 }
 
-/* Hidden video stream element */
 #videoInput {
     position: absolute;
     top: -9999px;
@@ -54,7 +54,7 @@ body {
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 460px;
+    max-width: 440px;
     margin: 0 auto;
     padding: 0;
     gap: 12px;
@@ -62,10 +62,10 @@ body {
 }
 
 #viewPanel {
-    display: contents; /* Allows children to flow seamlessly inside #container */
+    display: contents;
 }
 
-/* 1. Camera & Heart Rate Block */
+/* 1. Camera & Heart Rate */
 #textDisplay {
     order: 1;
     width: 100%;
@@ -97,36 +97,31 @@ body {
     width: 100%;
 }
 
-/* Heart Rate Stat Badge */
+/* Clean Purple Status Pill */
 .status-bar {
-    display: flex;
+    display: inline-flex;
     justify-content: center;
     align-items: center;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #f1f5f9;
-    background: rgba(255, 255, 255, 0.08);
-    padding: 8px 18px;
+    background: #F5F3FF;
+    border: 1.5px solid #DDD6FE;
+    padding: 6px 18px;
     border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
     margin: 0 auto;
-    gap: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 6px rgba(109, 40, 217, 0.08);
 }
 
 .status-bar > div:first-child {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
 }
 
 .metric-label {
-    color: #94a3b8;
-    font-size: 0.9rem;
-    font-weight: 600;
+    color: #6D28D9;
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
 .value-box {
@@ -135,19 +130,19 @@ body {
 }
 
 #heartRateValue {
-    font-size: 1.25rem;
-    font-weight: 800;
+    font-size: 1.2rem;
+    font-weight: 900;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .unit {
-    color: #a78bfa;
-    font-size: 0.85rem;
-    font-weight: 700;
+    color: #7C3AED;
+    font-size: 0.8rem;
+    font-weight: 800;
     letter-spacing: 0.5px;
 }
 
-/* Camera Video & Face-Tracking Canvas */
+/* Camera Video Box */
 .video-wrapper {
     width: 100%;
     display: flex;
@@ -157,15 +152,15 @@ body {
 .canvas-wrapper {
     position: relative;
     width: 100%;
-    max-width: 440px;
+    max-width: 420px;
     aspect-ratio: 4 / 3;
     height: auto;
     margin: 0 auto;
-    border-radius: 16px;
+    border-radius: 18px;
     overflow: hidden;
     background: #000000;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 6px 20px rgba(109, 40, 217, 0.12);
+    border: 2px solid #EDE9FE;
 }
 
 #previewCanvas,
@@ -176,19 +171,19 @@ body {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover;
-    border-radius: 16px;
+    border-radius: 18px;
     pointer-events: none;
 }
 
-/* 2. Start / Stop Button */
+/* 2. Start Button */
 #sidebar {
     order: 2;
     width: 100%;
-    max-width: 440px;
+    max-width: 420px;
     display: flex;
     justify-content: center;
     padding: 0;
-    margin: 4px 0;
+    margin: 2px 0;
 }
 
 #controlPanel {
@@ -202,7 +197,7 @@ body {
 
 #switchButton {
     background: linear-gradient(135deg, #6D28D9, #8B5CF6);
-    color: #ffffff;
+    color: #FFFFFF;
     font-size: 1.05rem;
     font-weight: 800;
     letter-spacing: 0.5px;
@@ -211,8 +206,7 @@ body {
     border: none;
     cursor: pointer;
     width: 100%;
-    max-width: 440px;
-    box-shadow: 0 4px 14px rgba(109, 40, 217, 0.35);
+    box-shadow: 0 4px 14px rgba(109, 40, 217, 0.3);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     outline: none;
     text-align: center;
@@ -221,27 +215,27 @@ body {
 #switchButton:hover {
     background: linear-gradient(135deg, #5B21B6, #7C3AED);
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(109, 40, 217, 0.45);
+    box-shadow: 0 6px 18px rgba(109, 40, 217, 0.4);
 }
 
 #switchButton:active {
     transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(109, 40, 217, 0.3);
+    box-shadow: 0 2px 8px rgba(109, 40, 217, 0.25);
 }
 
 #switchButton:disabled {
-    background: #334155;
-    color: #64748b;
+    background: #E2E8F0;
+    color: #94A3B8;
     cursor: not-allowed;
     box-shadow: none;
     transform: none;
 }
 
-/* 3. Real-Time Waveform Graph */
+/* 3. Waveform Graph */
 #cameraPreview {
     order: 3;
     width: 100%;
-    max-width: 440px;
+    max-width: 420px;
     margin: 0 auto;
 }
 
@@ -254,27 +248,26 @@ body {
 }
 
 #plotContent {
-    border: 1.5px solid rgba(255, 255, 255, 0.1);
-    border-radius: 14px;
+    border: 1.5px solid #EDE9FE;
+    border-radius: 16px;
     overflow: hidden;
-    background: #1e293b;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    background: #FAFAFD;
+    box-shadow: 0 4px 14px rgba(109, 40, 217, 0.06);
 }
 
 #plotCanvas {
     width: 100%;
-    height: 110px;
+    height: 105px;
     display: block;
 }
 
-/* Responsive adjustments */
 @media (max-width: 480px) {
     body {
         padding: 6px 8px 16px;
     }
 
     .canvas-wrapper {
-        border-radius: 14px;
+        border-radius: 16px;
     }
 
     #switchButton {
@@ -284,6 +277,6 @@ body {
     }
 
     #plotCanvas {
-        height: 100px;
+        height: 95px;
     }
 }

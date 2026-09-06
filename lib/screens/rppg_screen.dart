@@ -74,54 +74,51 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A), // Dark slate aesthetic for medical vision
+      backgroundColor: const Color(0xFFF9FAFC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: const Color(0xFFF9FAFC),
         elevation: 0,
+        leadingWidth: 64,
         leading: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 8.0),
           child: InkWell(
             onTap: () => Navigator.of(context).pop(),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.15),
-                ),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    offset: const Offset(0, 2),
+                    blurRadius: 6,
+                  ),
+                ],
               ),
-              child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 16,
+                color: Color(0xFF0F172A),
+              ),
             ),
           ),
         ),
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'rPPG Pulse Monitor',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.2,
-              ),
-            ),
-            Text(
-              'Contactless Facial Video Inference',
-              style: TextStyle(
-                color: Color(0xFF94A3B8),
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+        centerTitle: true,
+        title: const Text(
+          'Heart Rate Monitor',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 18,
+            letterSpacing: -0.3,
+            color: Color(0xFF0F172A),
+          ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF6D28D9), size: 20),
             tooltip: 'Reload Camera Feed',
             onPressed: () {
               setState(() {
@@ -133,22 +130,22 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
           ),
           Container(
             margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: const Color(0xFF10B981).withValues(alpha: 0.15),
+              color: const Color(0xFFEDE9FE),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+              border: Border.all(color: const Color(0xFFDDD6FE)),
             ),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.circle, color: Color(0xFF10B981), size: 8),
-                SizedBox(width: 6),
+                Icon(Icons.circle, color: Color(0xFF6D28D9), size: 7),
+                SizedBox(width: 5),
                 Text(
                   'ON-DEVICE AI',
                   style: TextStyle(
-                    color: Color(0xFF10B981),
-                    fontSize: 10,
+                    color: Color(0xFF6D28D9),
+                    fontSize: 9.5,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.5,
                   ),
@@ -276,13 +273,21 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
             // WEBVIEW EMBED
             Expanded(
               child: Container(
-                margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
-                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(22),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.08),
+                    color: const Color(0xFFEDE9FE),
+                    width: 1.5,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF6D28D9).withValues(alpha: 0.06),
+                      offset: const Offset(0, 6),
+                      blurRadius: 20,
+                    ),
+                  ],
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Stack(
@@ -344,11 +349,15 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircularProgressIndicator(color: Color(0xFF8B5CF6)),
+                            CircularProgressIndicator(color: Color(0xFF6D28D9)),
                             SizedBox(height: 16),
                             Text(
-                              'Starting local rPPG server...',
-                              style: TextStyle(color: Colors.white70, fontSize: 13),
+                              'Starting local rPPG engine...',
+                              style: TextStyle(
+                                color: Color(0xFF64748B),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
@@ -356,30 +365,31 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
 
                     if (_isLoading && _isServerRunning)
                       Container(
-                        color: const Color(0xFF0F172A),
+                        color: Colors.white,
                         child: const Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               CircularProgressIndicator(
-                                color: Color(0xFF8B5CF6),
+                                color: Color(0xFF6D28D9),
                                 strokeWidth: 3,
                               ),
                               SizedBox(height: 16),
                               Text(
                                 'Loading AI Vision & ONNX Models...',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: Color(0xFF0F172A),
                                   fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                               SizedBox(height: 6),
                               Text(
-                                'Preparing face detection & signal processing',
+                                'Preparing face detection & pulse signal processing',
                                 style: TextStyle(
-                                  color: Color(0xFF94A3B8),
+                                  color: Color(0xFF64748B),
                                   fontSize: 12,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
@@ -396,22 +406,24 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
+                color: const Color(0xFFF5F3FF),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: const Color(0xFFDDD6FE),
+                  width: 1.2,
                 ),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline_rounded, color: Color(0xFFA78BFA), size: 20),
+                  Icon(Icons.info_outline_rounded, color: Color(0xFF6D28D9), size: 20),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Center your face in good lighting and remain still. Tap "Start" inside the camera panel to begin live reading.',
                       style: TextStyle(
-                        color: Color(0xFFCBD5E1),
-                        fontSize: 11.5,
+                        color: Color(0xFF4C1D95),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                         height: 1.35,
                       ),
                     ),
