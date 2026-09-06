@@ -20,7 +20,7 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnimation;
 
-  static const int _serverPort = 8080;
+  int _serverPort = 8080;
 
   @override
   void initState() {
@@ -39,25 +39,33 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _startLocalServer() async {
-    _localhostServer = InAppLocalhostServer(
-      documentRoot: 'assets/rppg_demo',
-      port: _serverPort,
-    );
-
-    try {
-      await _localhostServer.start();
-      if (mounted) {
-        setState(() {
-          _isServerRunning = true;
-        });
+    for (int port = 8080; port <= 8085; port++) {
+      try {
+        final server = InAppLocalhostServer(
+          documentRoot: 'assets/rppg_demo',
+          port: port,
+        );
+        await server.start();
+        if (server.isRunning()) {
+          _localhostServer = server;
+          _serverPort = port;
+          if (mounted) {
+            setState(() {
+              _isServerRunning = true;
+            });
+          }
+          debugPrint('InAppLocalhostServer started successfully on port $port');
+          return;
+        }
+      } catch (e) {
+        debugPrint('Port $port in use or failed: $e, trying next...');
       }
-    } catch (e) {
-      debugPrint('Error starting InAppLocalhostServer: $e');
-      if (mounted) {
-        setState(() {
-          _isServerRunning = true;
-        });
-      }
+    }
+    // If all dynamic ports failed, mark running so WebView at least attempts default
+    if (mounted) {
+      setState(() {
+        _isServerRunning = true;
+      });
     }
   }
 
@@ -332,6 +340,13 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
                             resources: request.resources,
                             action: PermissionResponseAction.GRANT,
                           );
+                        },
+                        onConsoleMessage: (controller, consoleMessage) {
+                          debugPrint('RPPG JS: [${consoleMessage.messageLevel}] ${consoleMessage.message}');
+                        },
+                        onJsAlert: (controller, jsAlertRequest) async {
+                          debugPrint('RPPG JS Alert: ${jsAlertRequest.message}');
+                          return JsAlertResponse(handledByClient: false);
                         },
                         onLoadStop: (controller, url) {
                           if (mounted) {

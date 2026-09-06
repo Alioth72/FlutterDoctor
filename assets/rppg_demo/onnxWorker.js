@@ -6,6 +6,7 @@ let state = {};
 let lastTimestamp = null;
 
 ort.env.wasm.wasmPaths = "https://fastly.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
+ort.env.wasm.numThreads = 1;
 
 ort.InferenceSession.create("model.onnx", {
     executionProviders: ["wasm"],
@@ -46,22 +47,30 @@ self.onmessage = async (event) => {
         return;
     }
     const startTime = Date.now();
-    const { input, timestamp, lambda } = event.data;
-    const inputData = new ort.Tensor("float32", input, [1, 1, 36, 36, 3]);
-    const dt = new ort.Tensor("float32", [Math.max((lastTimestamp ? (timestamp - lastTimestamp) / lambda : 1 / 30), 1/90)], []);
-    lastTimestamp = timestamp;
-    const feeds = {};
-    feeds[onnxSession.inputNames[0]] = inputData;
-    for (const [key, value] of Object.entries(state)) {
-        feeds[key] = value;
+    try {
+        const { input, timestamp, lambda } = event.data;
+        const inputData = new ort.Tensor("float32", input, [1, 1, 36, 36, 3]);
+        const rawDt = lastTimestamp ? (timestamp - lastTimestamp) / lambda : (1 / 30);
+        // Clamp dt safely between 1/45s (~22ms) and 1/20s (50ms) to prevent Mamba-2 exponential state decay on mobile frame drops
+        const clampedDt = Math.max(1 / 45, Math.min(1 / 20, rawDt));
+        const dt = new ort.Tensor("float32", [clampedDt], []);
+        lastTimestamp = timestamp;
+        const feeds = {};
+        feeds[onnxSession.inputNames[0]] = inputData;
+        for (const [key, value] of Object.entries(state)) {
+            feeds[key] = value;
+        }
+        feeds[onnxSession.inputNames[37]] = dt;
+        const outputs = await onnxSession.run(feeds);
+        const output = outputs[onnxSession.outputNames[0]]["cpuData"]["0"];
+        for (let i = 1; i < onnxSession.outputNames.length; i++) {
+            state[onnxSession.inputNames[i]] = outputs[onnxSession.outputNames[i]];
+        }
+        const nowTime = Date.now();
+        const delay = nowTime - startTime;
+        self.postMessage({output, delay, timestamp: nowTime, type: "data"});
+    } catch (err) {
+        console.error("onnxWorker inference error:", err);
+        self.postMessage({output: 0, delay: 0, timestamp: Date.now(), type: "error"});
     }
-    feeds[onnxSession.inputNames[37]] = dt;
-    const outputs = await onnxSession.run(feeds);
-    const output = outputs[onnxSession.outputNames[0]]["cpuData"]["0"];
-    for (let i = 1; i < onnxSession.outputNames.length; i++) {
-        state[onnxSession.inputNames[i]] = outputs[onnxSession.outputNames[i]];
-    }
-    const nowTime = Date.now();
-    const delay = nowTime - startTime;
-    self.postMessage({output, delay, timestamp: nowTime, type: "data"});
 };

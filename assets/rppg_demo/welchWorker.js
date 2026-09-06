@@ -4,6 +4,7 @@ let welchSession;
 let hrSession;
 
 ort.env.wasm.wasmPaths = "https://fastly.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
+ort.env.wasm.numThreads = 1;
 
 ort.InferenceSession.create("welch_psd.onnx", {
     executionProviders: ["wasm"],
