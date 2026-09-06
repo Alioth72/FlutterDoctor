@@ -62,6 +62,9 @@ flutter:
 
   assets:
     - assets/rppg_demo/
+    - assets/rppg_demo/vendor/mediapipe/
+    - assets/rppg_demo/vendor/mediapipe/wasm/
+    - assets/rppg_demo/vendor/onnxruntime/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

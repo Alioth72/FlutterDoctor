@@ -1,11 +1,11 @@
-importScripts("https://fastly.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js");
+importScripts("./vendor/onnxruntime/ort.min.js");
 
 let onnxSession;
 let state = {};
 
 let lastTimestamp = null;
 
-ort.env.wasm.wasmPaths = "https://fastly.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
+ort.env.wasm.wasmPaths = "./vendor/onnxruntime/";
 
 ort.InferenceSession.create("model.onnx", {
     executionProviders: ["wasm"],

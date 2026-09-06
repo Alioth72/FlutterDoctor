@@ -88,7 +88,7 @@ console.log(`Using requestAnimationFrame fallback: ${isApplePlatform()}`);
 
 //const isApplePlatform = () => true
 
-import { FaceDetector, FilesetResolver } from "https://fastly.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.4";
+import { FaceDetector, FilesetResolver } from "./vendor/mediapipe/vision_bundle.mjs";
 
 class KalmanFilter1D {
     constructor(processNoise, measurementNoise, initialState, initialEstimateError) {
@@ -121,7 +121,7 @@ let faceDetector = null;
 
 async function initializeFaceDetector() {
     const vision = await FilesetResolver.forVisionTasks(
-        "https://fastly.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.4/wasm"
+        "./vendor/mediapipe/wasm"
     );
     faceDetector = await FaceDetector.createFromOptions(vision, {
         baseOptions: {
@@ -169,6 +169,11 @@ function stopCamera() {
         } else if (rafHandle) {
             try { cancelAnimationFrame(rafHandle); } catch (e) {}
         }
+        if (video.srcObject) {
+            try {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            } catch (e) {}
+        }
         video.srcObject = null;
     }
     rafHandle = null;
@@ -208,26 +213,40 @@ function startFrameProcessing() {
     }
 }
 
+function updateDimensions() {
+    if (video && video.videoWidth > 0 && video.videoHeight > 0) {
+        if (previewCanvas.width !== video.videoWidth || previewCanvas.height !== video.videoHeight) {
+            previewCanvas.width = video.videoWidth;
+            previewCanvas.height = video.videoHeight;
+            overlayCanvas.width = video.videoWidth;
+            overlayCanvas.height = video.videoHeight;
+        }
+        const wrapper = document.querySelector('.canvas-wrapper');
+        if (wrapper) {
+            wrapper.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+        }
+        console.log(`Delivered video resolution: ${video.videoWidth}x${video.videoHeight} (aspect ratio: ${(video.videoWidth / video.videoHeight).toFixed(3)})`);
+    }
+}
+
 async function toggleCamera() {
     if (isCameraOn) {
         stopCamera();
         return;
     }
     try {
-        // Request camera with fallback for emulators without facingMode: user
+        // Request camera with aspect ratio constraint (0.75 for portrait) without hardcoded pixel dimensions
         let stream;
         try {
             stream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    width: { ideal: 640 },
-                    height: { ideal: 480 },
-                    frameRate: { ideal: 30 },
+                    aspectRatio: { ideal: 0.75 },
                     facingMode: "user"
                 },
                 audio: false,
             });
         } catch (constraintError) {
-            console.warn("facingMode:user failed, trying fallback video: true", constraintError);
+            console.warn("aspectRatio/facingMode failed, trying fallback video: true", constraintError);
             stream = await navigator.mediaDevices.getUserMedia({
                 video: true,
                 audio: false,
@@ -237,24 +256,26 @@ async function toggleCamera() {
         // 确保视频元素已初始化
         if (!video) {
             video = document.getElementById("videoInput");
-            video.addEventListener('loadedmetadata', () => {
-                video.currentTime = 0.001;
-                previewCanvas.width = video.videoWidth;
-                previewCanvas.height = video.videoHeight;
-                overlayCanvas.width = video.videoWidth;
-                overlayCanvas.height = video.videoHeight;
-            });
         }
+
+        video.removeEventListener('loadedmetadata', updateDimensions);
+        video.addEventListener('loadedmetadata', () => {
+            video.currentTime = 0.001;
+            updateDimensions();
+        });
+        video.removeEventListener('resize', updateDimensions);
+        video.addEventListener('resize', updateDimensions);
 
         // 同步设置媒体流
         video.srcObject = stream;
 
-        // iOS 必须的播放触发
+        // 播放触发
         await video.play().then(() => {
+            updateDimensions();
             console.log('视频播放成功，当前状态:',
                 `paused: ${video.paused}, `,
                 `readyState: ${video.readyState}, `,
-                `error: ${video.error}`
+                `dimensions: ${video.videoWidth}x${video.videoHeight}`
             );
             startFrameProcessing();
         }).catch(err => {
@@ -269,7 +290,6 @@ async function toggleCamera() {
         // 启动后续处理
         isCameraOn = true;
         cameraButton.textContent = "Stop";
-        // rafHandle = video.requestVideoFrameCallback(processFrame);
 
     } catch (error) {
         console.error('Camera error:', error.name, error.message);
@@ -417,10 +437,15 @@ welchWorker.onmessage = (event) => {
 }
 
 function cropAndResizeUsingBoundingBox(canvas, boundingBox) {
-    const x = Math.max(0, boundingBox.originX);
-    const y = Math.max(0, boundingBox.originY);
-    const width = Math.min(boundingBox.width, canvas.width - x);
-    const height = Math.min(boundingBox.height, canvas.height - y);
+    const rawX = boundingBox.originX;
+    const rawY = boundingBox.originY;
+    const rawW = boundingBox.width;
+    const rawH = boundingBox.height;
+
+    const x = Math.max(0, rawX);
+    const y = Math.max(0, rawY);
+    const width = Math.min(rawW - (x - rawX), canvas.width - x);
+    const height = Math.min(rawH - (y - rawY), canvas.height - y);
 
     if (width <= 0 || height <= 0) return null;
 
@@ -442,6 +467,10 @@ async function processFrame(now, metadata) {
         timestampArray.push(lastTime);
         if (timestampArray.length > 301) {
             timestampArray.shift();
+        }
+        if (video.videoWidth > 0 && video.videoHeight > 0 &&
+            (previewCanvas.width !== video.videoWidth || previewCanvas.height !== video.videoHeight)) {
+            updateDimensions();
         }
         previewCtx.drawImage(video, 0, 0, previewCanvas.width, previewCanvas.height);
 

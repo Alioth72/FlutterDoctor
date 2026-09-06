@@ -1,6 +1,76 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+
+/// Embedded local HTTP server that serves rPPG assets with Cross-Origin Isolation
+/// headers (COOP and COEP) required for high-performance multi-threaded WebAssembly.
+class RppgAssetServer {
+  final int port;
+  final String documentRoot;
+  HttpServer? _server;
+
+  RppgAssetServer({this.port = 8080, this.documentRoot = 'assets/rppg_demo'});
+
+  Future<void> start() async {
+    _server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
+    _server!.listen((HttpRequest request) async {
+      final response = request.response;
+      // Critical headers: Enable SharedArrayBuffer and multi-threaded SIMD WASM in WebViews
+      response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+      response.headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
+      response.headers.set('Cross-Origin-Resource-Policy', 'cross-origin');
+      response.headers.set('Access-Control-Allow-Origin', '*');
+
+      String path = request.uri.path;
+      if (path.startsWith('/')) path = path.substring(1);
+      if (path == 'favicon.ico') {
+        response.statusCode = HttpStatus.noContent;
+        await response.close();
+        return;
+      }
+      if (path.isEmpty || path.endsWith('/')) path += 'index.html';
+
+      final assetPath = '$documentRoot/$path';
+      try {
+        final byteData = await rootBundle.load(assetPath);
+        final bytes = byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
+
+        response.headers.contentType = _resolveContentType(path);
+        response.add(bytes);
+      } catch (e) {
+        response.statusCode = HttpStatus.notFound;
+        response.write('Not Found: $path');
+      } finally {
+        await response.close();
+      }
+    });
+  }
+
+  ContentType _resolveContentType(String path) {
+    if (path.endsWith('.html')) return ContentType.html;
+    if (path.endsWith('.js') || path.endsWith('.mjs')) {
+      return ContentType('application', 'javascript', charset: 'utf-8');
+    }
+    if (path.endsWith('.css')) return ContentType('text', 'css', charset: 'utf-8');
+    if (path.endsWith('.json')) return ContentType.json;
+    if (path.endsWith('.wasm')) return ContentType('application', 'wasm');
+    if (path.endsWith('.onnx') || path.endsWith('.tflite')) {
+      return ContentType('application', 'octet-stream');
+    }
+    if (path.endsWith('.png')) return ContentType('image', 'png');
+    if (path.endsWith('.jpg') || path.endsWith('.jpeg')) return ContentType('image', 'jpeg');
+    if (path.endsWith('.ico')) return ContentType('image', 'x-icon');
+    return ContentType.binary;
+  }
+
+  Future<void> close() async {
+    await _server?.close(force: true);
+    _server = null;
+  }
+}
 
 /// Screen hosting the client-side rPPG (photoplethysmography) heart-rate
 /// detection web engine served over a local HTTP server.
@@ -12,7 +82,7 @@ class RppgScreen extends StatefulWidget {
 }
 
 class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateMixin {
-  late final InAppLocalhostServer _localhostServer;
+  late final RppgAssetServer _localhostServer;
   InAppWebViewController? _webViewController;
   bool _isServerRunning = false;
   bool _isLoading = true;
@@ -39,7 +109,7 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _startLocalServer() async {
-    _localhostServer = InAppLocalhostServer(
+    _localhostServer = RppgAssetServer(
       documentRoot: 'assets/rppg_demo',
       port: _serverPort,
     );
@@ -52,7 +122,7 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
         });
       }
     } catch (e) {
-      debugPrint('Error starting InAppLocalhostServer: $e');
+      debugPrint('Error starting RppgAssetServer: $e');
       if (mounted) {
         setState(() {
           _isServerRunning = true;
@@ -67,7 +137,7 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
     try {
       _localhostServer.close();
     } catch (e) {
-      debugPrint('Error closing InAppLocalhostServer: $e');
+      debugPrint('Error closing RppgAssetServer: $e');
     }
     super.dispose();
   }
@@ -302,7 +372,7 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
                           mediaPlaybackRequiresUserGesture: false,
                           allowsInlineMediaPlayback: true,
                           javaScriptEnabled: true,
-                          cacheEnabled: false,
+                          cacheEnabled: true,
                           transparentBackground: false,
                           preferredContentMode: UserPreferredContentMode.MOBILE,
                         ),

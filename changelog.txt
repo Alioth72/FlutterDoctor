@@ -1,0 +1,13 @@
+perf(rppg): add RppgAssetServer with COOP/COEP headers, localize MediaPipe & ONNX vendor dependencies, and support dynamic camera aspect ratios
+- Step 1 (COOP/COEP): Replaced InAppLocalhostServer with custom RppgAssetServer in rppg_screen.dart serving Cross-Origin-Opener-Policy: same-origin, Cross-Origin-Embedder-Policy: require-corp, and Cross-Origin-Resource-Policy: cross-origin on all responses. Enabled cacheEnabled: true in InAppWebViewSettings.
+- Step 2 (Vendor Localization): Downloaded and bundled @mediapipe/tasks-vision@0.10.4 and onnxruntime-web@1.18.0 WASM/JS binaries into assets/rppg_demo/vendor/, registered them in pubspec.yaml, and updated main.js, onnxWorker.js, and welchWorker.js imports to local paths (0 CDN requests, 0 HTTP 404 errors).
+- Step 3 (Dynamic Camera & Crop): Updated getUserMedia to request video: { aspectRatio: { ideal: 0.75 }, facingMode: "user" } without hardcoded pixel dimensions; added dynamic runtime listeners to synchronize previewCanvas, overlayCanvas, and .canvas-wrapper aspect ratio to actual delivered videoWidth/videoHeight; audited and updated cropAndResizeUsingBoundingBox with boundary clamping; added hardware camera track cleanup to stopCamera().
+
+8a7a7d0 fix(rppg): optimize Android WebView frame rate and fix halved 20-30 BPM reading
+37cbb12 feat(rppg): integrate client-side rPPG heart-rate detection with on-device AI
+81cef4c feat(ui): implement modern purple CURAHEALTH dashboard and appointment themes matching mockups
+c47c6dc fix(ui): wrap AI explainer section titles in Expanded to prevent text overflow
+938971f feat: enhance schemes parsing, AI explainer, and latest-first appointment sorting
+a57e0dc feat: complete wireframe home dashboard, drawer, government schemes deterministic engine, and Gemini AI integration
+b158a5e feat: patient app onboarding flow, doctor appointment booking with calendar and digital receipt
+27c5f19 Initial commit
