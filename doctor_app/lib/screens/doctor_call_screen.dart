@@ -2,13 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:teleconsult_vitals/teleconsult_vitals.dart';
 
 import '../data/appointment_repository.dart';
 import '../models/teleconsult_models.dart';
-import '../services/bpm_estimator.dart';
-import '../services/bpm_frame_capture_service.dart';
 import '../services/call_service.dart';
-import '../services/merppg_inference_service.dart';
 import 'post_call_screen.dart';
 
 class DoctorCallScreen extends StatefulWidget {
@@ -51,61 +49,32 @@ class _DoctorCallScreenState extends State<DoctorCallScreen> {
   }
 
   void _handleTelemetry(Map<String, dynamic> message) {
-    if (!mounted || message['version'] != 1) return;
-    switch (message['type']) {
-      case 'captureDiagnostics':
-        setState(() {
-          _captureDiagnostics = BpmCaptureDiagnostics(
-            capturedFrames: _intValue(message['capturedFrames']),
-            detectedFaces: _intValue(message['detectedFaces']),
-            skippedBusyTicks: _intValue(message['skippedBusyTicks']),
-            captureRate: _doubleValue(message['captureRate']),
-            preparedFaceRate: _doubleValue(message['preparedFaceRate']),
-            faceHitRate: _doubleValue(message['faceHitRate']),
-            lastProcessingTime: Duration(
-              milliseconds: _intValue(message['processingMs']),
-            ),
-            lastCaptureTime: Duration(
-              milliseconds: _intValue(message['captureMs']),
-            ),
-            lastDetectionTime: Duration(
-              milliseconds: _intValue(message['detectionMs']),
-            ),
-            lastPreparationTime: Duration(
-              milliseconds: _intValue(message['preparationMs']),
-            ),
-            frameWidth: _intValue(message['frameWidth']),
-            frameHeight: _intValue(message['frameHeight']),
-            lastError: message['lastError'] as String?,
-          );
-        });
+    if (!mounted) return;
+    final telemetry = VitalsTelemetryMessage.tryParse(message);
+    switch (telemetry) {
+      case CaptureDiagnosticsTelemetry(:final diagnostics):
+        setState(() => _captureDiagnostics = diagnostics);
         return;
-      case 'vitalsSample':
-        final estimateData = message['estimate'];
+      case VitalsSampleTelemetry():
         final receivedAt = DateTime.now();
         setState(() {
           _merppgDiagnostics = MerppgDiagnostics(
             status: 'On-device BVP active',
             ready: true,
-            processedSamples: _intValue(message['processedSamples']),
-            droppedFrames: _intValue(message['droppedFrames']),
-            lastInferenceTime: Duration(
-              milliseconds: _intValue(message['inferenceMs']),
-            ),
-            latestBvp: _nullableDoubleValue(message['bvp']),
+            processedSamples: telemetry.processedSamples,
+            droppedFrames: telemetry.droppedFrames,
+            lastInferenceTime: telemetry.inferenceTime,
+            latestBvp: telemetry.bvp,
           );
-          if (estimateData is Map) {
-            final data = Map<String, dynamic>.from(estimateData);
+          if (telemetry.estimate case final incoming?) {
             final estimate = BpmEstimate(
               timestamp: receivedAt,
-              status: data['status'] as String? ?? 'Measuring pulse quality…',
-              confidence: _doubleValue(data['confidence']),
-              effectiveSampleRate: _doubleValue(data['effectiveSampleRate']),
-              sampleCount: _intValue(data['sampleCount']),
-              maximumResolvableBpm: _doubleValue(
-                data['maximumResolvableBpm'],
-              ),
-              bpm: _nullableDoubleValue(data['bpm']),
+              status: incoming.status,
+              confidence: incoming.confidence,
+              effectiveSampleRate: incoming.effectiveSampleRate,
+              sampleCount: incoming.sampleCount,
+              maximumResolvableBpm: incoming.maximumResolvableBpm,
+              bpm: incoming.bpm,
             );
             _bpmEstimate = estimate;
             if (estimate.bpm != null) {
@@ -123,6 +92,8 @@ class _DoctorCallScreenState extends State<DoctorCallScreen> {
             }
           }
         });
+        return;
+      case null:
         return;
     }
   }
@@ -415,11 +386,7 @@ class _VitalsLauncher extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 3),
-              const Icon(
-                Icons.expand_more,
-                size: 18,
-                color: Colors.white70,
-              ),
+              const Icon(Icons.expand_more, size: 18, color: Colors.white70),
             ],
           ),
         ),
@@ -512,10 +479,7 @@ class _VitalsDiagnostics extends StatelessWidget {
                   Text(
                     '${diagnostics.preparedFaceRate.toStringAsFixed(1)} face fps  •  '
                     '${(diagnostics.faceHitRate * 100).toStringAsFixed(0)}% hit',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 11),
                   ),
                 ],
               ),
@@ -665,9 +629,7 @@ class _BpmChart extends StatelessWidget {
       ),
       borderData: FlBorderData(show: false),
       titlesData: FlTitlesData(
-        topTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
-        ),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         rightTitles: const AxisTitles(
           sideTitles: SideTitles(showTitles: false),
         ),
@@ -742,9 +704,3 @@ class _CallButton extends StatelessWidget {
     ],
   );
 }
-
-int _intValue(Object? value) => (value as num?)?.toInt() ?? 0;
-
-double _doubleValue(Object? value) => (value as num?)?.toDouble() ?? 0;
-
-double? _nullableDoubleValue(Object? value) => (value as num?)?.toDouble();

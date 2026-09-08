@@ -4,12 +4,14 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
+import 'package:teleconsult_vitals/teleconsult_vitals.dart';
 
 import 'bpm_frame_capture_service.dart';
 
 typedef MerppgResultCallback = void Function(MerppgResult result);
-typedef MerppgDiagnosticsCallback =
-    void Function(MerppgDiagnostics diagnostics);
+typedef MerppgDiagnosticsCallback = void Function(
+  MerppgDiagnostics diagnostics,
+);
 
 class MerppgResult {
   const MerppgResult({
@@ -23,48 +25,15 @@ class MerppgResult {
   final Duration inferenceTime;
 }
 
-class MerppgDiagnostics {
-  const MerppgDiagnostics({
-    required this.status,
-    required this.ready,
-    required this.processedSamples,
-    required this.droppedFrames,
-    required this.lastInferenceTime,
-    this.latestBvp,
-    this.error,
-  });
-
-  const MerppgDiagnostics.loading()
-    : status = 'Loading ME-rPPG model…',
-      ready = false,
-      processedSamples = 0,
-      droppedFrames = 0,
-      lastInferenceTime = Duration.zero,
-      latestBvp = null,
-      error = null;
-
-  final String status;
-  final bool ready;
-  final int processedSamples;
-  final int droppedFrames;
-  final Duration lastInferenceTime;
-  final double? latestBvp;
-  final String? error;
-}
-
 /// Runs the official ME-rPPG model one face frame at a time.
 ///
 /// The model is recurrent: outputs 1–36 replace inputs 1–36 after every
 /// successful inference. Input 37 is the actual elapsed time between accepted
 /// frames, matching the official browser implementation.
 class MerppgInferenceService {
-  MerppgInferenceService({
-    required this.onResult,
-    required this.onDiagnostics,
-  });
+  MerppgInferenceService({required this.onResult, required this.onDiagnostics});
 
-  static const String _modelAsset =
-      'assets/models/me_rppg_model.onnx';
+  static const String _modelAsset = 'assets/models/me_rppg_model.onnx';
   static const String _stateAsset = 'assets/models/me_rppg_state.bin';
   static const String _manifestAsset =
       'assets/models/me_rppg_state_manifest.json';
@@ -183,10 +152,13 @@ class MerppgInferenceService {
                 Duration.microsecondsPerSecond;
       final boundedElapsed = elapsedSeconds.clamp(1 / 90, 0.5).toDouble();
 
-      frameValue = await OrtValue.fromList(
-        frame.rgb,
-        const <int>[1, 1, 36, 36, 3],
-      );
+      frameValue = await OrtValue.fromList(frame.rgb, const <int>[
+        1,
+        1,
+        36,
+        36,
+        3,
+      ]);
       elapsedValue = await OrtValue.fromList(
         Float32List.fromList(<double>[boundedElapsed]),
         const <int>[],

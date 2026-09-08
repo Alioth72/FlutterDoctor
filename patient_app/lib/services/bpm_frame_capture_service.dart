@@ -8,10 +8,12 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
+import 'package:teleconsult_vitals/teleconsult_vitals.dart';
 
 typedef FaceFrameCallback = void Function(CapturedFaceFrame frame);
-typedef CaptureDiagnosticsCallback =
-    void Function(BpmCaptureDiagnostics diagnostics);
+typedef CaptureDiagnosticsCallback = void Function(
+  BpmCaptureDiagnostics diagnostics,
+);
 
 class CapturedFaceFrame {
   const CapturedFaceFrame({
@@ -23,55 +25,6 @@ class CapturedFaceFrame {
   final DateTime timestamp;
   final Float32List rgb;
   final Uint8List? previewJpeg;
-}
-
-class BpmCaptureDiagnostics {
-  const BpmCaptureDiagnostics({
-    required this.capturedFrames,
-    required this.detectedFaces,
-    required this.skippedBusyTicks,
-    required this.captureRate,
-    required this.preparedFaceRate,
-    required this.faceHitRate,
-    required this.lastProcessingTime,
-    required this.lastCaptureTime,
-    required this.lastDetectionTime,
-    required this.lastPreparationTime,
-    required this.frameWidth,
-    required this.frameHeight,
-    this.lastError,
-  });
-
-  const BpmCaptureDiagnostics.waiting()
-    : capturedFrames = 0,
-      detectedFaces = 0,
-      skippedBusyTicks = 0,
-      captureRate = 0,
-      preparedFaceRate = 0,
-      faceHitRate = 0,
-      lastProcessingTime = Duration.zero,
-      lastCaptureTime = Duration.zero,
-      lastDetectionTime = Duration.zero,
-      lastPreparationTime = Duration.zero,
-      frameWidth = 0,
-      frameHeight = 0,
-      lastError = null;
-
-  final int capturedFrames;
-  final int detectedFaces;
-  final int skippedBusyTicks;
-  final double captureRate;
-  final double preparedFaceRate;
-
-  /// Percentage of periodic ML Kit checks that found a face.
-  final double faceHitRate;
-  final Duration lastProcessingTime;
-  final Duration lastCaptureTime;
-  final Duration lastDetectionTime;
-  final Duration lastPreparationTime;
-  final int frameWidth;
-  final int frameHeight;
-  final String? lastError;
 }
 
 /// Captures and prepares local WebRTC camera frames for the ME-rPPG model.
@@ -204,7 +157,8 @@ class BpmFrameCaptureService {
         }
         _frameWidth = decoded.width;
         _frameHeight = decoded.height;
-        final includePreview = _lastPreviewAt == null ||
+        final includePreview =
+            _lastPreviewAt == null ||
             now.difference(_lastPreviewAt!) >= _previewInterval;
         final prepared = _prepareFace(
           decoded,
@@ -241,8 +195,9 @@ class BpmFrameCaptureService {
   bool _shouldDetectFace(DateTime now) {
     final lastDetectionAt = _lastDetectionAt;
     if (lastDetectionAt == null) return true;
-    final interval =
-        _lastFaceBox == null ? _faceSearchInterval : _faceRefreshInterval;
+    final interval = _lastFaceBox == null
+        ? _faceSearchInterval
+        : _faceRefreshInterval;
     return now.difference(lastDetectionAt) >= interval;
   }
 
@@ -262,7 +217,8 @@ class BpmFrameCaptureService {
     _detectionHits++;
     _lastFaceBox = faces
         .reduce(
-          (a, b) => a.boundingBox.width * a.boundingBox.height >=
+          (a, b) =>
+              a.boundingBox.width * a.boundingBox.height >=
                   b.boundingBox.width * b.boundingBox.height
               ? a
               : b,
@@ -277,13 +233,15 @@ class BpmFrameCaptureService {
   }) {
     final left = boundingBox.left.floor().clamp(0, source.width - 1);
     final topPadding = boundingBox.height * 0.2;
-    final top = (boundingBox.top - topPadding)
-        .floor()
-        .clamp(0, source.height - 1);
+    final top = (boundingBox.top - topPadding).floor().clamp(
+      0,
+      source.height - 1,
+    );
     final right = boundingBox.right.ceil().clamp(left + 1, source.width);
-    final bottom = (boundingBox.bottom + topPadding * 0.2)
-        .ceil()
-        .clamp(top + 1, source.height);
+    final bottom = (boundingBox.bottom + topPadding * 0.2).ceil().clamp(
+      top + 1,
+      source.height,
+    );
 
     final cropped = img.copyCrop(
       source,

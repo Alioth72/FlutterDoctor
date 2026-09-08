@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:patient_app/services/bpm_estimator.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:teleconsult_vitals/teleconsult_vitals.dart';
 
 void main() {
   test('recovers BPM from an irregularly timed periodic BVP signal', () {
@@ -14,9 +14,11 @@ void main() {
       final jitterMillis = <int>[-18, 9, 22, -7, 14, -11][index % 6];
       elapsedMicros += (150 + jitterMillis) * 1000;
       final seconds = elapsedMicros / 1000000;
-      final value = math.sin(2 * math.pi * 1.2 * seconds) +
+      final value =
+          math.sin(2 * math.pi * 1.2 * seconds) +
           0.04 * math.sin(2 * math.pi * 0.35 * seconds);
-      latest = estimator.addSample(
+      latest =
+          estimator.addSample(
             start.add(Duration(microseconds: elapsedMicros)),
             value,
           ) ??
@@ -36,7 +38,8 @@ void main() {
     BpmEstimate? latest;
 
     for (var index = 0; index < 60; index++) {
-      latest = estimator.addSample(
+      latest =
+          estimator.addSample(
             start.add(Duration(milliseconds: index * 150)),
             math.sin(index / 4),
           ) ??

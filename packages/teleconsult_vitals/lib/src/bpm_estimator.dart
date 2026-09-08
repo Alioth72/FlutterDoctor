@@ -1,26 +1,6 @@
 import 'dart:math' as math;
 
-class BpmEstimate {
-  const BpmEstimate({
-    required this.timestamp,
-    required this.status,
-    required this.confidence,
-    required this.effectiveSampleRate,
-    required this.sampleCount,
-    required this.maximumResolvableBpm,
-    this.bpm,
-  });
-
-  final DateTime timestamp;
-  final String status;
-  final double confidence;
-  final double effectiveSampleRate;
-  final int sampleCount;
-  final double maximumResolvableBpm;
-  final double? bpm;
-
-  bool get reliable => bpm != null && confidence >= 0.5;
-}
+import 'vitals_models.dart';
 
 class _TimedBvp {
   const _TimedBvp(this.timestamp, this.value);
@@ -66,7 +46,9 @@ class TimingAwareBpmEstimator {
       return _waiting(timestamp, 'Collecting pulse signal…');
     }
     final elapsedSeconds =
-        _samples.last.timestamp.difference(_samples.first.timestamp).inMicroseconds /
+        _samples.last.timestamp
+            .difference(_samples.first.timestamp)
+            .inMicroseconds /
         Duration.microsecondsPerSecond;
     if (elapsedSeconds < _analysisWindow.inSeconds * 0.9) {
       return _waiting(
@@ -137,8 +119,10 @@ class TimingAwareBpmEstimator {
     }
     final concentration = totalPower <= 0 ? 0.0 : peakBandPower / totalPower;
     final spectralQuality = (concentration / 0.5).clamp(0.0, 1.0);
-    final confidence =
-        (0.65 * periodicity + 0.35 * spectralQuality).clamp(0.0, 1.0);
+    final confidence = (0.65 * periodicity + 0.35 * spectralQuality).clamp(
+      0.0,
+      1.0,
+    );
 
     return BpmEstimate(
       timestamp: timestamp,
@@ -251,28 +235,33 @@ class TimingAwareBpmEstimator {
     if (segmentLength < 24) return const _Spectrum(<double>[], <double>[]);
     final step = math.max(1, segmentLength ~/ 2);
     final frequencies = <double>[];
-    for (var frequency = minimumFrequency;
-        frequency <= maximumFrequency;
-        frequency += 0.01) {
+    for (
+      var frequency = minimumFrequency;
+      frequency <= maximumFrequency;
+      frequency += 0.01
+    ) {
       frequencies.add(frequency);
     }
     final powers = List<double>.filled(frequencies.length, 0);
     var segmentCount = 0;
     for (var start = 0; start + segmentLength <= signal.length; start += step) {
-      final mean = signal
+      final mean =
+          signal
               .skip(start)
               .take(segmentLength)
               .fold<double>(0, (a, b) => a + b) /
           segmentLength;
-      for (var frequencyIndex = 0;
-          frequencyIndex < frequencies.length;
-          frequencyIndex++) {
+      for (
+        var frequencyIndex = 0;
+        frequencyIndex < frequencies.length;
+        frequencyIndex++
+      ) {
         var real = 0.0;
         var imaginary = 0.0;
         final frequency = frequencies[frequencyIndex];
         for (var index = 0; index < segmentLength; index++) {
-          final window = 0.5 -
-              0.5 * math.cos(2 * math.pi * index / (segmentLength - 1));
+          final window =
+              0.5 - 0.5 * math.cos(2 * math.pi * index / (segmentLength - 1));
           final value = (signal[start + index] - mean) * window;
           final angle = 2 * math.pi * frequency * index / sampleRate;
           real += value * math.cos(angle);

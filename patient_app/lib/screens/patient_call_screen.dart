@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:teleconsult_vitals/teleconsult_vitals.dart';
 
 import '../data/appointment_repository.dart';
 import '../models/teleconsult_models.dart';
-import '../services/bpm_estimator.dart';
 import '../services/bpm_frame_capture_service.dart';
 import '../services/call_service.dart';
 import '../services/merppg_inference_service.dart';
@@ -71,26 +71,18 @@ class _PatientCallScreenState extends State<PatientCallScreen> {
     if (!mounted) return;
     final estimate = _bpmEstimator.addSample(result.timestamp, result.bvp);
     if (estimate != null) setState(() => _bpmEstimate = estimate);
-    final message = <String, dynamic>{
-      'type': 'vitalsSample',
-      'version': 1,
-      'timestampMicros': result.timestamp.microsecondsSinceEpoch,
-      'bvp': result.bvp,
-      'inferenceMs': result.inferenceTime.inMilliseconds,
-      'processedSamples': _merppgDiagnostics.processedSamples + 1,
-      'droppedFrames': _merppgDiagnostics.droppedFrames,
-      if (estimate != null)
-        'estimate': <String, dynamic>{
-          'timestampMicros': estimate.timestamp.microsecondsSinceEpoch,
-          'status': estimate.status,
-          'confidence': estimate.confidence,
-          'effectiveSampleRate': estimate.effectiveSampleRate,
-          'sampleCount': estimate.sampleCount,
-          'maximumResolvableBpm': estimate.maximumResolvableBpm,
-          'bpm': estimate.bpm,
-        },
-    };
-    unawaited(_callService?.sendTelemetry(message));
+    unawaited(
+      _callService?.sendTelemetry(
+        VitalsSampleTelemetry(
+          timestamp: result.timestamp,
+          bvp: result.bvp,
+          inferenceTime: result.inferenceTime,
+          processedSamples: _merppgDiagnostics.processedSamples + 1,
+          droppedFrames: _merppgDiagnostics.droppedFrames,
+          estimate: estimate,
+        ).toJson(),
+      ),
+    );
   }
 
   void _handleCaptureDiagnostics(BpmCaptureDiagnostics diagnostics) {
@@ -104,24 +96,12 @@ class _PatientCallScreenState extends State<PatientCallScreen> {
     }
     _lastCaptureTelemetryAt = now;
     unawaited(
-      _callService?.sendTelemetry(<String, dynamic>{
-        'type': 'captureDiagnostics',
-        'version': 1,
-        'timestampMicros': now.microsecondsSinceEpoch,
-        'capturedFrames': diagnostics.capturedFrames,
-        'detectedFaces': diagnostics.detectedFaces,
-        'skippedBusyTicks': diagnostics.skippedBusyTicks,
-        'captureRate': diagnostics.captureRate,
-        'preparedFaceRate': diagnostics.preparedFaceRate,
-        'faceHitRate': diagnostics.faceHitRate,
-        'processingMs': diagnostics.lastProcessingTime.inMilliseconds,
-        'captureMs': diagnostics.lastCaptureTime.inMilliseconds,
-        'detectionMs': diagnostics.lastDetectionTime.inMilliseconds,
-        'preparationMs': diagnostics.lastPreparationTime.inMilliseconds,
-        'frameWidth': diagnostics.frameWidth,
-        'frameHeight': diagnostics.frameHeight,
-        'lastError': diagnostics.lastError,
-      }),
+      _callService?.sendTelemetry(
+        CaptureDiagnosticsTelemetry(
+          timestamp: now,
+          diagnostics: diagnostics,
+        ).toJson(),
+      ),
     );
   }
 

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:teleconsult_vitals/teleconsult_vitals.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('recovers BPM from an irregularly timed periodic BVP signal', () {
