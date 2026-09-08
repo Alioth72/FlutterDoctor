@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import '../data/appointment_repository.dart';
 import '../models/teleconsult_models.dart';
+import '../services/bpm_estimator.dart';
+import '../services/bpm_frame_capture_service.dart';
 import '../services/call_service.dart';
+import '../services/merppg_inference_service.dart';
 
 class PatientCallScreen extends StatefulWidget {
   const PatientCallScreen({
@@ -24,8 +29,16 @@ class PatientCallScreen extends StatefulWidget {
 class _PatientCallScreenState extends State<PatientCallScreen> {
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  final TimingAwareBpmEstimator _bpmEstimator = TimingAwareBpmEstimator();
   late final CallLog _callLog;
+  late final BpmFrameCaptureService _frameCaptureService;
+  late final MerppgInferenceService _merppgInferenceService;
   CallService? _callService;
+  BpmCaptureDiagnostics _captureDiagnostics =
+      const BpmCaptureDiagnostics.waiting();
+  MerppgDiagnostics _merppgDiagnostics = const MerppgDiagnostics.loading();
+  BpmEstimate? _bpmEstimate;
+  DateTime? _lastCaptureTelemetryAt;
   String _status = 'Preparing call…';
   String? _error;
   bool _muted = false;
@@ -36,7 +49,87 @@ class _PatientCallScreenState extends State<PatientCallScreen> {
   void initState() {
     super.initState();
     _callLog = CallLog(appointmentId: widget.appointment.id);
+    _merppgInferenceService = MerppgInferenceService(
+      onResult: _handleBvpResult,
+      onDiagnostics: (diagnostics) {
+        if (!mounted) return;
+        setState(() => _merppgDiagnostics = diagnostics);
+      },
+    );
+    _frameCaptureService = BpmFrameCaptureService(
+      onFaceFrame: (frame) {
+        if (!mounted) return;
+        unawaited(_merppgInferenceService.process(frame));
+      },
+      onDiagnostics: _handleCaptureDiagnostics,
+    );
+    unawaited(_merppgInferenceService.initialize());
     _start();
+  }
+
+  void _handleBvpResult(MerppgResult result) {
+    if (!mounted) return;
+    final estimate = _bpmEstimator.addSample(result.timestamp, result.bvp);
+    if (estimate != null) setState(() => _bpmEstimate = estimate);
+    final message = <String, dynamic>{
+      'type': 'vitalsSample',
+      'version': 1,
+      'timestampMicros': result.timestamp.microsecondsSinceEpoch,
+      'bvp': result.bvp,
+      'inferenceMs': result.inferenceTime.inMilliseconds,
+      'processedSamples': _merppgDiagnostics.processedSamples + 1,
+      'droppedFrames': _merppgDiagnostics.droppedFrames,
+      if (estimate != null)
+        'estimate': <String, dynamic>{
+          'timestampMicros': estimate.timestamp.microsecondsSinceEpoch,
+          'status': estimate.status,
+          'confidence': estimate.confidence,
+          'effectiveSampleRate': estimate.effectiveSampleRate,
+          'sampleCount': estimate.sampleCount,
+          'maximumResolvableBpm': estimate.maximumResolvableBpm,
+          'bpm': estimate.bpm,
+        },
+    };
+    unawaited(_callService?.sendTelemetry(message));
+  }
+
+  void _handleCaptureDiagnostics(BpmCaptureDiagnostics diagnostics) {
+    if (!mounted) return;
+    _captureDiagnostics = diagnostics;
+    final now = DateTime.now();
+    if (_lastCaptureTelemetryAt != null &&
+        now.difference(_lastCaptureTelemetryAt!) <
+            const Duration(milliseconds: 750)) {
+      return;
+    }
+    _lastCaptureTelemetryAt = now;
+    unawaited(
+      _callService?.sendTelemetry(<String, dynamic>{
+        'type': 'captureDiagnostics',
+        'version': 1,
+        'timestampMicros': now.microsecondsSinceEpoch,
+        'capturedFrames': diagnostics.capturedFrames,
+        'detectedFaces': diagnostics.detectedFaces,
+        'skippedBusyTicks': diagnostics.skippedBusyTicks,
+        'captureRate': diagnostics.captureRate,
+        'preparedFaceRate': diagnostics.preparedFaceRate,
+        'faceHitRate': diagnostics.faceHitRate,
+        'processingMs': diagnostics.lastProcessingTime.inMilliseconds,
+        'captureMs': diagnostics.lastCaptureTime.inMilliseconds,
+        'detectionMs': diagnostics.lastDetectionTime.inMilliseconds,
+        'preparationMs': diagnostics.lastPreparationTime.inMilliseconds,
+        'frameWidth': diagnostics.frameWidth,
+        'frameHeight': diagnostics.frameHeight,
+        'lastError': diagnostics.lastError,
+      }),
+    );
+  }
+
+  Future<void> _startLocalVitals() async {
+    final tracks = _callService?.localStream?.getVideoTracks();
+    if (tracks != null && tracks.isNotEmpty && !_cameraOff) {
+      await _frameCaptureService.start(tracks.first);
+    }
   }
 
   Future<void> _start() async {
@@ -83,6 +176,7 @@ class _PatientCallScreenState extends State<PatientCallScreen> {
       if (mounted) {
         setState(() => _localRenderer.srcObject = service.localStream);
       }
+      await _startLocalVitals();
     } catch (error) {
       _callLog.hadError = true;
       if (mounted) {
@@ -98,6 +192,7 @@ class _PatientCallScreenState extends State<PatientCallScreen> {
     if (_ending) return;
     setState(() => _ending = true);
     _callLog.endedAt = DateTime.now();
+    _frameCaptureService.stop();
     await _callService?.hangUp();
     await widget.repository.saveCallLog(_callLog);
     if (mounted) Navigator.of(context).pop();
@@ -105,6 +200,8 @@ class _PatientCallScreenState extends State<PatientCallScreen> {
 
   @override
   void dispose() {
+    unawaited(_frameCaptureService.dispose());
+    unawaited(_merppgInferenceService.dispose());
     _callService?.hangUp();
     _localRenderer.dispose();
     _remoteRenderer.dispose();
@@ -157,6 +254,15 @@ class _PatientCallScreenState extends State<PatientCallScreen> {
                   ),
                 ),
               ),
+              Positioned(
+                top: 174,
+                right: 16,
+                child: _PatientVitalsPill(
+                  estimate: _bpmEstimate,
+                  captureDiagnostics: _captureDiagnostics,
+                  inferenceDiagnostics: _merppgDiagnostics,
+                ),
+              ),
               if (_error != null)
                 Center(
                   child: Container(
@@ -200,6 +306,11 @@ class _PatientCallScreenState extends State<PatientCallScreen> {
                       onPressed: () {
                         setState(() => _cameraOff = !_cameraOff);
                         _callService?.setCameraEnabled(!_cameraOff);
+                        if (_cameraOff) {
+                          _frameCaptureService.stop();
+                        } else {
+                          unawaited(_startLocalVitals());
+                        }
                       },
                     ),
                   ],
@@ -211,6 +322,57 @@ class _PatientCallScreenState extends State<PatientCallScreen> {
       ),
     );
   }
+}
+
+class _PatientVitalsPill extends StatelessWidget {
+  const _PatientVitalsPill({
+    required this.estimate,
+    required this.captureDiagnostics,
+    required this.inferenceDiagnostics,
+  });
+
+  final BpmEstimate? estimate;
+  final BpmCaptureDiagnostics captureDiagnostics;
+  final MerppgDiagnostics inferenceDiagnostics;
+
+  bool get _hasFreshReliableBpm =>
+      estimate?.reliable == true &&
+      DateTime.now().difference(estimate!.timestamp) <
+          const Duration(seconds: 5);
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Colors.black54,
+      borderRadius: BorderRadius.circular(22),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            Icons.favorite,
+            size: 17,
+            color: _hasFreshReliableBpm
+                ? Colors.lightGreenAccent
+                : Colors.white70,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            _hasFreshReliableBpm
+                ? '${estimate!.bpm!.round()} BPM'
+                : captureDiagnostics.preparedFaceRate > 0
+                ? 'Measuring vitals…'
+                : inferenceDiagnostics.error != null
+                ? 'Vitals unavailable'
+                : 'Finding face…',
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _WaitingBackground extends StatelessWidget {

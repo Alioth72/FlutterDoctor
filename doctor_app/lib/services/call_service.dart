@@ -10,6 +10,7 @@ import 'app_config.dart';
 typedef CallStatusCallback = void Function(String status);
 typedef RemoteStreamCallback = void Function(MediaStream stream);
 typedef CallErrorCallback = void Function(Object error);
+typedef TelemetryCallback = void Function(Map<String, dynamic> message);
 
 class CallService {
   CallService({
@@ -19,6 +20,7 @@ class CallService {
     required this.onStatus,
     required this.onRemoteStream,
     required this.onError,
+    this.onTelemetry,
   });
   final FirebaseFirestore firestore;
   final String appointmentId;
@@ -26,8 +28,10 @@ class CallService {
   final CallStatusCallback onStatus;
   final RemoteStreamCallback onRemoteStream;
   final CallErrorCallback onError;
+  final TelemetryCallback? onTelemetry;
 
   RTCPeerConnection? _peerConnection;
+  RTCDataChannel? _telemetryChannel;
   MediaStream? _localStream;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _callSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _candidateSub;
@@ -97,6 +101,7 @@ class CallService {
   }
 
   void _wirePeerCallbacks() {
+    _peerConnection!.onDataChannel = _attachTelemetryChannel;
     _peerConnection!.onTrack = (event) {
       if (event.streams.isNotEmpty) onRemoteStream(event.streams.first);
     };
@@ -139,6 +144,35 @@ class CallService {
         onError(error);
       }
     };
+  }
+
+  void _attachTelemetryChannel(RTCDataChannel channel) {
+    _telemetryChannel = channel;
+    channel.onMessage = (message) {
+      if (message.isBinary || onTelemetry == null) return;
+      try {
+        final decoded = jsonDecode(message.text);
+        if (decoded is Map) {
+          onTelemetry!(Map<String, dynamic>.from(decoded));
+        }
+      } catch (_) {
+        // Ignore malformed optional telemetry without interrupting the call.
+      }
+    };
+  }
+
+  Future<void> sendTelemetry(Map<String, dynamic> message) async {
+    final channel = _telemetryChannel;
+    if (_closed ||
+        channel == null ||
+        channel.state != RTCDataChannelState.RTCDataChannelOpen) {
+      return;
+    }
+    try {
+      await channel.send(RTCDataChannelMessage(jsonEncode(message)));
+    } catch (_) {
+      // Vitals telemetry is best-effort; audio/video must remain unaffected.
+    }
   }
 
   Future<void> _startCaller() async {
@@ -268,6 +302,7 @@ class CallService {
         track.stop();
       }
       await _localStream?.dispose();
+      await _telemetryChannel?.close();
       await _peerConnection?.close();
     }
   }
