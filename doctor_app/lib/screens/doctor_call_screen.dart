@@ -48,6 +48,7 @@ class _DoctorCallScreenState extends State<DoctorCallScreen> {
   bool _muted = false;
   bool _cameraOff = false;
   bool _ending = false;
+  bool _vitalsExpanded = false;
 
   @override
   void initState() {
@@ -203,23 +204,35 @@ class _DoctorCallScreenState extends State<DoctorCallScreen> {
             else
               _PatientPlaceholder(name: widget.appointment.patientName),
             Positioned(top: 16, left: 16, child: _Pill(text: _status)),
-            Positioned(
-              top: 160,
-              right: 16,
-              child: _VitalsDiagnostics(
-                diagnostics: _captureDiagnostics,
-                merppgDiagnostics: _merppgDiagnostics,
-                bpmEstimate: _bpmEstimate,
-                facePreview: _facePreview,
+            if (_vitalsExpanded)
+              Positioned(
+                top: 160,
+                right: 16,
+                child: _VitalsDiagnostics(
+                  diagnostics: _captureDiagnostics,
+                  merppgDiagnostics: _merppgDiagnostics,
+                  bpmEstimate: _bpmEstimate,
+                  facePreview: _facePreview,
+                  onClose: () => setState(() => _vitalsExpanded = false),
+                ),
+              )
+            else
+              Positioned(
+                top: 160,
+                right: 16,
+                child: _VitalsLauncher(
+                  bpmEstimate: _bpmEstimate,
+                  onPressed: () => setState(() => _vitalsExpanded = true),
+                ),
               ),
-            ),
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 118,
-              height: 138,
-              child: _BpmChart(samples: _bpmSamples),
-            ),
+            if (_vitalsExpanded)
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 118,
+                height: 138,
+                child: _BpmChart(samples: _bpmSamples),
+              ),
             Positioned(
               top: 16,
               right: 16,
@@ -332,18 +345,77 @@ class _Pill extends StatelessWidget {
   );
 }
 
+class _VitalsLauncher extends StatelessWidget {
+  const _VitalsLauncher({required this.bpmEstimate, required this.onPressed});
+
+  final BpmEstimate? bpmEstimate;
+  final VoidCallback onPressed;
+
+  bool get _hasFreshReliableBpm =>
+      bpmEstimate?.reliable == true &&
+      DateTime.now().difference(bpmEstimate!.timestamp) <
+          const Duration(seconds: 5);
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: 'Open AI-assisted vitals',
+    child: Material(
+      color: Colors.black54,
+      borderRadius: BorderRadius.circular(24),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPressed,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                Icons.favorite,
+                size: 18,
+                color: _hasFreshReliableBpm
+                    ? Colors.lightGreenAccent
+                    : Colors.white70,
+              ),
+              const SizedBox(width: 7),
+              Text(
+                _hasFreshReliableBpm
+                    ? '${bpmEstimate!.bpm!.round()} BPM'
+                    : 'Vitals',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 3),
+              const Icon(
+                Icons.expand_more,
+                size: 18,
+                color: Colors.white70,
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class _VitalsDiagnostics extends StatelessWidget {
   const _VitalsDiagnostics({
     required this.diagnostics,
     required this.merppgDiagnostics,
     required this.bpmEstimate,
     required this.facePreview,
+    required this.onClose,
   });
 
   final BpmCaptureDiagnostics diagnostics;
   final MerppgDiagnostics merppgDiagnostics;
   final BpmEstimate? bpmEstimate;
   final Uint8List? facePreview;
+  final VoidCallback onClose;
 
   bool get _hasFreshReliableBpm =>
       bpmEstimate?.reliable == true &&
@@ -366,9 +438,23 @@ class _VitalsDiagnostics extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text(
-          'AI-assisted vitals',
-          style: TextStyle(color: Colors.white70, fontSize: 12),
+        Row(
+          children: <Widget>[
+            const Expanded(
+              child: Text(
+                'AI-assisted vitals',
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ),
+            IconButton(
+              onPressed: onClose,
+              tooltip: 'Close vitals',
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+              padding: EdgeInsets.zero,
+              icon: const Icon(Icons.close, color: Colors.white70, size: 18),
+            ),
+          ],
         ),
         const SizedBox(height: 6),
         Row(
