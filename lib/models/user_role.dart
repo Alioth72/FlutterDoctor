@@ -2,6 +2,7 @@ enum UserRole {
   doctor,
   worker,
   admin,
+  patient,
 }
 
 extension UserRoleExtension on UserRole {
@@ -13,6 +14,8 @@ extension UserRoleExtension on UserRole {
         return 'Worker Mode';
       case UserRole.admin:
         return 'Admin Mode';
+      case UserRole.patient:
+        return 'Patient Portal';
     }
   }
 
@@ -24,6 +27,8 @@ extension UserRoleExtension on UserRole {
         return 'Access shift monitoring, field visits & queue management';
       case UserRole.admin:
         return 'Access machine records, hospital inventory & system alerts';
+      case UserRole.patient:
+        return 'Access personal medical records, prescriptions & appointments';
     }
   }
 }

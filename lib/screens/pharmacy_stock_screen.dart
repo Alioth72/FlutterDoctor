@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../services/api_client.dart';
 
 class PharmacyItem {
   final String id;
@@ -232,6 +233,21 @@ class _PharmacyStockScreenState extends State<PharmacyStockScreen> {
         notes: 'For ICU & Emergency Ward requirement.',
       ),
     ];
+    _loadLiveInventory();
+  }
+
+  Future<void> _loadLiveInventory() async {
+    try {
+      final liveItems = await ApiClient.getInventory();
+      if (liveItems.isNotEmpty && mounted) {
+        setState(() {
+          for (final live in liveItems.reversed) {
+            _inventory.removeWhere((i) => i.id == live.id || i.name == live.name);
+            _inventory.insert(0, live);
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   @override

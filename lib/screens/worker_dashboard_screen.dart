@@ -4,6 +4,8 @@ import '../models/user_profile.dart';
 import '../models/hospital_admin_repository.dart';
 import 'qr_workflow_screen.dart';
 import 'login_screen.dart';
+import '../services/auth_service.dart';
+import '../services/api_client.dart';
 
 class WorkerDashboardScreen extends StatefulWidget {
   final UserProfile? userProfile;
@@ -27,6 +29,38 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     super.initState();
     _hospitalId = widget.userProfile?.hospitalId ?? 'hosp_1';
     _hospital = HospitalAdminRepository.getHospitalDetails(_hospitalId);
+    _loadLivePatients();
+  }
+
+  Future<void> _loadLivePatients() async {
+    try {
+      final livePatients = await ApiClient.getPatients();
+      if (livePatients.isNotEmpty && mounted) {
+        setState(() {
+          for (final p in livePatients) {
+            final patientId = p['patient_id']?.toString() ?? '';
+            final name = p['full_name']?.toString() ?? 'Patient';
+            final phone = p['phone_e164']?.toString() ?? '';
+            HospitalAdminRepository.addPatient(HospitalAdminPatient(
+              id: patientId,
+              name: name,
+              phone: phone,
+              password: '1',
+              age: 45,
+              gender: p['sex_at_birth']?.toString() ?? 'Male',
+              diagnosis: 'General Health Care',
+              department: 'General Medicine',
+              hospitalId: _hospitalId,
+              hospitalName: _hospital.name,
+              roomNo: 'OPD Ward',
+              bedNo: 'Bed 1',
+              assignedDoctor: 'Dr. Rajesh V. Sharma',
+              admissionDate: 'Today',
+            ));
+          }
+        });
+      }
+    } catch (_) {}
   }
 
 
@@ -1044,7 +1078,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             ListTile(
               leading: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
               title: const Text('Logout', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
-              onTap: () {
+              onTap: () async {
+                await AuthService.logout();
+                if (!mounted) return;
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => const LoginScreen()),

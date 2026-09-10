@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/room_machine_models.dart';
 import '../theme/app_colors.dart';
+import '../services/api_client.dart';
 
 class MachineRecordsScreen extends StatefulWidget {
   const MachineRecordsScreen({super.key});
@@ -43,6 +44,24 @@ class _MachineRecordsScreenState extends State<MachineRecordsScreen> {
 
     _selectedHospital = _doctorHospitals.first;
     _selectedDepartment = _selectedHospital.departments.first;
+    _loadLiveMachines();
+  }
+
+  Future<void> _loadLiveMachines() async {
+    try {
+      final liveMachines = await ApiClient.getMachines();
+      if (liveMachines.isNotEmpty && mounted) {
+        setState(() {
+          for (final room in _allRooms) {
+            for (final live in liveMachines) {
+              if (!room.equipments.any((e) => e.serialNumber == live.serialNumber)) {
+                room.equipments.insert(0, live);
+              }
+            }
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   @override

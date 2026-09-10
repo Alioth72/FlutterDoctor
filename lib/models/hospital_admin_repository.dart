@@ -14,6 +14,7 @@ class HospitalAdminStaffDoctor {
   bool isOnDuty;
   String shiftTiming;
   String email;
+  String? licenseNumber;
 
   HospitalAdminStaffDoctor({
     required this.id,
@@ -30,6 +31,7 @@ class HospitalAdminStaffDoctor {
     this.isOnDuty = true,
     required this.shiftTiming,
     required this.email,
+    this.licenseNumber,
   });
 }
 
@@ -78,6 +80,7 @@ class HospitalAdminPatient {
   String bedNo;
   bool isAdmitted;
   String assignedDoctor;
+  String? assignedDoctorUserId;
   String admissionDate;
   String? forwardedToDoctor;
   String? forwardSpecialty;
@@ -85,6 +88,8 @@ class HospitalAdminPatient {
   String? forwardDate;
   String? urgency;
   Map<String, String>? vitals;
+  String? medicalRecordNumber;
+  String? bloodGroup;
 
   HospitalAdminPatient({
     required this.id,
@@ -101,6 +106,7 @@ class HospitalAdminPatient {
     required this.bedNo,
     this.isAdmitted = false,
     required this.assignedDoctor,
+    this.assignedDoctorUserId,
     required this.admissionDate,
     this.forwardedToDoctor,
     this.forwardSpecialty,
@@ -108,6 +114,8 @@ class HospitalAdminPatient {
     this.forwardDate,
     this.urgency,
     this.vitals,
+    this.medicalRecordNumber,
+    this.bloodGroup,
   });
 }
 
@@ -606,6 +614,25 @@ class HospitalAdminRepository {
   static void addDoctor(HospitalAdminStaffDoctor doc) {
     _doctors.removeWhere((d) => d.id == doc.id || d.phone == doc.phone);
     _doctors.insert(0, doc);
+  }
+
+  static void updateDoctor(HospitalAdminStaffDoctor doc) {
+    final idx = _doctors.indexWhere((d) => d.id == doc.id || d.phone == doc.phone);
+    if (idx != -1) {
+      _doctors[idx] = doc;
+    } else {
+      _doctors.insert(0, doc);
+    }
+  }
+
+  static void syncLiveDoctors(List<HospitalAdminStaffDoctor> liveDoctors, String hospitalId) {
+    _doctors.removeWhere((d) => d.hospitalId == hospitalId);
+    _doctors.insertAll(0, liveDoctors);
+  }
+
+  static void syncLivePatients(List<HospitalAdminPatient> livePatients, String hospitalId) {
+    _patients.removeWhere((p) => p.hospitalId == hospitalId);
+    _patients.insertAll(0, livePatients);
   }
 
   static void removeDoctor(String docId) {

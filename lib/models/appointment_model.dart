@@ -51,7 +51,18 @@ class AppointmentItem {
   final String? roomNo;
   String? dietarySuggestions;
   List<InpatientProcedureItem>? inpatientSchedules;
-  bool isCompleted;
+  bool _isCompleted;
+  bool get isCompleted => _isCompleted || status.toLowerCase() == 'completed';
+  set isCompleted(bool val) => _isCompleted = val;
+  String status;
+  final String? patientId;
+  final String? medicalRecordNumber;
+  final String? bloodGroup;
+  final String? patientPhone;
+  final String? doctorName;
+  final Map<String, dynamic>? clinicalData;
+  final List<String>? allergies;
+  final Map<String, dynamic>? emergencyContact;
 
   AppointmentItem({
     required this.id,
@@ -73,6 +84,15 @@ class AppointmentItem {
     this.roomNo,
     this.dietarySuggestions,
     this.inpatientSchedules,
-    this.isCompleted = false,
-  });
+    bool isCompleted = false,
+    this.status = 'confirmed',
+    this.patientId,
+    this.medicalRecordNumber,
+    this.bloodGroup,
+    this.patientPhone,
+    this.doctorName,
+    this.clinicalData,
+    this.allergies,
+    this.emergencyContact,
+  }) : _isCompleted = isCompleted;
 }

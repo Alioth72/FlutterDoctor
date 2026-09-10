@@ -5,14 +5,14 @@ import '../models/appointment_model.dart';
 import '../models/user_profile.dart';
 import 'appointment_detail_screen.dart';
 import 'qr_workflow_screen.dart';
-import 'chronic_postop_schedule_screen.dart';
 import 'pandemic_alert_screen.dart';
 import 'doctor_duty_schedule_screen.dart';
 import 'pharmacy_stock_screen.dart';
-import 'hospital_stay_careplan_screen.dart';
 import 'machine_records_screen.dart';
 import 'colleague_consult_screen.dart';
 import 'login_screen.dart';
+import '../services/auth_service.dart';
+import '../services/api_client.dart';
 
 enum DoctorAvailabilityMode {
   notAvailable, // 1st: Not available for hospital -> Grey
@@ -87,39 +87,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  LinearGradient get _currentCalendarGradient {
-    switch (_availabilityMode) {
-      case DoctorAvailabilityMode.notAvailable:
-        return const LinearGradient(
-          colors: [Color(0xFF374151), Color(0xFF1F2937)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
-      case DoctorAvailabilityMode.available:
-        return const LinearGradient(
-          colors: [Color(0xFF5B21B6), Color(0xFF3B0764)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
-      case DoctorAvailabilityMode.emergency:
-        return const LinearGradient(
-          colors: [Color(0xFFB91C1C), Color(0xFF7F1D1D)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
-    }
-  }
-
-  Color get _currentCalendarShadowColor {
-    switch (_availabilityMode) {
-      case DoctorAvailabilityMode.notAvailable:
-        return const Color(0xFF1F2937);
-      case DoctorAvailabilityMode.available:
-        return AppColors.primaryDark;
-      case DoctorAvailabilityMode.emergency:
-        return const Color(0xFF7F1D1D);
-    }
-  }
+  final Set<String> _dismissedAppointmentIds = {};
 
   final List<AppointmentItem> _appointments = [
     AppointmentItem(
@@ -244,6 +212,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ];
 
   final List<AppointmentItem> _transferredAppointments = [];
+  bool _isLoadingAppointments = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLiveAppointments();
+  }
+
+  Future<void> _loadLiveAppointments() async {
+    setState(() => _isLoadingAppointments = true);
+    try {
+      var liveList = await ApiClient.getAppointments(
+        providerUserId: widget.userProfile?.userId,
+      );
+      if (liveList == null || liveList.isEmpty) {
+        liveList = await ApiClient.getAppointments();
+      }
+      if (liveList != null && liveList.isNotEmpty && mounted) {
+        setState(() {
+          _appointments.clear();
+          _appointments.addAll(
+            liveList!.where((a) => !_dismissedAppointmentIds.contains(a.id)),
+          );
+        });
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _isLoadingAppointments = false);
+  }
 
   void _deleteAppointment(int index) {
     final appt = _appointments[index];
@@ -301,7 +297,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
     if (result == true) {
-      setState(() {});
+      _loadLiveAppointments();
     }
   }
 
@@ -364,22 +360,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Ashwini',
-                                  style: TextStyle(
-                                    fontSize: 24,
+                                Text(
+                                  widget.userProfile?.name ?? 'Dr. Rajesh V. Sharma',
+                                  style: const TextStyle(
+                                    fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.headingText,
-                                    letterSpacing: 1.5,
+                                    letterSpacing: 0.5,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
+                                const SizedBox(height: 2),
                                 Row(
                                   children: [
-                                    const Text(
-                                      'Doctor Portal',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.muted,
+                                    Flexible(
+                                      child: Text(
+                                        widget.userProfile?.qualification ?? 'Senior Consultant Physician',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.muted,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -825,27 +829,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                     // List of Visually Attractive Appointment Cards
                     Expanded(
-                      child: _appointments.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.task_alt, size: 52, color: AppColors.success),
-                                  SizedBox(height: 10),
-                                  Text(
-                                    'All appointments completed or transferred!',
-                                    style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600),
+                      child: RefreshIndicator(
+                        onRefresh: _loadLiveAppointments,
+                        child: _isLoadingAppointments && _appointments.isEmpty
+                            ? const Center(
+                                child: CircularProgressIndicator(color: AppColors.primary),
+                              )
+                            : _appointments.isEmpty
+                                ? ListView(
+                                    children: const [
+                                      SizedBox(height: 60),
+                                      Center(
+                                        child: Column(
+                                          children: [
+                                            Icon(Icons.task_alt, size: 52, color: AppColors.success),
+                                            SizedBox(height: 10),
+                                            Text(
+                                              'No appointments scheduled for today',
+                                              style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : ListView.builder(
+                                    physics: const AlwaysScrollableScrollPhysics(),
+                                    itemCount: _appointments.length,
+                                    itemBuilder: (context, index) {
+                                      final appt = _appointments[index];
+                                      return _buildAppointmentCard(appt, index);
+                                    },
                                   ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              itemCount: _appointments.length,
-                              itemBuilder: (context, index) {
-                                final appt = _appointments[index];
-                                return _buildAppointmentCard(appt, index);
-                              },
-                            ),
+                      ),
                     ),
                   ],
                 ),
@@ -865,8 +881,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
       key: Key(appt.id),
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
-          _openAppointmentDetail(appt);
-          return false;
+          if (appt.isCompleted) {
+            // Remove completed consultation from doctor's screen only (not database)
+            setState(() {
+              _dismissedAppointmentIds.add(appt.id);
+              _appointments.removeWhere((a) => a.id == appt.id);
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Completed consultation for ${appt.patientName} removed from your screen.'),
+                backgroundColor: AppColors.success,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return true;
+          } else {
+            _openAppointmentDetail(appt);
+            return false;
+          }
         } else if (direction == DismissDirection.endToStart) {
           _transferAppointment(index);
           return false;
@@ -878,17 +910,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
         padding: const EdgeInsets.only(left: 24),
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: AppColors.primaryLight,
+          color: appt.isCompleted ? const Color(0xFFDCFCE7) : AppColors.primaryLight,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
+          border: Border.all(
+            color: (appt.isCompleted ? AppColors.success : AppColors.primary).withValues(alpha: 0.4),
+            width: 1.5,
+          ),
         ),
         child: Row(
           children: [
-            Icon(Icons.touch_app_rounded, color: AppColors.primary, size: 26),
-            SizedBox(width: 10),
+            Icon(
+              appt.isCompleted ? Icons.check_circle_rounded : Icons.touch_app_rounded,
+              color: appt.isCompleted ? AppColors.success : AppColors.primary,
+              size: 26,
+            ),
+            const SizedBox(width: 10),
             Text(
-              'Swipe Right: Open Details & Prescription',
-              style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.bold, fontSize: 13.5),
+              appt.isCompleted
+                  ? 'Swipe Right: Remove from Screen (Completed)'
+                  : 'Swipe Right: Open Details & Prescription',
+              style: TextStyle(
+                color: appt.isCompleted ? const Color(0xFF15803D) : AppColors.primaryDark,
+                fontWeight: FontWeight.bold,
+                fontSize: 13.5,
+              ),
             ),
           ],
         ),
@@ -1020,6 +1065,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                 ),
                               ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: appt.status == 'completed'
+                                      ? AppColors.successBg
+                                      : (appt.status == 'in_progress' ? const Color(0xFFFEF3C7) : const Color(0xFFF3F4F6)),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: appt.status == 'completed'
+                                        ? AppColors.success.withValues(alpha: 0.4)
+                                        : (appt.status == 'in_progress' ? const Color(0xFFF59E0B) : const Color(0xFFE5E7EB)),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Text(
+                                  appt.status.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: appt.status == 'completed'
+                                        ? AppColors.successText
+                                        : (appt.status == 'in_progress' ? const Color(0xFFB45309) : const Color(0xFF4B5563)),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 2),
@@ -1030,6 +1101,86 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               fontWeight: FontWeight.w600,
                               color: AppColors.bodyText,
                             ),
+                          ),
+                          if (appt.isCompleted) ...[
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFF86EFAC), width: 0.8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.swipe_right_alt_rounded, size: 13, color: Color(0xFF15803D)),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Completed • Swipe right to remove from screen',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF15803D),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          if (appt.medicalRecordNumber != null || appt.bloodGroup != null) ...[
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                if (appt.medicalRecordNumber != null)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                    margin: const EdgeInsets.only(right: 6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                                    ),
+                                    child: Text(
+                                      'MRN: ${appt.medicalRecordNumber}',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF1E40AF),
+                                        fontFamily: 'monospace',
+                                      ),
+                                    ),
+                                  ),
+                                if (appt.bloodGroup != null)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFEF2F2),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: const Color(0xFFFECACA)),
+                                    ),
+                                    child: Text(
+                                      appt.bloodGroup!,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFB91C1C),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                          const SizedBox(height: 2),
+                          Text(
+                            appt.diagnosis,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: Color(0xFF7C3AED),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -1425,7 +1576,90 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 14),
+                const SizedBox(height: 8),
+
+                // Doctor License Badge & Chamber Details
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    if (profile.licenseNumber != null && profile.licenseNumber!.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.verified_user_outlined, size: 12, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Lic: ${profile.licenseNumber}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (profile.chamber != null && profile.chamber!.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.meeting_room_outlined, size: 12, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              profile.chamber!,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (profile.shiftTiming != null && profile.shiftTiming!.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.schedule_outlined, size: 12, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              profile.shiftTiming!,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
 
                 // 3-Option Hospital Availability & Emergency Toggle Button
                 _buildAvailabilityToggle(),
@@ -1504,8 +1738,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ListTile(
             leading: const Icon(Icons.logout, color: AppColors.danger),
             title: const Text('Logout', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
-            onTap: () {
+            onTap: () async {
               Navigator.pop(context);
+              await AuthService.logout();
+              if (!mounted) return;
               Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
             },
           ),

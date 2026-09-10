@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_assets.dart';
 import '../models/user_role.dart';
+import '../models/user_profile.dart';
 import '../services/auth_service.dart';
 import 'dashboard_screen.dart';
 import 'admin_dashboard_screen.dart';
@@ -14,76 +15,81 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  
-  bool _showForm = false;
+class _LoginScreenState extends State<LoginScreen> {
+  final _loginFormKey = GlobalKey<FormState>();
+
+  // Login Controllers
+  final TextEditingController _loginPhoneController = TextEditingController();
+  final TextEditingController _loginPasswordController = TextEditingController();
+
   bool _obscurePassword = true;
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _phoneController.dispose();
-    _passwordController.dispose();
+    _loginPhoneController.dispose();
+    _loginPasswordController.dispose();
     super.dispose();
   }
 
-  void _onLoginPressed() {
-    if (!_showForm) {
-      setState(() {
-        _showForm = true;
-      });
-      return;
-    }
-
-    if (_formKey.currentState?.validate() ?? false) {
-      _performLogin();
-    }
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
-  void _performLogin() {
-    setState(() {
-      _isLoading = true;
-    });
+  void _navigateToDashboard(UserProfile userProfile) {
+    Widget destinationScreen;
+    switch (userProfile.role) {
+      case UserRole.doctor:
+        destinationScreen = DashboardScreen(userProfile: userProfile);
+        break;
+      case UserRole.worker:
+        destinationScreen = WorkerDashboardScreen(userProfile: userProfile);
+        break;
+      case UserRole.admin:
+        destinationScreen = AdminDashboardScreen(userProfile: userProfile);
+        break;
+      case UserRole.patient:
+        destinationScreen = DashboardScreen(userProfile: userProfile);
+        break;
+    }
 
-    final phone = _phoneController.text.trim();
-    final password = _passwordController.text.trim();
-    
-    final userProfile = AuthService.authenticateUser(phone, password);
-    final role = userProfile?.role ?? AuthService.getRoleFromPhoneNumber(phone);
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => destinationScreen),
+    );
+  }
 
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
+  Future<void> _performLogin() async {
+    if (!(_loginFormKey.currentState?.validate() ?? false)) return;
 
-      Widget destinationScreen;
-      switch (role) {
-        case UserRole.doctor:
-          destinationScreen = DashboardScreen(userProfile: userProfile);
-          break;
-        case UserRole.worker:
-          destinationScreen = WorkerDashboardScreen(userProfile: userProfile);
-          break;
-        case UserRole.admin:
-          destinationScreen = AdminDashboardScreen(userProfile: userProfile);
-          break;
+    setState(() => _isLoading = true);
+
+    try {
+      final phone = _loginPhoneController.text.trim();
+      final password = _loginPasswordController.text;
+      final userProfile = await AuthService.login(phone, password);
+
+      if (userProfile != null && mounted) {
+        _navigateToDashboard(userProfile);
       }
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => destinationScreen),
-      );
-    });
+    } catch (e) {
+      _showError(e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
-  void _fillTestCredentials(String phone, String pass) {
+  void _fillTestCredentials(String phone, String password) {
     setState(() {
-      _phoneController.text = phone;
-      _passwordController.text = pass;
+      _loginPhoneController.text = phone;
+      _loginPasswordController.text = password;
     });
   }
 
@@ -99,14 +105,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Logo Container matching wireframe
+                // App Logo
                 Container(
-                  width: 140,
-                  height: 140,
-                  padding: const EdgeInsets.all(16),
+                  width: 110,
+                  height: 110,
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: AppColors.border, width: 1.5),
                     boxShadow: [
                       BoxShadow(
@@ -117,47 +123,36 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(18),
                     child: Image.asset(
                       AppAssets.logo,
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.local_hospital, size: 70, color: AppColors.primary),
+                          const Icon(Icons.local_hospital, size: 60, color: AppColors.primary),
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-                // ASHWINI Title matching wireframe
+                // Title & Subtitle
                 const Text(
                   'ASHWINI',
                   style: TextStyle(
-                    fontSize: 28,
+                    fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 2.5,
+                    letterSpacing: 2.2,
                     color: AppColors.headingText,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 const Text(
-                  'Healthcare Intelligence System',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.muted,
-                    letterSpacing: 0.5,
-                  ),
+                  'Rural Healthcare Intelligence System',
+                  style: TextStyle(fontSize: 12, color: AppColors.muted, letterSpacing: 0.5),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
 
-                // Animated Form / Login Button Transition
-                AnimatedCrossFade(
-                  duration: const Duration(milliseconds: 350),
-                  crossFadeState: _showForm
-                      ? CrossFadeState.showSecond
-                      : CrossFadeState.showFirst,
-                  firstChild: _buildInitialLoginButton(),
-                  secondChild: _buildLoginForm(),
-                ),
+                // Login Form
+                _buildLoginForm(),
               ],
             ),
           ),
@@ -166,61 +161,21 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  /// Initial Landing state matching right side of wireframe
-  Widget _buildInitialLoginButton() {
-    return Container(
-      width: double.infinity,
-      height: 56,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.40),
-            blurRadius: 16,
-            spreadRadius: 1,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: _onLoginPressed,
-          child: const Center(
-            child: Text(
-              'Login',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Expanded Form state matching left side of wireframe (Phone no. & Password)
+  // ==========================================================
+  // LOGIN FORM (PHONE NUMBER + PASSWORD)
+  // ==========================================================
   Widget _buildLoginForm() {
     return Form(
-      key: _formKey,
+      key: _loginFormKey,
       child: Column(
         children: [
           // Phone Field
           TextFormField(
-            controller: _phoneController,
+            controller: _loginPhoneController,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
               labelText: 'Phone Number',
-              hintText: 'Enter phone number',
+              hintText: 'e.g. +91 99887 76655',
               prefixIcon: const Icon(Icons.phone_outlined, color: AppColors.muted),
               filled: true,
               fillColor: AppColors.surface,
@@ -238,33 +193,29 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 borderSide: const BorderSide(color: AppColors.primary, width: 2),
               ),
             ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter phone number';
-              }
+            validator: (val) {
+              if (val == null || val.trim().isEmpty) return 'Please enter your phone number';
+              final digits = val.replaceAll(RegExp(r'\D'), '');
+              if (digits.length < 10) return 'Enter at least 10 valid digits';
               return null;
             },
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
 
-          // Password Field
+          // Password Field with Visibility Toggle
           TextFormField(
-            controller: _passwordController,
+            controller: _loginPasswordController,
             obscureText: _obscurePassword,
             decoration: InputDecoration(
               labelText: 'Password',
-              hintText: 'Enter password',
+              hintText: 'Enter your password',
               prefixIcon: const Icon(Icons.lock_outline, color: AppColors.muted),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                   color: AppColors.muted,
                 ),
-                onPressed: () {
-                  setState(() {
-                    _obscurePassword = !_obscurePassword;
-                  });
-                },
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               ),
               filled: true,
               fillColor: AppColors.surface,
@@ -282,67 +233,24 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 borderSide: const BorderSide(color: AppColors.primary, width: 2),
               ),
             ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter password';
-              }
+            validator: (val) {
+              if (val == null || val.isEmpty) return 'Please enter your password';
+              if (val.length < 8) return 'Password must be at least 8 characters';
               return null;
             },
           ),
           const SizedBox(height: 24),
 
-          // Submit Button (3D Pop-Out Gradient Button)
-          Container(
-            width: double.infinity,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.primaryDark],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.40),
-                  blurRadius: 16,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: _isLoading ? null : _performLogin,
-                child: Center(
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.5,
-                          ),
-                        )
-                      : const Text(
-                          'Login',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                ),
-              ),
-            ),
+          // Login Button
+          _buildSubmitButton(
+            title: 'Login',
+            onTap: _isLoading ? null : _performLogin,
           ),
+          const SizedBox(height: 24),
 
-          const SizedBox(height: 20),
-
-          // Demo quick login helpers
+          // Quick Demo Logins
+          const Text('Quick Select Demo Account:', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          const SizedBox(height: 10),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -351,80 +259,81 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ActionChip(
                 avatar: const Icon(Icons.medical_services_outlined, size: 14, color: AppColors.primary),
                 label: const Text('Doctor: 1234567890', style: TextStyle(fontSize: 11)),
-                onPressed: () => _fillTestCredentials('1234567890', '1'),
+                onPressed: () => _fillTestCredentials('1234567890', 'Doctor@12345'),
                 backgroundColor: AppColors.surface,
                 side: const BorderSide(color: AppColors.border),
               ),
               ActionChip(
                 avatar: const Icon(Icons.admin_panel_settings_outlined, size: 14, color: Color(0xFF4338CA)),
                 label: const Text('Admin: 2345678901', style: TextStyle(fontSize: 11)),
-                onPressed: () => _fillTestCredentials('2345678901', '1'),
+                onPressed: () => _fillTestCredentials('2345678901', 'Admin@12345'),
                 backgroundColor: AppColors.surface,
                 side: const BorderSide(color: AppColors.border),
               ),
               ActionChip(
                 avatar: const Icon(Icons.badge_outlined, size: 14, color: Color(0xFF0D9488)),
                 label: const Text('Worker: 3456789012', style: TextStyle(fontSize: 11)),
-                onPressed: () => _fillTestCredentials('3456789012', '1'),
+                onPressed: () => _fillTestCredentials('3456789012', 'Worker@12345'),
+                backgroundColor: AppColors.surface,
+                side: const BorderSide(color: AppColors.border),
+              ),
+              ActionChip(
+                avatar: const Icon(Icons.person_outline, size: 14, color: Color(0xFFE11D48)),
+                label: const Text('Patient: 9988776655', style: TextStyle(fontSize: 11)),
+                onPressed: () => _fillTestCredentials('9988776655', 'Patient@12345'),
                 backgroundColor: AppColors.surface,
                 side: const BorderSide(color: AppColors.border),
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
 
-          const SizedBox(height: 20),
-
-          // Big Pop-Out Back Button Box
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.primaryLight, width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  blurRadius: 18,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  setState(() {
-                    _showForm = false;
-                  });
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 14),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(
-                        Icons.arrow_back_rounded,
-                        color: AppColors.primary,
-                        size: 22,
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Back',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryDark,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+  Widget _buildSubmitButton({required String title, required VoidCallback? onTap}) {
+    return Container(
+      width: double.infinity,
+      height: 54,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.35),
+            blurRadius: 14,
+            spreadRadius: 1,
+            offset: const Offset(0, 6),
           ),
         ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Center(
+            child: _isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                  )
+                : Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+          ),
+        ),
       ),
     );
   }

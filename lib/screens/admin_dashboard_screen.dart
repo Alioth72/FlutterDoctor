@@ -3,7 +3,10 @@ import '../theme/app_colors.dart';
 import '../models/user_profile.dart';
 import '../models/hospital_admin_repository.dart';
 import '../models/room_machine_models.dart';
+import '../models/appointment_model.dart';
 import 'login_screen.dart';
+import '../services/auth_service.dart';
+import '../services/api_client.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   final UserProfile? userProfile;
@@ -20,10 +23,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   late String _hospitalId;
   late HospitalDetailInfo _hospital;
 
-  // Staff sub-tab: 0 = Doctors, 1 = Workers, 2 = Patients
+  // Staff sub-tab: 0 = Doctors, 1 = Workers, 2 = Patients, 3 = Consultations
   int _staffSubTabIndex = 0;
   String _searchQuery = '';
   final Set<String> _visiblePasswords = {};
+  bool _isLoadingDoctors = false;
+  bool _isLoadingPatients = false;
+  bool _isLoadingAppointments = false;
+  List<AppointmentItem> _liveAppointments = [];
+  String _appointmentFilterStatus = 'all';
 
   @override
   void initState() {
@@ -31,6 +39,134 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     _tabController = TabController(length: 3, vsync: this);
     _hospitalId = widget.userProfile?.hospitalId ?? 'hosp_1';
     _refreshHospitalData();
+    _loadLiveDoctors();
+    _loadLivePatients();
+    _loadLiveAppointments();
+  }
+
+  Future<void> _loadLiveAppointments() async {
+    setState(() => _isLoadingAppointments = true);
+    try {
+      final list = await ApiClient.getAppointments();
+      if (!mounted) return;
+      setState(() {
+        if (list != null) {
+          _liveAppointments = list;
+        }
+        _isLoadingAppointments = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingAppointments = false);
+    }
+  }
+
+  Future<void> _loadLiveDoctors() async {
+    setState(() => _isLoadingDoctors = true);
+    try {
+      final rawDocs = await ApiClient.getDoctors();
+      if (!mounted) return;
+
+      if (rawDocs.isNotEmpty) {
+        final liveList = rawDocs.map<HospitalAdminStaffDoctor>((row) {
+          final availability = row['availability'] is Map ? row['availability'] as Map : {};
+          final specialties = row['specialties'] is List
+              ? (row['specialties'] as List).map((e) => e.toString()).toList()
+              : <String>[];
+          final phone = row['phone_e164']?.toString() ?? '';
+          final localDigits = phone.replaceAll(RegExp(r'\D'), '');
+
+          String dept = specialties.isNotEmpty ? specialties.first : 'General Medicine';
+          String qual = availability['qualification']?.toString() ??
+              (specialties.length > 1 ? specialties[1] : 'MBBS, MD');
+          String desig = availability['designation']?.toString() ?? 'Consultant Specialist';
+          int expYears = num.tryParse(availability['experience_years']?.toString() ?? '8')?.toInt() ?? 8;
+
+          return HospitalAdminStaffDoctor(
+            id: row['user_id']?.toString() ?? 'doc_${DateTime.now().millisecondsSinceEpoch}',
+            name: row['full_name']?.toString() ?? 'Doctor',
+            phone: localDigits.length >= 10 ? localDigits.substring(localDigits.length - 10) : localDigits,
+            password: '',
+            department: dept,
+            qualification: qual,
+            designation: desig,
+            experienceYears: expYears,
+            chamberNo: availability['chamber']?.toString() ?? 'Chamber 108',
+            hospitalId: _hospitalId,
+            hospitalName: _hospital.name,
+            isOnDuty: row['is_active'] != false,
+            shiftTiming: availability['shift']?.toString() ?? '08:00 AM - 02:00 PM',
+            email: '${localDigits.length >= 10 ? localDigits.substring(localDigits.length - 10) : localDigits}@${_hospital.name.toLowerCase().replaceAll(' ', '')}.org',
+            licenseNumber: row['license_number']?.toString(),
+          );
+        }).toList();
+
+        setState(() {
+          HospitalAdminRepository.syncLiveDoctors(liveList, _hospitalId);
+          _isLoadingDoctors = false;
+        });
+      } else {
+        setState(() => _isLoadingDoctors = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingDoctors = false);
+    }
+  }
+
+  Future<void> _loadLivePatients() async {
+    setState(() => _isLoadingPatients = true);
+    try {
+      final rawPatients = await ApiClient.getPatients();
+      if (!mounted) return;
+
+      if (rawPatients.isNotEmpty) {
+        final liveList = rawPatients.map<HospitalAdminPatient>((row) {
+          final phone = row['phone_e164']?.toString() ?? '';
+          final localDigits = phone.replaceAll(RegExp(r'\D'), '');
+          final dob = row['date_of_birth']?.toString();
+          int age = 35;
+          if (dob != null && dob.length >= 4) {
+            final birthYear = int.tryParse(dob.substring(0, 4));
+            if (birthYear != null) {
+              age = DateTime.now().year - birthYear;
+            }
+          }
+          final sex = row['sex_at_birth']?.toString();
+          final formattedGender = (sex != null && sex.isNotEmpty)
+              ? '${sex[0].toUpperCase()}${sex.substring(1)}'
+              : 'Male';
+
+          return HospitalAdminPatient(
+            id: row['patient_id']?.toString() ?? 'pat_${DateTime.now().millisecondsSinceEpoch}',
+            name: row['full_name']?.toString() ?? 'Patient',
+            phone: localDigits.length >= 10 ? localDigits.substring(localDigits.length - 10) : localDigits,
+            password: '••••',
+            age: age,
+            gender: formattedGender,
+            diagnosis: 'Outpatient Care',
+            department: 'General Medicine',
+            hospitalId: _hospitalId,
+            hospitalName: _hospital.name,
+            roomNo: 'OPD Ward',
+            bedNo: 'Bay 1',
+            isAdmitted: false,
+            assignedDoctor: row['assigned_doctor_name']?.toString() ?? 'Unassigned',
+            assignedDoctorUserId: row['assigned_doctor_user_id']?.toString(),
+            admissionDate: (row['created_at']?.toString() ?? '').split('T').first,
+            medicalRecordNumber: row['medical_record_number']?.toString() ?? 'MRN-N/A',
+            bloodGroup: row['blood_group']?.toString() ?? 'N/A',
+          );
+        }).toList();
+
+        setState(() {
+          HospitalAdminRepository.syncLivePatients(liveList, _hospitalId);
+          _isLoadingPatients = false;
+        });
+      } else {
+        setState(() => _isLoadingPatients = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingPatients = false);
+    }
   }
 
   void _refreshHospitalData() {
@@ -190,7 +326,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     IconButton(
                       icon: const Icon(Icons.logout_rounded, color: Colors.white),
                       tooltip: 'Logout',
-                      onPressed: () {
+                      onPressed: () async {
+                        await AuthService.logout();
+                        if (!mounted) return;
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -265,43 +403,47 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     return Column(
       children: [
         const SizedBox(height: 12),
-        // Sub-Tab Switcher: Doctors | Workers | Patients
+        // Sub-Tab Switcher: Doctors | Workers | Patients | Consultations
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: _buildSubTabChip(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildSubTabChip(
                   index: 0,
                   label: 'Doctors (${doctors.length})',
                   icon: Icons.medical_services_outlined,
                   color: AppColors.primary,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildSubTabChip(
+                const SizedBox(width: 8),
+                _buildSubTabChip(
                   index: 1,
                   label: 'Workers (${workers.length})',
                   icon: Icons.badge_outlined,
                   color: const Color(0xFF0D9488),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildSubTabChip(
+                const SizedBox(width: 8),
+                _buildSubTabChip(
                   index: 2,
                   label: 'Patients (${patients.length})',
                   icon: Icons.personal_injury_outlined,
                   color: const Color(0xFFE11D48),
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                _buildSubTabChip(
+                  index: 3,
+                  label: 'Consultations (${_liveAppointments.length})',
+                  icon: Icons.event_note_rounded,
+                  color: const Color(0xFF059669),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),
 
-        // Search Bar & Add Button
+        // Search Bar & Action Button
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
@@ -314,7 +456,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         ? 'Search doctors by name or phone...'
                         : _staffSubTabIndex == 1
                             ? 'Search workers by name or phone...'
-                            : 'Search patients by name or diagnosis...',
+                            : _staffSubTabIndex == 2
+                                ? 'Search patients by name or diagnosis...'
+                                : 'Search consultations by patient, reason, or ID...',
                     prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
                     filled: true,
                     fillColor: Colors.white,
@@ -331,37 +475,54 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 ),
               ),
               const SizedBox(width: 10),
-              ElevatedButton.icon(
-                onPressed: () {
-                  if (_staffSubTabIndex == 0) {
-                    _openAddDoctorDialog();
-                  } else if (_staffSubTabIndex == 1) {
-                    _openAddWorkerDialog();
-                  } else {
-                    _openAddPatientDialog();
-                  }
-                },
-                icon: const Icon(Icons.add, color: Colors.white, size: 18),
-                label: Text(
-                  _staffSubTabIndex == 0
-                      ? 'Add Doctor'
-                      : _staffSubTabIndex == 1
-                          ? 'Add Worker'
-                          : 'Add Patient',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              if (_staffSubTabIndex == 3)
+                ElevatedButton.icon(
+                  onPressed: _loadLiveAppointments,
+                  icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 18),
+                  label: const Text(
+                    'Refresh',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF059669),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 2,
+                  ),
+                )
+              else
+                ElevatedButton.icon(
+                  onPressed: () {
+                    if (_staffSubTabIndex == 0) {
+                      _openAddDoctorDialog();
+                    } else if (_staffSubTabIndex == 1) {
+                      _openAddWorkerDialog();
+                    } else {
+                      _openAddPatientDialog();
+                    }
+                  },
+                  icon: const Icon(Icons.add, color: Colors.white, size: 18),
+                  label: Text(
+                    _staffSubTabIndex == 0
+                        ? 'Add Doctor'
+                        : _staffSubTabIndex == 1
+                            ? 'Add Worker'
+                            : 'Add Patient',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _staffSubTabIndex == 0
+                        ? AppColors.primary
+                        : _staffSubTabIndex == 1
+                            ? const Color(0xFF0D9488)
+                            : const Color(0xFFE11D48),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 2,
+                  ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _staffSubTabIndex == 0
-                      ? AppColors.primary
-                      : _staffSubTabIndex == 1
-                          ? const Color(0xFF0D9488)
-                          : const Color(0xFFE11D48),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 2,
-                ),
-              ),
             ],
           ),
         ),
@@ -373,7 +534,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               ? _buildDoctorsList(doctors)
               : _staffSubTabIndex == 1
                   ? _buildWorkersList(workers)
-                  : _buildPatientsList(patients),
+                  : _staffSubTabIndex == 2
+                      ? _buildPatientsList(patients)
+                      : _buildConsultationsList(),
         ),
       ],
     );
@@ -413,19 +576,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               : null,
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 16, color: isSelected ? Colors.white : const Color(0xFF475569)),
-            const SizedBox(width: 5),
-            Flexible(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : const Color(0xFF1E293B),
-                ),
-                overflow: TextOverflow.ellipsis,
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : const Color(0xFF1E293B),
               ),
             ),
           ],
@@ -444,166 +605,187 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     }).toList();
 
     if (filtered.isEmpty) {
-      return _buildEmptyState('No doctors found in ${_hospital.name}');
+      return _isLoadingDoctors
+          ? const Center(child: CircularProgressIndicator())
+          : _buildEmptyState('No doctors found in ${_hospital.name}');
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: filtered.length,
-      itemBuilder: (context, index) {
-        final doc = filtered[index];
-        final isPassVisible = _visiblePasswords.contains(doc.id);
+    return RefreshIndicator(
+      onRefresh: _loadLiveDoctors,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: filtered.length,
+        itemBuilder: (context, index) {
+          final doc = filtered[index];
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: 1.5,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: Color(0xFFE2E8F0)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: AppColors.primaryLight,
-                      child: const Icon(Icons.person, color: AppColors.primary, size: 28),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            doc.name,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0F172A),
-                            ),
-                          ),
-                          Text(
-                            '${doc.designation} • ${doc.department}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            doc.qualification,
-                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                          ),
-                        ],
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            elevation: 1.5,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: AppColors.primaryLight,
+                        child: const Icon(Icons.person, color: AppColors.primary, size: 28),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444)),
-                      tooltip: 'Remove Doctor from Database',
-                      onPressed: () => _confirmRemoveDoctor(doc),
-                    ),
-                  ],
-                ),
-                const Divider(height: 18, color: Color(0xFFF1F5F9)),
-
-                // Details Grid: Chamber, Shift, Duty Toggle, and PASSWORD
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDetailRow(Icons.meeting_room_outlined, 'Chamber: ${doc.chamberNo}'),
-                          const SizedBox(height: 4),
-                          _buildDetailRow(Icons.schedule_outlined, 'Shift: ${doc.shiftTiming}'),
-                          const SizedBox(height: 4),
-                          _buildDetailRow(Icons.phone_outlined, 'Phone: ${doc.phone}'),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        // Duty Toggle Switch
-                        Row(
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              doc.isOnDuty ? 'ON DUTY' : 'OFF DUTY',
-                              style: TextStyle(
-                                fontSize: 10,
+                              doc.name,
+                              style: const TextStyle(
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: doc.isOnDuty ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                                color: Color(0xFF0F172A),
                               ),
                             ),
-                            Switch(
-                              value: doc.isOnDuty,
-                              activeThumbColor: const Color(0xFF10B981),
-                              onChanged: (val) {
-                                setState(() {
-                                  HospitalAdminRepository.toggleStaffDuty(doc.id, true);
-                                });
-                              },
+                            Text(
+                              '${doc.designation} • ${doc.department}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              doc.qualification,
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-                // PASSWORD BOX FOR ADMIN (Full Credentials Control)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFFDE68A)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.key_rounded, size: 16, color: Color(0xFFB45309)),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Password: ${isPassVisible ? doc.password : '••••••••'}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF92400E),
-                          fontFamily: 'monospace',
-                        ),
                       ),
-                      const Spacer(),
-                      InkWell(
-                        onTap: () => _togglePasswordVisibility(doc.id),
-                        child: Text(
-                          isPassVisible ? 'Hide' : 'Show',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFB45309),
-                            decoration: TextDecoration.underline,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, color: AppColors.primary, size: 22),
+                            tooltip: 'Edit Doctor Profile',
+                            onPressed: () => _openEditDoctorDialog(doc),
                           ),
-                        ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 22),
+                            tooltip: 'Remove Doctor from Database',
+                            onPressed: () => _confirmRemoveDoctor(doc),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ),
-              ],
+                  const Divider(height: 18, color: Color(0xFFF1F5F9)),
+
+                  // Details Grid: Chamber, Shift, Duty Toggle
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildDetailRow(Icons.meeting_room_outlined, 'Chamber: ${doc.chamberNo}'),
+                            const SizedBox(height: 4),
+                            _buildDetailRow(Icons.schedule_outlined, 'Shift: ${doc.shiftTiming}'),
+                            const SizedBox(height: 4),
+                            _buildDetailRow(Icons.phone_outlined, 'Phone: +91 ${doc.phone}'),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          // Duty Toggle Switch
+                          Row(
+                            children: [
+                              Text(
+                                doc.isOnDuty ? 'ACTIVE' : 'INACTIVE',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: doc.isOnDuty ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                                ),
+                              ),
+                              Switch(
+                                value: doc.isOnDuty,
+                                activeThumbColor: const Color(0xFF10B981),
+                                onChanged: (val) async {
+                                  setState(() {
+                                    doc.isOnDuty = val;
+                                    HospitalAdminRepository.updateDoctor(doc);
+                                  });
+                                  await ApiClient.updateDoctor(userId: doc.id, isActive: val);
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Verified License & Department Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.verified_user_outlined, size: 16, color: Color(0xFF1D4ED8)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'License: ${doc.licenseNumber?.isNotEmpty == true ? doc.licenseNumber : "Verified Practitioner"}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1E40AF),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFF93C5FD)),
+                          ),
+                          child: Text(
+                            doc.department,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1D4ED8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
-  // --- WORKERS LIST ---
   Widget _buildWorkersList(List<HospitalAdminStaffWorker> workers) {
     final filtered = workers.where((w) {
       if (_searchQuery.isEmpty) return true;
@@ -769,181 +951,1213 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   Widget _buildPatientsList(List<HospitalAdminPatient> patients) {
     final filtered = patients.where((p) {
       if (_searchQuery.isEmpty) return true;
-      return p.name.toLowerCase().contains(_searchQuery) ||
-          p.phone.contains(_searchQuery) ||
-          p.diagnosis.toLowerCase().contains(_searchQuery);
+      final q = _searchQuery.toLowerCase();
+      return p.name.toLowerCase().contains(q) ||
+          p.phone.contains(q) ||
+          p.diagnosis.toLowerCase().contains(q) ||
+          (p.medicalRecordNumber != null && p.medicalRecordNumber!.toLowerCase().contains(q)) ||
+          (p.bloodGroup != null && p.bloodGroup!.toLowerCase().contains(q));
     }).toList();
 
     if (filtered.isEmpty) {
-      return _buildEmptyState('No patients registered in ${_hospital.name}');
+      return _isLoadingPatients
+          ? const Center(child: CircularProgressIndicator())
+          : _buildEmptyState('No patients registered in ${_hospital.name}');
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: filtered.length,
-      itemBuilder: (context, index) {
-        final pat = filtered[index];
-        final isPassVisible = _visiblePasswords.contains(pat.id);
+    return RefreshIndicator(
+      onRefresh: _loadLivePatients,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: filtered.length,
+        itemBuilder: (context, index) {
+          final pat = filtered[index];
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: 1.5,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: Color(0xFFE2E8F0)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: const Color(0xFFFFE4E6),
-                      child: const Icon(Icons.personal_injury_rounded, color: Color(0xFFE11D48), size: 28),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                pat.name,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: pat.isAdmitted ? const Color(0xFFDC2626) : const Color(0xFF0284C7),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  pat.isAdmitted ? 'INPATIENT' : 'OPD',
-                                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            '${pat.age} Yrs • ${pat.gender} • ${pat.department}',
-                            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                          ),
-                          Text(
-                            pat.diagnosis,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFFBE123C),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            elevation: 1.5,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: const Color(0xFFFFE4E6),
+                        child: const Icon(Icons.personal_injury_rounded, color: Color(0xFFE11D48), size: 28),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444)),
-                      tooltip: 'Remove Patient from Database',
-                      onPressed: () => _confirmRemovePatient(pat),
-                    ),
-                  ],
-                ),
-                const Divider(height: 18, color: Color(0xFFF1F5F9)),
-
-                // Patient Details
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDetailRow(Icons.hotel_outlined, 'Bed: ${pat.roomNo} (${pat.bedNo})'),
-                          const SizedBox(height: 4),
-                          _buildDetailRow(Icons.person_pin_circle_outlined, 'Doctor: ${pat.assignedDoctor}'),
-                          const SizedBox(height: 4),
-                          _buildDetailRow(Icons.phone_outlined, 'Phone: ${pat.phone}'),
-                        ],
-                      ),
-                    ),
-                    if (pat.forwardedToDoctor != null)
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEEF2FF),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFC7D2FE)),
-                        ),
+                      const SizedBox(width: 12),
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'FORWARDED TO',
-                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF4338CA)),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    pat.name,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: pat.isAdmitted ? const Color(0xFFDC2626) : const Color(0xFF0284C7),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    pat.isAdmitted ? 'INPATIENT' : 'OPD',
+                                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
                             ),
+                            const SizedBox(height: 2),
                             Text(
-                              pat.forwardedToDoctor!,
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF312E81)),
+                              '${pat.age} Yrs • ${pat.gender} • ${pat.department}',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                             ),
+                            const SizedBox(height: 2),
                             Text(
-                              pat.urgency ?? 'Routine',
-                              style: const TextStyle(fontSize: 10, color: Color(0xFF4F46E5)),
+                              pat.diagnosis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFFBE123C),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
                       ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-                // Patient Portal Password / PIN
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFFDE68A)),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.receipt_long_rounded, color: Color(0xFF059669)),
+                            tooltip: 'View Prescriptions & Medicines',
+                            onPressed: () => _showPatientPrescriptionsDialog(pat),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.person_add_alt_1_rounded, color: AppColors.primary),
+                            tooltip: 'Assign / Reassign Doctor',
+                            onPressed: () => _showAssignDoctorDialog(pat),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444)),
+                            tooltip: 'Remove Patient from Database',
+                            onPressed: () => _confirmRemovePatient(pat),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  child: Row(
+                  const Divider(height: 18, color: Color(0xFFF1F5F9)),
+
+                  // Patient Details
+                  Row(
                     children: [
-                      const Icon(Icons.key_rounded, size: 16, color: Color(0xFFB45309)),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Portal Password / PIN: ${isPassVisible ? pat.password : '••••'}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF92400E),
-                          fontFamily: 'monospace',
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildDetailRow(Icons.phone_outlined, 'Phone: +91 ${pat.phone}'),
+                            const SizedBox(height: 4),
+                            _buildDetailRow(Icons.calendar_today_outlined, 'Registered: ${pat.admissionDate}'),
+                            const SizedBox(height: 4),
+                            _buildDetailRow(
+                              Icons.medical_services_outlined,
+                              'Assigned Doctor: ${pat.assignedDoctor}',
+                            ),
+                          ],
                         ),
                       ),
-                      const Spacer(),
+                    ],
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Real Database Credentials (MRN & Blood Group Badges & Prescriptions)
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.badge_outlined, size: 15, color: Color(0xFF1D4ED8)),
+                            const SizedBox(width: 5),
+                            Text(
+                              'MRN: ${pat.medicalRecordNumber ?? 'MRN-N/A'}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E40AF),
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFFECACA)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.bloodtype_outlined, size: 15, color: Color(0xFFDC2626)),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Blood: ${pat.bloodGroup ?? 'N/A'}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF991B1B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       InkWell(
-                        onTap: () => _togglePasswordVisibility(pat.id),
-                        child: Text(
-                          isPassVisible ? 'Hide' : 'Show',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFB45309),
-                            decoration: TextDecoration.underline,
+                        onTap: () => _showPatientPrescriptionsDialog(pat),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.medication_rounded, size: 15, color: Color(0xFF059669)),
+                              SizedBox(width: 5),
+                              Text(
+                                'Prescriptions',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF065F46),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildConsultationsList() {
+    if (_isLoadingAppointments && _liveAppointments.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF059669)),
+      );
+    }
+
+    final filtered = _liveAppointments.where((appt) {
+      final q = _searchQuery;
+      final matchesSearch = q.isEmpty ||
+          appt.patientName.toLowerCase().contains(q) ||
+          appt.appointmentNo.toLowerCase().contains(q) ||
+          appt.diagnosis.toLowerCase().contains(q);
+
+      final matchesStatus = _appointmentFilterStatus == 'all' ||
+          appt.status.toLowerCase() == _appointmentFilterStatus;
+
+      return matchesSearch && matchesStatus;
+    }).toList();
+
+    final completedCount = _liveAppointments.where((a) => a.status.toLowerCase() == 'completed').length;
+    final inProgressCount = _liveAppointments.where((a) => a.status.toLowerCase() == 'in_progress').length;
+    final confirmedCount = _liveAppointments.where((a) => a.status.toLowerCase() == 'confirmed').length;
+
+    return RefreshIndicator(
+      onRefresh: _loadLiveAppointments,
+      color: const Color(0xFF059669),
+      child: Column(
+        children: [
+          // Filter Chips Row
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildConsultationFilterChip('all', 'All (${_liveAppointments.length})'),
+                  const SizedBox(width: 8),
+                  _buildConsultationFilterChip(
+                    'completed',
+                    'Completed ($completedCount)',
+                    isCompletedBadge: true,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildConsultationFilterChip(
+                    'in_progress',
+                    'In Progress ($inProgressCount)',
+                  ),
+                  const SizedBox(width: 8),
+                  _buildConsultationFilterChip(
+                    'confirmed',
+                    'Confirmed ($confirmedCount)',
+                  ),
+                ],
+              ),
             ),
           ),
+          Expanded(
+            child: filtered.isEmpty
+                ? _buildEmptyState('No consultations found matching your current filter.')
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final appt = filtered[index];
+                      final isCompleted = appt.status.toLowerCase() == 'completed';
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        decoration: BoxDecoration(
+                          color: isCompleted ? const Color(0xFFF0FDF4) : Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: isCompleted ? const Color(0xFF10B981) : const Color(0xFFE2E8F0),
+                            width: isCompleted ? 2.0 : 1.0,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isCompleted
+                                  ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                                  : Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Top status row
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  if (isCompleted)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981),
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.check_circle_rounded, size: 14, color: Colors.white),
+                                          SizedBox(width: 5),
+                                          Text(
+                                            'COMPLETED CONSULTATION',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  else
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: appt.status == 'in_progress'
+                                            ? const Color(0xFFFEF3C7)
+                                            : const Color(0xFFEFF6FF),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: appt.status == 'in_progress'
+                                              ? const Color(0xFFF59E0B)
+                                              : const Color(0xFFBFDBFE),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        appt.status.toUpperCase(),
+                                        style: TextStyle(
+                                          color: appt.status == 'in_progress'
+                                              ? const Color(0xFFB45309)
+                                              : const Color(0xFF1E40AF),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 10.5,
+                                        ),
+                                      ),
+                                    ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: isCompleted
+                                          ? const Color(0xFFDCFCE7)
+                                          : const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: isCompleted
+                                            ? const Color(0xFF86EFAC)
+                                            : const Color(0xFFCBD5E1),
+                                        width: 0.8,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      appt.appointmentNo,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                        color: isCompleted
+                                            ? const Color(0xFF15803D)
+                                            : const Color(0xFF475569),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Patient name & info
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 19,
+                                    backgroundColor: isCompleted
+                                        ? const Color(0xFFDCFCE7)
+                                        : const Color(0xFFE2E8F0),
+                                    child: Text(
+                                      appt.patientName.isNotEmpty ? appt.patientName[0].toUpperCase() : 'P',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: isCompleted
+                                            ? const Color(0xFF15803D)
+                                            : const Color(0xFF475569),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          appt.patientName,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                        Text(
+                                          '${appt.gender} • ${appt.age} yrs • ${appt.timing}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF64748B),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                              const SizedBox(height: 10),
+
+                              // Clinical Diagnosis / Reason
+                              _buildDetailRow(
+                                Icons.medical_information_outlined,
+                                'Reason: ${appt.diagnosis.isNotEmpty ? appt.diagnosis : 'Clinical Consultation'}',
+                              ),
+                              const SizedBox(height: 6),
+                              _buildDetailRow(
+                                Icons.payment_rounded,
+                                'Billing: ${appt.paymentStatus}',
+                              ),
+                               const SizedBox(height: 10),
+
+                              // Prescribed Medicines Preview
+                              if (appt.medicines.isNotEmpty) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: isCompleted ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: isCompleted ? const Color(0xFFBBF7D0) : const Color(0xFFE2E8F0),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.medication_rounded,
+                                            size: 15,
+                                            color: isCompleted ? const Color(0xFF15803D) : const Color(0xFF0284C7),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'Prescribed Medicines (${appt.medicines.length}):',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: isCompleted ? const Color(0xFF166534) : const Color(0xFF0369A1),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Wrap(
+                                        spacing: 6,
+                                        runSpacing: 6,
+                                        children: appt.medicines.map((med) => Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: isCompleted ? const Color(0xFF86EFAC) : const Color(0xFFCBD5E1),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${med.name} • ${med.duration}',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF1E293B),
+                                            ),
+                                          ),
+                                        )).toList(),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                              ],
+
+                              // Actions Row
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                alignment: WrapAlignment.spaceBetween,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    ),
+                                    child: Text(
+                                      'Mode: ${appt.mode.name.toUpperCase()}',
+                                      style: const TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 6,
+                                    children: [
+                                      // View Full Prescription & Medicines Dialog
+                                      OutlinedButton.icon(
+                                        onPressed: () => _showPrescriptionDialog(appt),
+                                        icon: const Icon(
+                                          Icons.receipt_long_rounded,
+                                          size: 16,
+                                          color: Color(0xFF059669),
+                                        ),
+                                        label: const Text(
+                                          'Prescription',
+                                          style: TextStyle(
+                                            color: Color(0xFF059669),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11.5,
+                                          ),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          side: const BorderSide(color: Color(0xFFA7F3D0)),
+                                          backgroundColor: const Color(0xFFECFDF5),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        ),
+                                      ),
+                                      // Permanent Delete from Database (Admin only)
+                                      OutlinedButton.icon(
+                                        onPressed: () => _confirmDeleteConsultation(appt),
+                                        icon: const Icon(
+                                          Icons.delete_forever_rounded,
+                                          size: 16,
+                                          color: Color(0xFFDC2626),
+                                        ),
+                                        label: const Text(
+                                          'Remove',
+                                          style: TextStyle(
+                                            color: Color(0xFFDC2626),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11.5,
+                                          ),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          side: const BorderSide(color: Color(0xFFFCA5A5)),
+                                          backgroundColor: const Color(0xFFFEF2F2),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConsultationFilterChip(String status, String label, {bool isCompletedBadge = false}) {
+    final isSelected = _appointmentFilterStatus == status;
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected
+              ? Colors.white
+              : (isCompletedBadge ? const Color(0xFF15803D) : const Color(0xFF475569)),
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: isCompletedBadge ? const Color(0xFF10B981) : const Color(0xFF0F172A),
+      backgroundColor: isCompletedBadge ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
+      side: BorderSide(
+        color: isCompletedBadge ? const Color(0xFF86EFAC) : const Color(0xFFCBD5E1),
+      ),
+      onSelected: (_) {
+        setState(() => _appointmentFilterStatus = status);
+      },
+    );
+  }
+
+  void _confirmDeleteConsultation(AppointmentItem appt) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        bool isDeleting = false;
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              title: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 26),
+                  SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      'Delete from Database',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                'Are you sure you want to permanently delete appointment ${appt.appointmentNo} for ${appt.patientName} from the database?\n\nThis action cannot be undone.',
+                style: const TextStyle(fontSize: 13.5, color: Color(0xFF334155)),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isDeleting ? null : () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: isDeleting
+                      ? null
+                      : () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          setDialogState(() => isDeleting = true);
+                          try {
+                            final res = await ApiClient.deleteAppointment(appt.id);
+                            if (res['success'] == true) {
+                              if (mounted) {
+                                setState(() {
+                                  _liveAppointments.removeWhere((a) => a.id == appt.id);
+                                });
+                              }
+                              if (ctx.mounted) {
+                                Navigator.pop(ctx);
+                              }
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Consultation ${appt.appointmentNo} permanently deleted from database.',
+                                  ),
+                                  backgroundColor: AppColors.success,
+                                ),
+                              );
+                              if (mounted) {
+                                _loadLiveAppointments();
+                                _loadLivePatients();
+                              }
+                            } else {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to delete: ${res['error'] ?? 'Unknown error'}'),
+                                  backgroundColor: AppColors.danger,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Error deleting consultation: $e'),
+                                backgroundColor: AppColors.danger,
+                              ),
+                            );
+                          } finally {
+                            if (ctx.mounted) setDialogState(() => isDeleting = false);
+                          }
+                        },
+                  icon: isDeleting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Icon(Icons.delete_forever_rounded, size: 18),
+                  label: const Text('Delete from DB'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC2626),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showPrescriptionDialog(AppointmentItem appt) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final isCompleted = appt.status.toLowerCase() == 'completed';
+        final medicines = appt.medicines;
+
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          actionsPadding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isCompleted ? const Color(0xFFDCFCE7) : const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.medication_rounded,
+                  color: isCompleted ? const Color(0xFF15803D) : const Color(0xFF2563EB),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Prescription & Medicines',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    ),
+                    Text(
+                      '${appt.appointmentNo} • ${appt.patientName}',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Patient & Doctor summary card
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Patient: ${appt.patientName} (${appt.age}y / ${appt.gender})',
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF1E293B)),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isCompleted ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                appt.status.toUpperCase(),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                  color: isCompleted ? const Color(0xFF166534) : const Color(0xFFB45309),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.medical_services_outlined, size: 14, color: Color(0xFF64748B)),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Doctor: ${appt.doctorName}',
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF475569)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (appt.diagnosis.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(Icons.medical_information_outlined, size: 14, color: Color(0xFF64748B)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Diagnosis: ${appt.diagnosis}',
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFF475569), fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Heading
+                  Row(
+                    children: [
+                      const Icon(Icons.format_list_bulleted_rounded, size: 16, color: Color(0xFF059669)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Prescribed Medications (${medicines.length})',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  if (medicines.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'No medications recorded for this consultation.',
+                          style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B), fontStyle: FontStyle.italic),
+                        ),
+                      ),
+                    )
+                  else
+                    ...medicines.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final med = entry.value;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFCBD5E1)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.02),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '${idx + 1}. ${med.name}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13.5,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFECFDF5),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                                  ),
+                                  child: Text(
+                                    med.duration,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                      color: Color(0xFF065F46),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(Icons.schedule_rounded, size: 14, color: Color(0xFF64748B)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Dosage / Frequency: ${med.dosage}',
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFF334155), fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
+                            if (med.closestClinic.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.local_pharmacy_outlined, size: 14, color: Color(0xFF059669)),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      'Dispensing: ${med.closestClinic}',
+                                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF059669)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }),
+
+                  if (appt.isAdmitted) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFECACA)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.bed_rounded, size: 15, color: Color(0xFFDC2626)),
+                              SizedBox(width: 6),
+                              Text(
+                                'Inpatient Care Details',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF991B1B)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text('Room / Bed: ${appt.roomNo ?? 'General Ward'}', style: const TextStyle(fontSize: 12, color: Color(0xFF7F1D1D))),
+                          if (appt.dietarySuggestions != null && appt.dietarySuggestions!.isNotEmpty)
+                            Text('Diet: ${appt.dietarySuggestions}', style: const TextStyle(fontSize: 12, color: Color(0xFF7F1D1D))),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              ),
+              child: const Text('Close', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showPatientPrescriptionsDialog(HospitalAdminPatient pat) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setModalState) {
+            return FutureBuilder<List<Map<String, dynamic>>>(
+              future: ApiClient.getPatientPrescriptions(pat.id),
+              builder: (context, snapshot) {
+                final isLoading = snapshot.connectionState == ConnectionState.waiting;
+                final rxList = snapshot.data ?? [];
+
+                return AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  actionsPadding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                  title: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.receipt_long_rounded,
+                          color: Color(0xFF059669),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Patient Prescriptions',
+                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                            ),
+                            Text(
+                              '${pat.name} • MRN: ${pat.medicalRecordNumber ?? 'N/A'}',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  content: SizedBox(
+                    width: double.maxFinite,
+                    height: 380,
+                    child: isLoading
+                        ? const Center(child: CircularProgressIndicator(color: Color(0xFF059669)))
+                        : rxList.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.medication_liquid_outlined, size: 48, color: Colors.grey.shade400),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'No prescriptions recorded for ${pat.name}.',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: rxList.length,
+                                itemBuilder: (context, idx) {
+                                  final rx = rxList[idx];
+                                  final medName = rx['medication_name']?.toString() ?? 'Medication';
+                                  final dosage = rx['dosage']?.toString() ?? rx['frequency']?.toString() ?? '1 tablet';
+                                  final duration = rx['duration_days'] != null ? '${rx['duration_days']} Days' : '5 Days';
+                                  final prescriber = rx['prescriber_name']?.toString() ?? 'Doctor';
+                                  final status = rx['status']?.toString() ?? 'active';
+                                  final pharmacy = rx['pharmacy_name']?.toString() ?? 'Ashwini Central Pharmacy';
+
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 10),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                '${idx + 1}. $medName',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 13.5,
+                                                  color: Color(0xFF0F172A),
+                                                ),
+                                              ),
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: status == 'active'
+                                                    ? const Color(0xFFDCFCE7)
+                                                    : const Color(0xFFF1F5F9),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                status.toUpperCase(),
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 10,
+                                                  color: status == 'active'
+                                                      ? const Color(0xFF15803D)
+                                                      : const Color(0xFF64748B),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.schedule_rounded, size: 14, color: Color(0xFF64748B)),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Dosage: $dosage • Duration: $duration',
+                                              style: const TextStyle(fontSize: 12, color: Color(0xFF334155), fontWeight: FontWeight.w500),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.medical_services_outlined, size: 14, color: Color(0xFF64748B)),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                'Prescribed by: $prescriber',
+                                                style: const TextStyle(fontSize: 11.5, color: Color(0xFF475569)),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (pharmacy.isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              const Icon(Icons.local_pharmacy_outlined, size: 14, color: Color(0xFF059669)),
+                                              const SizedBox(width: 4),
+                                              Expanded(
+                                                child: Text(
+                                                  'Pharmacy: $pharmacy',
+                                                  style: const TextStyle(fontSize: 11.5, color: Color(0xFF059669)),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                  ),
+                  actions: [
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF059669),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                      ),
+                      child: const Text('Close', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
         );
       },
     );
@@ -1448,21 +2662,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   // ==========================================
-  // ADD DOCTOR DIALOG
+  // ADD DOCTOR DIALOG (Phase 8: ApiClient Integration)
   // ==========================================
   void _openAddDoctorDialog() {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
-    final passCtrl = TextEditingController();
+    final passCtrl = TextEditingController(text: 'Doctor@12345');
+    final licenseCtrl = TextEditingController();
     final qualCtrl = TextEditingController();
     final desigCtrl = TextEditingController(text: 'Consultant Specialist');
     final expCtrl = TextEditingController(text: '8');
     final chamberCtrl = TextEditingController(text: 'Chamber 108');
     final shiftCtrl = TextEditingController(text: '08:00 AM - 02:00 PM');
     String selectedDept = _hospital.departments.first;
+    bool obscurePass = true;
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
+      barrierDismissible: !isSubmitting,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlgState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -1479,34 +2697,75 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               children: [
                 TextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Doctor Full Name', hintText: 'e.g. Dr. Ramesh Gupta'),
+                  decoration: const InputDecoration(
+                    labelText: 'Doctor Full Name *',
+                    hintText: 'e.g. Dr. Ramesh Gupta',
+                    prefixIcon: Icon(Icons.badge_outlined, size: 20),
+                  ),
                 ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: phoneCtrl,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(labelText: 'Phone (Login Username)', hintText: '10 digits'),
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number (Login ID) *',
+                    hintText: '10 digits (e.g. 9811223344)',
+                    prefixIcon: Icon(Icons.phone_outlined, size: 20),
+                  ),
                 ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: passCtrl,
-                  decoration: const InputDecoration(labelText: 'Password (Credentials)', hintText: 'Set login password'),
+                  obscureText: obscurePass,
+                  decoration: InputDecoration(
+                    labelText: 'Initial Password (Min 8 chars) *',
+                    hintText: 'e.g. Doctor@12345',
+                    prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscurePass ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 20),
+                      onPressed: () => setDlgState(() => obscurePass = !obscurePass),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: licenseCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Medical License Number',
+                    hintText: 'e.g. MCI-DEL-2026-4421',
+                    prefixIcon: Icon(Icons.verified_outlined, size: 20),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: selectedDept,
-                  decoration: const InputDecoration(labelText: 'Department'),
+                  decoration: const InputDecoration(
+                    labelText: 'Department / Specialty',
+                    prefixIcon: Icon(Icons.medical_services_outlined, size: 20),
+                  ),
                   items: _hospital.departments.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
-                  onChanged: (val) {
+                  onChanged: isSubmitting ? null : (val) {
                     if (val != null) setDlgState(() => selectedDept = val);
                   },
                 ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: qualCtrl,
-                  decoration: const InputDecoration(labelText: 'Qualification', hintText: 'MBBS, MD, DM'),
+                  decoration: const InputDecoration(
+                    labelText: 'Qualification',
+                    hintText: 'e.g. MBBS, MD, DM',
+                    prefixIcon: Icon(Icons.school_outlined, size: 20),
+                  ),
                 ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: desigCtrl,
-                  decoration: const InputDecoration(labelText: 'Designation'),
+                  decoration: const InputDecoration(
+                    labelText: 'Designation',
+                    prefixIcon: Icon(Icons.work_outline, size: 20),
+                  ),
                 ),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
@@ -1525,62 +2784,379 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: shiftCtrl,
-                  decoration: const InputDecoration(labelText: 'Shift Timing'),
+                  decoration: const InputDecoration(
+                    labelText: 'Shift Timing',
+                    prefixIcon: Icon(Icons.access_time, size: 20),
+                  ),
                 ),
               ],
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                final name = nameCtrl.text.trim();
-                final phone = phoneCtrl.text.trim();
-                final pass = passCtrl.text.trim();
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final name = nameCtrl.text.trim();
+                      final phone = phoneCtrl.text.trim();
+                      final password = passCtrl.text.trim();
+                      final phoneDigits = phone.replaceAll(RegExp(r'\D'), '');
 
-                if (name.isEmpty || phone.isEmpty || pass.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill Name, Phone, and Password')),
-                  );
-                  return;
-                }
+                      if (name.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Color(0xFFE11D48),
+                            content: Text('Please enter doctor full name'),
+                          ),
+                        );
+                        return;
+                      }
 
-                final newDoc = HospitalAdminStaffDoctor(
-                  id: 'doc_${DateTime.now().millisecondsSinceEpoch}',
-                  name: name.startsWith('Dr.') ? name : 'Dr. $name',
-                  phone: phone,
-                  password: pass,
-                  department: selectedDept,
-                  qualification: qualCtrl.text.trim().isNotEmpty ? qualCtrl.text.trim() : 'MBBS, MD',
-                  designation: desigCtrl.text.trim(),
-                  experienceYears: int.tryParse(expCtrl.text.trim()) ?? 5,
-                  chamberNo: chamberCtrl.text.trim(),
-                  hospitalId: _hospitalId,
-                  hospitalName: _hospital.name,
-                  isOnDuty: true,
-                  shiftTiming: shiftCtrl.text.trim(),
-                  email: '${phone}@${_hospital.name.toLowerCase().replaceAll(' ', '')}.org',
-                );
+                      if (phoneDigits.length < 10) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Color(0xFFE11D48),
+                            content: Text('Please enter a valid 10-digit phone number'),
+                          ),
+                        );
+                        return;
+                      }
 
-                setState(() {
-                  HospitalAdminRepository.addDoctor(newDoc);
-                });
+                      if (password.length < 8) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Color(0xFFE11D48),
+                            content: Text('Initial password must be at least 8 characters'),
+                          ),
+                        );
+                        return;
+                      }
 
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: const Color(0xFF10B981),
-                    content: Text('Doctor ${newDoc.name} registered with credentials!'),
+                      setDlgState(() => isSubmitting = true);
+
+                      final specialties = [
+                        selectedDept,
+                        if (qualCtrl.text.trim().isNotEmpty) qualCtrl.text.trim(),
+                      ];
+
+                      final availability = {
+                        'chamber': chamberCtrl.text.trim().isNotEmpty ? chamberCtrl.text.trim() : 'Chamber 108',
+                        'shift': shiftCtrl.text.trim().isNotEmpty ? shiftCtrl.text.trim() : '08:00 AM - 02:00 PM',
+                        'hospital_id': _hospitalId,
+                        'qualification': qualCtrl.text.trim().isNotEmpty ? qualCtrl.text.trim() : 'MBBS, MD',
+                        'designation': desigCtrl.text.trim().isNotEmpty ? desigCtrl.text.trim() : 'Consultant Specialist',
+                        'experience_years': int.tryParse(expCtrl.text.trim()) ?? 8,
+                      };
+
+                      final res = await ApiClient.createDoctor(
+                        fullName: name,
+                        phone: phone,
+                        password: password,
+                        licenseNumber: licenseCtrl.text.trim().isNotEmpty ? licenseCtrl.text.trim() : null,
+                        specialties: specialties,
+                        availability: availability,
+                      );
+
+                      if (!mounted || !ctx.mounted) return;
+
+                      if (res['success'] == true) {
+                        final data = res['data'] is Map ? res['data'] as Map : {};
+                        final newDoc = HospitalAdminStaffDoctor(
+                          id: data['user_id']?.toString() ?? 'doc_${DateTime.now().millisecondsSinceEpoch}',
+                          name: data['full_name']?.toString() ?? (name.startsWith('Dr.') ? name : 'Dr. $name'),
+                          phone: data['phone_e164']?.toString() ?? phone,
+                          password: '',
+                          department: selectedDept,
+                          qualification: qualCtrl.text.trim().isNotEmpty ? qualCtrl.text.trim() : 'MBBS, MD',
+                          designation: desigCtrl.text.trim().isNotEmpty ? desigCtrl.text.trim() : 'Consultant Specialist',
+                          experienceYears: int.tryParse(expCtrl.text.trim()) ?? 5,
+                          chamberNo: chamberCtrl.text.trim().isNotEmpty ? chamberCtrl.text.trim() : 'Chamber 108',
+                          hospitalId: _hospitalId,
+                          hospitalName: _hospital.name,
+                          isOnDuty: true,
+                          shiftTiming: shiftCtrl.text.trim().isNotEmpty ? shiftCtrl.text.trim() : '08:00 AM - 02:00 PM',
+                          email: '${phoneDigits.length >= 10 ? phoneDigits.substring(phoneDigits.length - 10) : phoneDigits}@${_hospital.name.toLowerCase().replaceAll(' ', '')}.org',
+                        );
+
+                        setState(() {
+                          HospitalAdminRepository.addDoctor(newDoc);
+                        });
+
+                        Navigator.pop(ctx);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFF10B981),
+                            content: Row(
+                              children: [
+                                const Icon(Icons.check_circle_outline, color: Colors.white),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text('Doctor ${newDoc.name} successfully registered in database!')),
+                              ],
+                            ),
+                          ),
+                        );
+                      } else {
+                        setDlgState(() => isSubmitting = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFFE11D48),
+                            content: Row(
+                              children: [
+                                const Icon(Icons.error_outline, color: Colors.white),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(res['error']?.toString() ?? 'Registration failed')),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Save Doctor', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==========================================
+  // EDIT DOCTOR DIALOG
+  // ==========================================
+  void _openEditDoctorDialog(HospitalAdminStaffDoctor doc) {
+    final nameCtrl = TextEditingController(text: doc.name);
+    final phoneCtrl = TextEditingController(text: doc.phone);
+    final licenseCtrl = TextEditingController(text: doc.licenseNumber ?? '');
+    final qualCtrl = TextEditingController(text: doc.qualification);
+    final desigCtrl = TextEditingController(text: doc.designation);
+    final expCtrl = TextEditingController(text: doc.experienceYears.toString());
+    final chamberCtrl = TextEditingController(text: doc.chamberNo);
+    final shiftCtrl = TextEditingController(text: doc.shiftTiming);
+    String selectedDept = _hospital.departments.contains(doc.department)
+        ? doc.department
+        : (_hospital.departments.isNotEmpty ? _hospital.departments.first : 'General Medicine');
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: !isSubmitting,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.edit_note_rounded, color: AppColors.primary),
+              const SizedBox(width: 8),
+              const Text('Edit Doctor Profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Doctor Full Name *',
+                    prefixIcon: Icon(Icons.badge_outlined, size: 20),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('Save Doctor', style: TextStyle(color: Colors.white)),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: phoneCtrl,
+                  enabled: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone (Registered Identity)',
+                    prefixIcon: Icon(Icons.phone_outlined, size: 20),
+                    filled: true,
+                    fillColor: Color(0xFFF1F5F9),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: licenseCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Medical License Number',
+                    hintText: 'e.g. MCI-DEL-2026-4421',
+                    prefixIcon: Icon(Icons.verified_outlined, size: 20),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: selectedDept,
+                  decoration: const InputDecoration(
+                    labelText: 'Department / Specialty',
+                    prefixIcon: Icon(Icons.medical_services_outlined, size: 20),
+                  ),
+                  items: _hospital.departments.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                  onChanged: isSubmitting ? null : (val) {
+                    if (val != null) setDlgState(() => selectedDept = val);
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: qualCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Qualification',
+                    prefixIcon: Icon(Icons.school_outlined, size: 20),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: desigCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Designation',
+                    prefixIcon: Icon(Icons.work_outline, size: 20),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: expCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Exp (Years)'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: chamberCtrl,
+                        decoration: const InputDecoration(labelText: 'Chamber'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: shiftCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Shift Timing',
+                    prefixIcon: Icon(Icons.access_time, size: 20),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final name = nameCtrl.text.trim();
+                      if (name.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Color(0xFFE11D48),
+                            content: Text('Please enter doctor full name'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDlgState(() => isSubmitting = true);
+
+                      final specialties = [
+                        selectedDept,
+                        if (qualCtrl.text.trim().isNotEmpty) qualCtrl.text.trim(),
+                      ];
+
+                      final availability = {
+                        'chamber': chamberCtrl.text.trim().isNotEmpty ? chamberCtrl.text.trim() : doc.chamberNo,
+                        'shift': shiftCtrl.text.trim().isNotEmpty ? shiftCtrl.text.trim() : doc.shiftTiming,
+                        'hospital_id': _hospitalId,
+                        'qualification': qualCtrl.text.trim().isNotEmpty ? qualCtrl.text.trim() : doc.qualification,
+                        'designation': desigCtrl.text.trim().isNotEmpty ? desigCtrl.text.trim() : doc.designation,
+                        'experience_years': int.tryParse(expCtrl.text.trim()) ?? doc.experienceYears,
+                      };
+
+                      final res = await ApiClient.updateDoctor(
+                        userId: doc.id,
+                        fullName: name,
+                        licenseNumber: licenseCtrl.text.trim().isNotEmpty ? licenseCtrl.text.trim() : null,
+                        specialties: specialties,
+                        availability: availability,
+                      );
+
+                      if (!mounted || !ctx.mounted) return;
+
+                      if (res['success'] == true) {
+                        doc.name = name.startsWith('Dr.') ? name : 'Dr. $name';
+                        doc.department = selectedDept;
+                        doc.qualification = qualCtrl.text.trim().isNotEmpty ? qualCtrl.text.trim() : doc.qualification;
+                        doc.designation = desigCtrl.text.trim().isNotEmpty ? desigCtrl.text.trim() : doc.designation;
+                        doc.experienceYears = int.tryParse(expCtrl.text.trim()) ?? doc.experienceYears;
+                        doc.chamberNo = chamberCtrl.text.trim().isNotEmpty ? chamberCtrl.text.trim() : doc.chamberNo;
+                        doc.shiftTiming = shiftCtrl.text.trim().isNotEmpty ? shiftCtrl.text.trim() : doc.shiftTiming;
+                        doc.licenseNumber = licenseCtrl.text.trim().isNotEmpty ? licenseCtrl.text.trim() : null;
+
+                        setState(() {
+                          HospitalAdminRepository.updateDoctor(doc);
+                        });
+
+                        Navigator.pop(ctx);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFF10B981),
+                            content: Row(
+                              children: [
+                                const Icon(Icons.check_circle_outline, color: Colors.white),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text('Doctor ${doc.name} profile updated in database!')),
+                              ],
+                            ),
+                          ),
+                        );
+                      } else {
+                        setDlgState(() => isSubmitting = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFFE11D48),
+                            content: Row(
+                              children: [
+                                const Icon(Icons.error_outline, color: Colors.white),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(res['error']?.toString() ?? 'Update failed')),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Update Doctor', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -1703,14 +3279,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   void _openAddPatientDialog() {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
-    final passCtrl = TextEditingController(text: '1234');
+    final mrnCtrl = TextEditingController();
     final ageCtrl = TextEditingController(text: '40');
     final diagCtrl = TextEditingController();
     final roomCtrl = TextEditingController(text: 'Room C-101');
     final bedCtrl = TextEditingController(text: 'Bed 4');
+    final reasonCtrl = TextEditingController(text: 'Initial Intake Consultation');
     String selectedGender = 'Male';
+    String selectedBloodGroup = 'O+';
     String selectedDept = _hospital.departments.first;
+    String? selectedInitialDocId;
     bool isAdmitted = false;
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
@@ -1721,7 +3301,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             children: [
               Icon(Icons.personal_injury_rounded, color: Color(0xFFE11D48)),
               SizedBox(width: 8),
-              Text('Add Patient Record', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('Register Patient in Database', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ],
           ),
           content: SingleChildScrollView(
@@ -1730,40 +3310,57 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               children: [
                 TextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Patient Full Name'),
+                  decoration: const InputDecoration(
+                    labelText: 'Patient Full Name *',
+                    hintText: 'e.g. Ramesh Kumar',
+                  ),
                 ),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
+                      flex: 3,
                       child: TextField(
                         controller: phoneCtrl,
                         keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(labelText: 'Phone'),
+                        decoration: const InputDecoration(
+                          labelText: 'Phone *',
+                          hintText: '10-digit number',
+                          prefixText: '+91 ',
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: TextField(
-                        controller: passCtrl,
-                        decoration: const InputDecoration(labelText: 'Portal PIN/Password'),
+                      flex: 2,
+                      child: DropdownButtonFormField<String>(
+                        initialValue: selectedBloodGroup,
+                        decoration: const InputDecoration(labelText: 'Blood Group'),
+                        items: ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']
+                            .map((bg) => DropdownMenuItem(value: bg, child: Text(bg)))
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) setDlgState(() => selectedBloodGroup = val);
+                        },
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
                       child: TextField(
                         controller: ageCtrl,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Age'),
+                        decoration: const InputDecoration(labelText: 'Age (Years)'),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: selectedGender,
-                        decoration: const InputDecoration(labelText: 'Gender'),
+                        initialValue: selectedGender,
+                        decoration: const InputDecoration(labelText: 'Sex'),
                         items: ['Male', 'Female', 'Other']
                             .map((g) => DropdownMenuItem(value: g, child: Text(g)))
                             .toList(),
@@ -1774,18 +3371,59 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: mrnCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Medical Record Number (MRN)',
+                    hintText: 'Optional (e.g. MRN-2026-004)',
+                  ),
+                ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: diagCtrl,
                   decoration: const InputDecoration(labelText: 'Primary Diagnosis / Symptoms'),
                 ),
+                const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: selectedDept,
+                  initialValue: selectedDept,
                   decoration: const InputDecoration(labelText: 'Department'),
                   items: _hospital.departments.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
                   onChanged: (val) {
                     if (val != null) setDlgState(() => selectedDept = val);
                   },
                 ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String?>(
+                  initialValue: selectedInitialDocId,
+                  decoration: const InputDecoration(
+                    labelText: 'Assign Doctor (Initial Consultation)',
+                    prefixIcon: Icon(Icons.assignment_ind_outlined, size: 20),
+                  ),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Unassigned / Assign Later'),
+                    ),
+                    ...HospitalAdminRepository.getAllDoctors()
+                        .where((d) => d.hospitalId == _hospitalId)
+                        .map(
+                          (doc) => DropdownMenuItem<String?>(
+                            value: doc.id,
+                            child: Text('${doc.name} (${doc.department})', overflow: TextOverflow.ellipsis),
+                          ),
+                        ),
+                  ],
+                  onChanged: (val) => setDlgState(() => selectedInitialDocId = val),
+                ),
+                if (selectedInitialDocId != null) ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: reasonCtrl,
+                    decoration: const InputDecoration(labelText: 'Consultation Reason / Notes'),
+                  ),
+                ],
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
@@ -1812,52 +3450,83 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
             ElevatedButton(
-              onPressed: () {
-                final name = nameCtrl.text.trim();
-                final phone = phoneCtrl.text.trim();
-                final pass = passCtrl.text.trim();
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final name = nameCtrl.text.trim();
+                      final phone = phoneCtrl.text.trim();
 
-                if (name.isEmpty || phone.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill Patient Name and Phone')),
-                  );
-                  return;
-                }
+                      if (name.isEmpty || phone.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please fill Patient Name and Phone')),
+                        );
+                        return;
+                      }
 
-                final newPatient = HospitalAdminPatient(
-                  id: 'pat_${DateTime.now().millisecondsSinceEpoch}',
-                  name: name,
-                  phone: phone,
-                  password: pass.isNotEmpty ? pass : '1234',
-                  age: int.tryParse(ageCtrl.text.trim()) ?? 35,
-                  gender: selectedGender,
-                  diagnosis: diagCtrl.text.trim().isNotEmpty ? diagCtrl.text.trim() : 'Observation',
-                  department: selectedDept,
-                  hospitalId: _hospitalId,
-                  hospitalName: _hospital.name,
-                  roomNo: roomCtrl.text.trim(),
-                  bedNo: bedCtrl.text.trim(),
-                  isAdmitted: isAdmitted,
-                  assignedDoctor: 'Dr. Rajesh V. Sharma',
-                  admissionDate: 'Today, Just Now',
-                );
+                      setDlgState(() => isSubmitting = true);
 
-                setState(() {
-                  HospitalAdminRepository.addPatient(newPatient);
-                });
+                      final age = int.tryParse(ageCtrl.text.trim()) ?? 35;
+                      final approxYear = DateTime.now().year - age;
+                      final dob = '$approxYear-01-01';
 
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: const Color(0xFFE11D48),
-                    content: Text('Patient ${newPatient.name} added with PIN: ${newPatient.password}'),
-                  ),
-                );
-              },
+                      final res = await ApiClient.createPatient(
+                        fullName: name,
+                        phone: phone,
+                        dateOfBirth: dob,
+                        sexAtBirth: selectedGender.toLowerCase(),
+                        bloodGroup: selectedBloodGroup,
+                        medicalRecordNumber: mrnCtrl.text.trim().isNotEmpty ? mrnCtrl.text.trim() : null,
+                        initialDoctorUserId: selectedInitialDocId,
+                        reason: selectedInitialDocId != null ? reasonCtrl.text.trim() : null,
+                        profileData: {
+                          'diagnosis': diagCtrl.text.trim().isNotEmpty ? diagCtrl.text.trim() : 'Observation',
+                          'department': selectedDept,
+                          'room_no': roomCtrl.text.trim(),
+                          'bed_no': bedCtrl.text.trim(),
+                          'is_admitted': isAdmitted,
+                        },
+                      );
+
+                      if (!mounted) return;
+
+                      if (res['success'] == true) {
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        final createdData = res['data'] ?? {};
+                        final mrnAssigned = createdData['medical_record_number'] ?? '';
+                        final hasAppt = createdData['appointment'] != null;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFF059669),
+                            content: Text(hasAppt
+                                ? 'Patient $name registered & initial consultation created! (MRN: $mrnAssigned)'
+                                : 'Patient $name registered successfully in PostgreSQL! (MRN: $mrnAssigned)'),
+                          ),
+                        );
+                        _loadLivePatients();
+                        _loadLiveAppointments();
+                      } else {
+                        if (ctx.mounted) setDlgState(() => isSubmitting = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFFDC2626),
+                            content: Text(res['error'] ?? 'Failed to register patient in database.'),
+                          ),
+                        );
+                      }
+                    },
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE11D48)),
-              child: const Text('Save Patient', style: TextStyle(color: Colors.white)),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Text('Save to Database', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -1874,19 +3543,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       builder: (ctx) => AlertDialog(
         title: const Text('Remove Doctor?'),
         content: Text(
-          'Are you sure you want to permanently remove ${doc.name} (${doc.phone}) from ${_hospital.name}? All active shifts and login credentials will be revoked.',
+          'Are you sure you want to permanently remove ${doc.name} (${doc.phone}) from ${_hospital.name}? All active shifts and database records will be revoked.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                HospitalAdminRepository.removeDoctor(doc.id);
-              });
+            onPressed: () async {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Doctor ${doc.name} removed from database.')),
-              );
+              final res = await ApiClient.deleteDoctor(doc.id);
+              if (mounted) {
+                if (res['success'] == true) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: const Color(0xFF059669),
+                      content: Text('Doctor ${doc.name} removed from database.'),
+                    ),
+                  );
+                  _loadLiveDoctors();
+                } else {
+                  setState(() {
+                    HospitalAdminRepository.removeDoctor(doc.id);
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(res['error'] ?? 'Doctor removed.')),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
             child: const Text('Remove Doctor', style: TextStyle(color: Colors.white)),
@@ -1900,7 +3582,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remove Worker?'),
+        title: const Text('Remove Healthcare Worker?'),
         content: Text(
           'Are you sure you want to remove ${worker.name} (${worker.phone}) from ${_hospital.name}?',
         ),
@@ -1930,19 +3612,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       builder: (ctx) => AlertDialog(
         title: const Text('Remove Patient?'),
         content: Text(
-          'Are you sure you want to discharge and remove patient ${pat.name} from the database?',
+          'Are you sure you want to remove patient ${pat.name} from the database?',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                HospitalAdminRepository.removePatient(pat.id);
-              });
+            onPressed: () async {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Patient ${pat.name} removed from database.')),
-              );
+              final res = await ApiClient.deletePatient(pat.id);
+              if (mounted) {
+                if (res['success'] == true) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Patient ${pat.name} removed from database.')),
+                  );
+                  _loadLivePatients();
+                } else {
+                  setState(() {
+                    HospitalAdminRepository.removePatient(pat.id);
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(res['error'] ?? 'Patient removed.')),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
             child: const Text('Remove Patient', style: TextStyle(color: Colors.white)),
@@ -1988,7 +3680,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: selectedRole,
+                    initialValue: selectedRole,
                     decoration: const InputDecoration(labelText: 'Staff Type'),
                     items: const [
                       DropdownMenuItem(value: 'Doctor', child: Text('Doctor')),
@@ -2011,7 +3703,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
-                    value: selectedStaffId.isNotEmpty ? selectedStaffId : null,
+                    initialValue: selectedStaffId.isNotEmpty ? selectedStaffId : null,
                     decoration: const InputDecoration(labelText: 'Staff Member'),
                     items: staffList.map((s) {
                       return DropdownMenuItem(value: s['id'], child: Text(s['name'] ?? ''));
@@ -2028,7 +3720,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
-                    value: selectedSlot,
+                    initialValue: selectedSlot,
                     decoration: const InputDecoration(labelText: 'Shift Slot'),
                     items: const [
                       DropdownMenuItem(value: 'Morning (08:00 AM - 02:00 PM)', child: Text('Morning (08:00 AM - 02:00 PM)')),
@@ -2041,7 +3733,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
-                    value: selectedDept,
+                    initialValue: selectedDept,
                     decoration: const InputDecoration(labelText: 'Department'),
                     items: _hospital.departments.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
                     onChanged: (val) {
@@ -2093,6 +3785,209 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF047857)),
                 child: const Text('Confirm Shift', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // ==========================================
+  // ASSIGN PATIENT TO DOCTOR DIALOG
+  // ==========================================
+  void _showAssignDoctorDialog(HospitalAdminPatient pat) {
+    final doctors = HospitalAdminRepository.getAllDoctors()
+        .where((d) => d.hospitalId == _hospitalId)
+        .toList();
+
+    if (doctors.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No doctors available in this facility to assign.'),
+          backgroundColor: Color(0xFFDC2626),
+        ),
+      );
+      return;
+    }
+
+    String selectedDocId = pat.assignedDoctorUserId ?? doctors.first.id;
+    if (!doctors.any((d) => d.id == selectedDocId)) {
+      selectedDocId = doctors.first.id;
+    }
+    String selectedDocName = doctors.firstWhere((d) => d.id == selectedDocId).name;
+    final reasonCtrl = TextEditingController(text: 'Primary Care Doctor Assignment');
+    bool isAssigning = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.assignment_ind_rounded, color: AppColors.primary, size: 22),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Assign Doctor to Patient',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Patient: ${pat.name}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'MRN: ${pat.medicalRecordNumber ?? 'N/A'} • Current: ${pat.assignedDoctor}',
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Select Doctor to Assign:',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedDocId,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),
+                    items: doctors.map((doc) {
+                      return DropdownMenuItem(
+                        value: doc.id,
+                        child: Text(
+                          '${doc.name} (${doc.department})',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: isAssigning
+                        ? null
+                        : (val) {
+                            if (val != null) {
+                              setModalState(() {
+                                selectedDocId = val;
+                                selectedDocName = doctors.firstWhere((d) => d.id == val).name;
+                              });
+                            }
+                          },
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: reasonCtrl,
+                    enabled: !isAssigning,
+                    decoration: InputDecoration(
+                      labelText: 'Assignment Reason / Consultation Note',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isAssigning ? null : () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton.icon(
+                onPressed: isAssigning
+                    ? null
+                    : () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                      setModalState(() => isAssigning = true);
+                      try {
+                        final res = await ApiClient.assignPatientDoctor(
+                          patientId: pat.id,
+                          doctorUserId: selectedDocId,
+                          reason: reasonCtrl.text.trim(),
+                        );
+
+                        if (res['success'] == true) {
+                          if (mounted) {
+                            setState(() {
+                              pat.assignedDoctor = selectedDocName;
+                              pat.assignedDoctorUserId = selectedDocId;
+                            });
+                          }
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                          }
+                          final actionMsg = res['message'] ?? '${pat.name} assigned to $selectedDocName & saved to database!';
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(actionMsg),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
+                          if (mounted) {
+                            _loadLivePatients();
+                            _loadLiveAppointments();
+                          }
+                        } else {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(res['error'] ?? 'Failed to assign patient.'),
+                              backgroundColor: AppColors.danger,
+                              duration: const Duration(seconds: 4),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        messenger.showSnackBar(
+                          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.danger),
+                        );
+                      } finally {
+                        if (ctx.mounted) setModalState(() => isAssigning = false);
+                      }
+                    },
+                icon: isAssigning
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+                label: Text(
+                  isAssigning ? 'ASSIGNING...' : 'CONFIRM ASSIGNMENT',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ],
           );

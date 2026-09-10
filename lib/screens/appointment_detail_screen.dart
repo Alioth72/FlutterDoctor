@@ -1,6 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../models/appointment_model.dart';
+
+import '../services/api_client.dart';
 
 class AppointmentDetailScreen extends StatefulWidget {
   final AppointmentItem appointment;
@@ -20,6 +22,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   late TextEditingController _diagnosisController;
   late TextEditingController _familyHistoryController;
   late List<MedicineItem> _medicines;
+
+  bool _isUpdatingStatus = false;
 
   DateTime? _scheduledFollowUpDate;
   String? _scheduledTimeSlot;
@@ -233,21 +237,189 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     );
   }
 
-  void _completeConsultation() {
-    widget.appointment.isCompleted = true;
-    widget.appointment.heightCm = double.tryParse(_heightController.text) ?? widget.appointment.heightCm;
-    widget.appointment.weightKg = double.tryParse(_weightController.text) ?? widget.appointment.weightKg;
-    widget.appointment.diagnosis = _diagnosisController.text;
-    widget.appointment.familyHistory = _familyHistoryController.text;
-    widget.appointment.medicines = _medicines;
+  Future<void> _startConsultation() async {
+    if (_isUpdatingStatus) return;
+    setState(() => _isUpdatingStatus = true);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Consultation completed for ${widget.appointment.patientName} & synced to database!'),
-        backgroundColor: AppColors.success,
+    try {
+      final res = await ApiClient.updateAppointment(
+        appointmentId: widget.appointment.id,
+        status: 'in_progress',
+        reason: _diagnosisController.text.isNotEmpty ? _diagnosisController.text : widget.appointment.diagnosis,
+      );
+
+      if (res['success'] == true) {
+        setState(() {
+          widget.appointment.status = 'in_progress';
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Consultation started! Status is now IN PROGRESS.'),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${res['error'] ?? 'Could not start consultation'}'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Network error: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdatingStatus = false);
+    }
+  }
+
+  Future<void> _completeConsultation() async {
+    if (_isUpdatingStatus) return;
+    setState(() => _isUpdatingStatus = true);
+
+    final height = double.tryParse(_heightController.text) ?? widget.appointment.heightCm;
+    final weight = double.tryParse(_weightController.text) ?? widget.appointment.weightKg;
+    final diag = _diagnosisController.text;
+    final famHist = _familyHistoryController.text;
+
+    try {
+      final res = await ApiClient.updateAppointment(
+        appointmentId: widget.appointment.id,
+        status: 'completed',
+        reason: diag.isNotEmpty ? diag : widget.appointment.diagnosis,
+        notes: {
+          'dietary_suggestions': widget.appointment.dietarySuggestions,
+          'room_no': widget.appointment.roomNo,
+          'is_admitted': widget.appointment.isAdmitted,
+          'completed_at': DateTime.now().toIso8601String(),
+        },
+        prescriptions: _medicines.map((m) {
+          final daysMatch = RegExp(r'\d+').firstMatch(m.duration);
+          final days = daysMatch != null ? int.tryParse(daysMatch.group(0)!) : 5;
+          return {
+            'medication_name': m.name,
+            'dosage': m.dosage,
+            'frequency': m.dosage,
+            'duration_days': (days != null && days > 0) ? days : 5,
+            'route': 'oral',
+            'closestClinic': m.closestClinic,
+            'instructions': {
+              'timing': m.dosage,
+              'clinic': m.closestClinic,
+            },
+          };
+        }).toList(),
+      );
+
+      if (res['success'] == true) {
+        widget.appointment.isCompleted = true;
+        widget.appointment.status = 'completed';
+        widget.appointment.heightCm = height;
+        widget.appointment.weightKg = weight;
+        widget.appointment.diagnosis = diag;
+        widget.appointment.familyHistory = famHist;
+        widget.appointment.medicines = _medicines;
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Consultation completed for ${widget.appointment.patientName} & synced to database!'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          Navigator.pop(context, true);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${res['error'] ?? 'Failed to complete consultation'}'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Network error: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdatingStatus = false);
+    }
+  }
+
+  Future<void> _cancelAppointment() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Cancel Appointment'),
+        content: Text('Are you sure you want to cancel the appointment for ${widget.appointment.patientName}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Back')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
       ),
     );
-    Navigator.pop(context, true);
+
+    if (confirm != true) return;
+
+    setState(() => _isUpdatingStatus = true);
+    try {
+      final res = await ApiClient.updateAppointment(
+        appointmentId: widget.appointment.id,
+        status: 'cancelled',
+      );
+      if (res['success'] == true) {
+        setState(() => widget.appointment.status = 'cancelled');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Appointment cancelled successfully.'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+          Navigator.pop(context, true);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to cancel: ${res['error']}'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Network error: $e'), backgroundColor: AppColors.danger),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdatingStatus = false);
+    }
   }
 
   @override
@@ -300,31 +472,61 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                 color: AppColors.headingText,
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isTeleconsult ? AppColors.infoBg : AppColors.primaryLight,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    isTeleconsult ? Icons.videocam_outlined : Icons.qr_code_scanner,
-                                    size: 14,
-                                    color: isTeleconsult ? AppColors.info : AppColors.primary,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    isTeleconsult ? 'Teleconsult' : 'In-Person QR',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: isTeleconsult ? AppColors.info : AppColors.primaryDark,
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  margin: const EdgeInsets.only(right: 6),
+                                  decoration: BoxDecoration(
+                                    color: appt.status == 'completed'
+                                        ? AppColors.successBg
+                                        : (appt.status == 'in_progress' ? const Color(0xFFFEF3C7) : AppColors.primaryLight),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: appt.status == 'completed'
+                                          ? AppColors.success
+                                          : (appt.status == 'in_progress' ? const Color(0xFFD97706) : AppColors.primary),
+                                      width: 1,
                                     ),
                                   ),
-                                ],
-                              ),
+                                  child: Text(
+                                    appt.status.toUpperCase(),
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: appt.status == 'completed'
+                                          ? AppColors.successText
+                                          : (appt.status == 'in_progress' ? const Color(0xFFB45309) : AppColors.primaryDark),
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isTeleconsult ? AppColors.infoBg : AppColors.primaryLight,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        isTeleconsult ? Icons.videocam_outlined : Icons.qr_code_scanner,
+                                        size: 14,
+                                        color: isTeleconsult ? AppColors.info : AppColors.primary,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        isTeleconsult ? 'Teleconsult' : 'In-Person QR',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: isTeleconsult ? AppColors.info : AppColors.primaryDark,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -343,6 +545,49 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                             ),
                           ],
                         ),
+                        if (appt.medicalRecordNumber != null || appt.bloodGroup != null) ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              if (appt.medicalRecordNumber != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                                  ),
+                                  child: Text(
+                                    'MRN: ${appt.medicalRecordNumber}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1E40AF),
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                ),
+                              if (appt.bloodGroup != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF2F2),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFFECACA)),
+                                  ),
+                                  child: Text(
+                                    'Blood: ${appt.bloodGroup}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFB91C1C),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 6),
                         Row(
                           children: [
@@ -1116,29 +1361,168 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                // CONSULTATION COMPLETE Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _completeConsultation,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                // Clinical Action Buttons based on status:
+                if (appt.status == 'queued' || appt.status == 'confirmed') ...[
+                  // 1. START CONSULTATION
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: _isUpdatingStatus ? null : _startConsultation,
+                      icon: _isUpdatingStatus
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Icon(Icons.play_circle_outline, color: Colors.white),
+                      label: Text(
+                        _isUpdatingStatus ? 'STARTING CONSULTATION...' : 'START CONSULTATION',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      'CONSULTATION COMPLETE',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.0,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      onPressed: _isUpdatingStatus ? null : _cancelAppointment,
+                      icon: const Icon(Icons.cancel_outlined, color: AppColors.danger, size: 18),
+                      label: const Text(
+                        'CANCEL APPOINTMENT',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.danger,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.danger, width: 1.2),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ] else if (appt.status == 'in_progress') ...[
+                  // 2. COMPLETE CONSULTATION
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: _isUpdatingStatus ? null : _completeConsultation,
+                      icon: _isUpdatingStatus
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Icon(Icons.task_alt_rounded, color: Colors.white),
+                      label: Text(
+                        _isUpdatingStatus ? 'SYNCING CONSULTATION...' : 'COMPLETE CONSULTATION',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: AppColors.success.withValues(alpha: 0.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      onPressed: _isUpdatingStatus ? null : _cancelAppointment,
+                      icon: const Icon(Icons.cancel_outlined, color: AppColors.danger, size: 18),
+                      label: const Text(
+                        'CANCEL APPOINTMENT',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.danger,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.danger, width: 1.2),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ] else if (appt.status == 'completed') ...[
+                  // 3. ALREADY COMPLETED STATE
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.successBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'CONSULTATION COMPLETED',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.successText,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (appt.status == 'cancelled') ...[
+                  // 4. CANCELLED STATE
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.dangerBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.cancel_rounded, color: AppColors.danger, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'APPOINTMENT CANCELLED',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.dangerText,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
