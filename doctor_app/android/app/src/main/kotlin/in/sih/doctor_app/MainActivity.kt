@@ -1,4 +1,4 @@
-package in.sih.doctor_app
+package `in`.sih.doctor_app
 
 import io.flutter.embedding.android.FlutterActivity
 
