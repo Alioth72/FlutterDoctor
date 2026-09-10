@@ -1,0 +1,299 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+
+import '../../data/services/gemini_cloud_llm_client.dart';
+import '../../data/services/groq_cloud_llm_client.dart';
+
+/// Modal bottom sheet to configure and test Cloud API keys (Groq / Gemini) at runtime.
+class ApiKeyDialog extends StatefulWidget {
+  const ApiKeyDialog({
+    super.key,
+    required this.cloudClient,
+    this.onKeySaved,
+  });
+
+  /// Either a [GroqCloudLlmClient] or [GeminiCloudLlmClient].
+  final dynamic cloudClient;
+  final VoidCallback? onKeySaved;
+
+  /// Helper to get the persistent key storage file.
+  static Future<File> _getKeyFile() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/groq_api_key.txt');
+  }
+
+  /// Saves the API key to local storage so it persists across app restarts.
+  static Future<void> persistApiKey(String key) async {
+    try {
+      final file = await _getKeyFile();
+      await file.writeAsString(key.trim());
+    } catch (_) {}
+  }
+
+  /// Loads the persisted API key from local storage.
+  static Future<String?> loadPersistedApiKey() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final groqFile = File('${dir.path}/groq_api_key.txt');
+      if (await groqFile.exists()) {
+        final key = (await groqFile.readAsString()).trim();
+        if (key.isNotEmpty && key.startsWith('gsk_')) return key;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<void> show(
+    BuildContext context, {
+    required dynamic cloudClient,
+    VoidCallback? onKeySaved,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ApiKeyDialog(
+        cloudClient: cloudClient,
+        onKeySaved: onKeySaved,
+      ),
+    );
+  }
+
+  @override
+  State<ApiKeyDialog> createState() => _ApiKeyDialogState();
+}
+
+class _ApiKeyDialogState extends State<ApiKeyDialog> {
+  late final TextEditingController _controller;
+  bool _obscureText = true;
+  bool _isValidating = false;
+  String? _errorMessage;
+
+  bool get _isGroq => widget.cloudClient is! GeminiCloudLlmClient;
+
+  @override
+  void initState() {
+    super.initState();
+    final clientKey = widget.cloudClient.apiKey as String;
+    _controller = TextEditingController(text: clientKey);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveAndValidateKey() async {
+    final key = _controller.text.trim();
+    if (key.isEmpty) {
+      setState(() {
+        _errorMessage = 'API Key cannot be empty.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isValidating = true;
+      _errorMessage = null;
+    });
+
+    if (_isGroq && !key.startsWith('gsk_')) {
+      setState(() {
+        _isValidating = false;
+        _errorMessage = 'Invalid format: Groq API keys start with "gsk_...". Get your free key at console.groq.com/keys';
+      });
+      return;
+    }
+
+    final error = await (widget.cloudClient.validateApiKey(key) as Future<String?>);
+    if (!mounted) return;
+
+    if (error != null) {
+      setState(() {
+        _isValidating = false;
+        _errorMessage = error;
+      });
+      return;
+    }
+
+    widget.cloudClient.setApiKey(key);
+    await ApiKeyDialog.persistApiKey(key);
+
+    if (!mounted) return;
+    setState(() {
+      _isValidating = false;
+    });
+
+    widget.onKeySaved?.call();
+    Navigator.of(context).pop();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isGroq
+            ? '✅ Connected to Groq LPU (Llama 3.3) successfully!'
+            : '✅ Connected to Cloud AI successfully!'),
+        backgroundColor: const Color(0xFF006A6A),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final hasKey = widget.cloudClient.hasApiKey as bool;
+    final title = _isGroq ? 'Groq API Settings' : 'Gemini API Settings';
+    final hint = _isGroq ? 'gsk_...' : 'AIzaSy...';
+    final keyUrl = _isGroq ? 'console.groq.com/keys' : 'aistudio.google.com/app/apikey';
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + bottomInset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0F2F1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.bolt_rounded,
+                  color: Color(0xFF006A6A),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$title Settings',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hasKey ? 'Status: Active (Key Configured)' : 'Status: No API key configured',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: hasKey ? const Color(0xFF059669) : const Color(0xFFD97706),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _isGroq
+                ? 'Enter your Groq API key to enable instant, sub-second clinical responses powered by Llama 3.3. Zero timeouts, ultra-low latency.'
+                : 'Enter your cloud API key to enable online clinical responses.',
+            style: const TextStyle(fontSize: 13.5, color: Color(0xFF64748B), height: 1.4),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _controller,
+            obscureText: _obscureText,
+            decoration: InputDecoration(
+              hintText: hint,
+              labelText: '$title Key',
+              errorText: _errorMessage,
+              errorMaxLines: 3,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              prefixIcon: const Icon(Icons.key, size: 20),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureText ? Icons.visibility_off : Icons.visibility,
+                  size: 20,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscureText = !_obscureText;
+                  });
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Get a free API key at $keyUrl',
+            style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _isValidating ? null : () => Navigator.of(context).pop(),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _isValidating ? null : _saveAndValidateKey,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF006A6A),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isValidating
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text(
+                          'Test & Save Key',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
