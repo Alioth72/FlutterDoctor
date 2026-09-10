@@ -3,6 +3,7 @@ import 'dart:io';
 
 import '../../domain/models/search_result.dart';
 import '../../domain/services/llm_client.dart';
+import 'env_config.dart';
 
 /// Signature for custom HTTP POST handlers, facilitating dependency injection in unit tests.
 typedef HttpPostHandler = Future<Map<String, dynamic>> Function(
@@ -20,14 +21,16 @@ class GeminiCloudLlmClient implements LlmClient {
     HttpPostHandler? httpHandler,
   })  : _apiKey = (apiKey != null && apiKey.isNotEmpty)
             ? apiKey.trim()
-            : (const String.fromEnvironment('GEMINI_API_KEY').isNotEmpty
-                ? const String.fromEnvironment('GEMINI_API_KEY').trim()
-                : defaultInbuiltApiKey.trim()),
+            : (EnvConfig.geminiApiKey.isNotEmpty
+                ? EnvConfig.geminiApiKey.trim()
+                : (const String.fromEnvironment('GEMINI_API_KEY').isNotEmpty
+                    ? const String.fromEnvironment('GEMINI_API_KEY').trim()
+                    : '')),
         _activeModel = model ?? 'gemini-flash-latest',
         _httpHandler = httpHandler ?? _defaultHttpPostHandler;
 
-  /// Put your Gemini API Key here if you want it built directly into the app:
-  static const String defaultInbuiltApiKey = 'AQ.Ab8RN6L8pfTo48TP8svIW6LiiwffIPSn88u-MikikhmGqdIdkA';
+  /// Gemini API Key dynamically loaded from .env or compile-time environment:
+  static String get defaultInbuiltApiKey => EnvConfig.geminiApiKey;
 
   /// Candidate models in order of priority (handles Google model retirements/deprecations automatically).
   static const List<String> candidateModels = [

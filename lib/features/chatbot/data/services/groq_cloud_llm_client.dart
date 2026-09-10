@@ -3,6 +3,7 @@ import 'dart:io';
 
 import '../../domain/models/search_result.dart';
 import '../../domain/services/llm_client.dart';
+import 'env_config.dart';
 
 /// Signature for custom HTTP POST handlers, facilitating dependency injection in unit tests.
 typedef HttpPostHandler = Future<Map<String, dynamic>> Function(
@@ -23,14 +24,16 @@ class GroqCloudLlmClient implements LlmClient {
     HttpPostHandler? httpHandler,
   })  : _apiKey = (apiKey != null && apiKey.isNotEmpty)
             ? apiKey.trim()
-            : (const String.fromEnvironment('GROQ_API_KEY').isNotEmpty
-                ? const String.fromEnvironment('GROQ_API_KEY').trim()
-                : defaultInbuiltApiKey.trim()),
+            : (EnvConfig.groqApiKey.isNotEmpty
+                ? EnvConfig.groqApiKey.trim()
+                : (const String.fromEnvironment('GROQ_API_KEY').isNotEmpty
+                    ? const String.fromEnvironment('GROQ_API_KEY').trim()
+                    : '')),
         _activeModel = model ?? 'openai/gpt-oss-20b',
         _httpHandler = httpHandler ?? _defaultHttpPostHandler;
 
-  /// Put your Groq API Key here if you want it built directly into the app:
-  static const String defaultInbuiltApiKey = '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';
+  /// Groq API Key dynamically loaded from .env or compile-time environment:
+  static String get defaultInbuiltApiKey => EnvConfig.groqApiKey;
 
   /// High-throughput Groq models in priority order.
   static const List<String> candidateModels = [

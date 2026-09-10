@@ -11,6 +11,7 @@ import 'features/chatbot/domain/repositories/patient_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await EnvConfig.init();
   runApp(const HealthcareChatApp());
 }
 
@@ -157,6 +158,7 @@ class _AppInitializerState extends State<AppInitializer> {
           widget.connectivityService ?? DefaultConnectivityService();
 
       // 5. Initialize generation engines (load saved key if present)
+      await EnvConfig.init();
       final savedApiKey = await ApiKeyDialog.loadPersistedApiKey();
       final cloudLlm = widget.cloudLlmClient ??
           GroqCloudLlmClient(

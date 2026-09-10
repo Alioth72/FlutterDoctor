@@ -11,10 +11,11 @@ Follow this 3-step guide to integrate this chatbot into your **Patient App** in 
 ### Step 1: Copy Files to Your Patient App
 1. Copy the `lib/features/chatbot/` folder into your Patient App's `lib/features/` directory.
 2. Copy `assets/data/medical_knowledge_embeddings.json` into your Patient App's `assets/data/` folder.
+3. Copy `.env.example` to `.env` in your project root and fill in your `GROQ_API_KEY` or `GEMINI_API_KEY`.
 
 ---
 
-### Step 2: Add Dependencies to `pubspec.yaml`
+### Step 2: Add Dependencies & Assets to `pubspec.yaml`
 Ensure your Patient App's `pubspec.yaml` includes:
 
 ```yaml
@@ -34,6 +35,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/data/   # MedQuAD offline knowledge embeddings
+    - .env           # Cloud LLM API keys (keep .env in your .gitignore!)
 ```
 Run `flutter pub get` after saving.
 
