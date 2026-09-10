@@ -1,0 +1,7 @@
+**/.dart_tool/
+**/build/
+**/android/local.properties
+**/ios/Flutter/ephemeral/
+**/packages/**/pubspec.lock
+*.env
+test_apks/

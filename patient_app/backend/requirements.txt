@@ -1,0 +1,8 @@
+# Core scraper dependencies
+scrapling>=0.2.0
+
+# Optional LLM providers for re-running eligibility extraction (extract_eligibility.py)
+# anthropic>=0.18.0
+# openai>=1.12.0
+# google-generativeai>=0.4.0
+# groq>=0.4.0

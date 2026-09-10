@@ -1,0 +1,322 @@
+/* ==========================================================================
+   ME-rPPG Light & Modern Purple Theme
+   Clean white background with vibrant royal purple accents
+   ========================================================================== */
+
+:root {
+    --primary-color: #6D28D9;
+    --primary-hover: #5B21B6;
+    --primary-light: #F5F3FF;
+    --primary-border: #EDE9FE;
+    --background: #FFFFFF;
+    --card-bg: #FFFFFF;
+    --text-primary: #0F172A;
+    --text-secondary: #64748B;
+    --accent: #7C3AED;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    padding: 10px 14px 20px;
+    background-color: #FFFFFF;
+    color: var(--text-primary);
+    box-sizing: border-box;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ==========================================================================
+   VISUALLY HIDDEN ELEMENTS (Preserved in DOM for JavaScript references)
+   ========================================================================== */
+#title,
+#description,
+#controlParams,
+.status-bar > div:nth-child(2),
+.status-bar > div:nth-child(3),
+.image-container {
+    display: none !important;
+}
+
+#videoInput {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   STREAMLINED CENTERED LAYOUT
+   ========================================================================== */
+#container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 0;
+    gap: 12px;
+    box-sizing: border-box;
+}
+
+#viewPanel {
+    display: contents;
+}
+
+/* 1. Camera & Heart Rate */
+#textDisplay {
+    order: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#cameraDisplay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+
+#previewTitle {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+#debugInfo {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+/* Clean Purple Status Pill */
+.status-bar {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    background: #F5F3FF;
+    border: 1.5px solid #DDD6FE;
+    padding: 6px 18px;
+    border-radius: 20px;
+    margin: 0 auto;
+    box-shadow: 0 2px 6px rgba(109, 40, 217, 0.08);
+}
+
+.status-bar > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.metric-label {
+    color: #6D28D9;
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.value-box {
+    display: inline-flex;
+    justify-content: center;
+}
+
+#heartRateValue {
+    font-size: 1.2rem;
+    font-weight: 900;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.unit {
+    color: #7C3AED;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+/* Camera Video Box */
+.video-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    position: relative;
+}
+
+.canvas-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    aspect-ratio: 3 / 4;
+    max-height: 380px;
+    margin: 0 auto;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #000000;
+    box-shadow: 0 6px 20px rgba(109, 40, 217, 0.12);
+    border: 2px solid #EDE9FE;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#previewCanvas,
+#overlayCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
+    border-radius: 18px;
+    pointer-events: none;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mirrored mode (horizontal flip for front/selfie camera) */
+.canvas-wrapper.mirrored #previewCanvas,
+.canvas-wrapper.mirrored #overlayCanvas {
+    transform: scaleX(-1);
+}
+
+.mirror-toggle-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.mirror-toggle-btn:active {
+    transform: scale(0.92);
+    background: rgba(109, 40, 217, 0.9);
+}
+
+/* 2. Start Button */
+#sidebar {
+    order: 2;
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    margin: 2px 0;
+}
+
+#controlPanel {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+#switchButton {
+    background: linear-gradient(135deg, #6D28D9, #8B5CF6);
+    color: #FFFFFF;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 13px 28px;
+    border-radius: 14px;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    box-shadow: 0 4px 14px rgba(109, 40, 217, 0.3);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    text-align: center;
+}
+
+#switchButton:hover {
+    background: linear-gradient(135deg, #5B21B6, #7C3AED);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(109, 40, 217, 0.4);
+}
+
+#switchButton:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(109, 40, 217, 0.25);
+}
+
+#switchButton:disabled {
+    background: #E2E8F0;
+    color: #94A3B8;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+/* 3. Waveform Graph */
+#cameraPreview {
+    order: 3;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+#resultPlot {
+    width: 100%;
+}
+
+#plotContainer {
+    width: 100%;
+}
+
+#plotContent {
+    border: 1.5px solid #EDE9FE;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #FAFAFD;
+    box-shadow: 0 4px 14px rgba(109, 40, 217, 0.06);
+}
+
+#plotCanvas {
+    width: 100%;
+    height: 105px;
+    display: block;
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 6px 8px 16px;
+    }
+
+    .canvas-wrapper {
+        border-radius: 16px;
+    }
+
+    #switchButton {
+        padding: 12px 20px;
+        font-size: 1rem;
+        border-radius: 12px;
+    }
+
+    #plotCanvas {
+        height: 95px;
+    }
+}

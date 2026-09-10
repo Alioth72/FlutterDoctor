@@ -1,0 +1,12 @@
+.git*
+.vscode
+local.settings.json
+test*
+*.ts
+src/**
+tsconfig.json
+*.log
+inspect*.js
+test*.js
+restore*.js
+node_modules/**

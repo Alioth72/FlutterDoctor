@@ -1,0 +1,22 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Prototype-only signaling. Audio, video, and clinical notes are not stored
+    // in Firestore. Require authenticated participants before production use.
+    match /teleconsult_calls/{appointmentId} {
+      allow read, create, update: if true;
+      allow delete: if false;
+
+      match /patientCandidates/{candidateId} {
+        allow read, create: if true;
+        allow update, delete: if false;
+      }
+
+      match /doctorCandidates/{candidateId} {
+        allow read, create: if true;
+        allow update, delete: if false;
+      }
+    }
+  }
+}
