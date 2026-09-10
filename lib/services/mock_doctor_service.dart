@@ -7,7 +7,7 @@ class MockDoctorService {
       name: 'Dr. Ananya Sharma',
       specialty: 'General Physician',
       qualification: 'MBBS, MD (Internal Medicine)',
-      hospital: 'City Civil Hospital, Block A',
+      hospital: 'Ashwini Central Hospital • OPD Block A',
       experienceYears: 12,
       rating: 4.8,
       consultationFee: 0,
@@ -25,10 +25,10 @@ class MockDoctorService {
     ),
     const Doctor(
       id: 'doc_2',
-      name: 'Dr. Rajesh Verma',
+      name: 'Dr. Rajesh Sharma',
       specialty: 'Cardiologist',
       qualification: 'MBBS, DM (Cardiology)',
-      hospital: 'District Multi-Speciality Hospital',
+      hospital: 'Ashwini Central Hospital • Cardiology Wing',
       experienceYears: 16,
       rating: 4.9,
       consultationFee: 0,
@@ -44,12 +44,12 @@ class MockDoctorService {
     ),
     const Doctor(
       id: 'doc_3',
-      name: 'Dr. Priya Nair',
+      name: 'Dr. M. Sundaram',
       specialty: 'Pediatrician (Child Specialist)',
       qualification: 'MBBS, DCH, DNB (Pediatrics)',
-      hospital: 'Mother & Child Community Health Centre',
-      experienceYears: 9,
-      rating: 4.7,
+      hospital: 'Ashwini Mother & Child Care Wing',
+      experienceYears: 14,
+      rating: 4.9,
       consultationFee: 0,
       availableDaysOfWeek: [1, 2, 3, 4, 5], // Mon - Fri
       availableTimeSlots: [
@@ -62,11 +62,11 @@ class MockDoctorService {
     ),
     const Doctor(
       id: 'doc_4',
-      name: 'Dr. Suresh Mehta',
+      name: 'Dr. Farhan Akhtar',
       specialty: 'Orthopedic Surgeon',
       qualification: 'MBBS, MS (Orthopedics)',
-      hospital: 'Apex Trauma & Joint Care Centre',
-      experienceYears: 14,
+      hospital: 'Ashwini Apex Trauma & Joint Center',
+      experienceYears: 15,
       rating: 4.8,
       consultationFee: 0,
       availableDaysOfWeek: [2, 4, 6], // Tue, Thu, Sat
@@ -80,10 +80,10 @@ class MockDoctorService {
     ),
     const Doctor(
       id: 'doc_5',
-      name: 'Dr. Kavita Deshmukh',
+      name: 'Dr. Shalini M.',
       specialty: 'Gynecologist & Obstetrician',
       qualification: 'MBBS, MS (OBG)',
-      hospital: 'Govt Maternity & Women Hospital',
+      hospital: 'Ashwini Central Hospital • Women Health Clinic',
       experienceYears: 11,
       rating: 4.9,
       consultationFee: 0,
@@ -99,12 +99,29 @@ class MockDoctorService {
     ),
     const Doctor(
       id: 'doc_6',
-      name: 'Dr. Amitav Sen',
+      name: 'Dr. Ananya Iyer',
+      specialty: 'Pulmonologist & Critical Care',
+      qualification: 'MBBS, MD (Pulmonology)',
+      hospital: 'Ashwini Central Hospital • Respiratory Center',
+      experienceYears: 10,
+      rating: 4.8,
+      consultationFee: 0,
+      availableDaysOfWeek: [1, 2, 4, 5], // Mon, Tue, Thu, Fri
+      availableTimeSlots: [
+        '09:30 AM',
+        '11:00 AM',
+        '02:00 PM',
+        '03:30 PM',
+      ],
+    ),
+    const Doctor(
+      id: 'doc_7',
+      name: 'Dr. Sunita Devi',
       specialty: 'Dermatologist',
       qualification: 'MBBS, MD (Dermatology)',
-      hospital: 'Skin & Allergy Care Dispensary',
+      hospital: 'Ashwini OPD Dispensary • Skin & Allergy',
       experienceYears: 8,
-      rating: 4.6,
+      rating: 4.7,
       consultationFee: 0,
       availableDaysOfWeek: [1, 3, 4, 6], // Mon, Wed, Thu, Sat
       availableTimeSlots: [
@@ -132,7 +149,7 @@ class MockDoctorService {
   List<String> getSpecialties() {
     final set = <String>{'All'};
     for (final doc in _doctors) {
-      set.add(doc.specialty.split(' (')[0]);
+      set.add(doc.specialty.split(' (')[0].split(' •')[0]);
     }
     return set.toList();
   }

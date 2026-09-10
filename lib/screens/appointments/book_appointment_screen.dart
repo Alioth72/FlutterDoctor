@@ -31,6 +31,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   DateTime _selectedDate = DateTime.now();
   String? _selectedTimeSlot = '09:00 AM';
   bool _isBooking = false;
+  String _selectedAppointmentType = 'Online';
 
   final List<String> _quickReasons = const [
     'General Checkup',
@@ -150,6 +151,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       appointmentDate: fullDateString,
       timeSlot: _selectedTimeSlot!,
       reason: _reasonController.text.trim().isEmpty ? 'General Consultation' : _reasonController.text.trim(),
+      appointmentType: _selectedAppointmentType,
     );
 
     if (!mounted) return;
@@ -180,12 +182,12 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
             padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 8.0),
             child: InkWell(
               onTap: () => Navigator.of(context).pop(),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(8),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.04),
@@ -247,7 +249,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF6D28D9),
+                                color: Color(0xFF7C3AED),
                               ),
                             ),
                           ),
@@ -269,20 +271,20 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                   });
                                   _loadDoctors();
                                 },
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(12),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                   decoration: BoxDecoration(
-                                    color: isSelected ? const Color(0xFF6D28D9) : Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
+                                    color: isSelected ? const Color(0xFF7C3AED) : Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFFE2E8F0),
+                                      color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFFE5E7EB),
                                       width: 1.2,
                                     ),
                                     boxShadow: isSelected
                                         ? [
                                             BoxShadow(
-                                              color: const Color(0xFF6D28D9).withValues(alpha: 0.3),
+                                              color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
                                               offset: const Offset(0, 4),
                                               blurRadius: 10,
                                             ),
@@ -336,7 +338,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: const Color(0xFFDCFCE7),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
                               '${_doctors.length} on duty',
@@ -380,15 +382,15 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFFE2E8F0),
+                                    color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFFE5E7EB),
                                     width: isSelected ? 2.0 : 1.2,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
                                       color: isSelected
-                                          ? const Color(0xFF6D28D9).withValues(alpha: 0.08)
+                                          ? const Color(0xFF7C3AED).withValues(alpha: 0.08)
                                           : Colors.black.withValues(alpha: 0.03),
                                       offset: const Offset(0, 6),
                                       blurRadius: 14,
@@ -411,7 +413,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                                   height: 48,
                                                   decoration: BoxDecoration(
                                                     color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFF0D9488),
-                                                    borderRadius: BorderRadius.circular(14),
+                                                    borderRadius: BorderRadius.circular(8),
                                                   ),
                                                   alignment: Alignment.center,
                                                   child: Text(
@@ -461,7 +463,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                                     style: const TextStyle(
                                                       fontSize: 12,
                                                       fontWeight: FontWeight.w700,
-                                                      color: Color(0xFF6D28D9),
+                                                      color: Color(0xFF7C3AED),
                                                     ),
                                                   ),
                                                   const SizedBox(height: 2),
@@ -551,7 +553,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                         child: Container(
                                           padding: const EdgeInsets.all(3),
                                           decoration: const BoxDecoration(
-                                            color: Color(0xFF6D28D9),
+                                            color: Color(0xFF7C3AED),
                                             shape: BoxShape.circle,
                                           ),
                                           child: const Icon(
@@ -584,7 +586,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                           ),
                           const Icon(
                             Icons.keyboard_arrow_down_rounded,
-                            color: Color(0xFF6D28D9),
+                            color: Color(0xFF7C3AED),
                             size: 22,
                           ),
                         ],
@@ -609,14 +611,14 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF3E8FF),
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Text(
                               '7 slots free',
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
-                                color: Color(0xFF6D28D9),
+                                color: Color(0xFF7C3AED),
                               ),
                             ),
                           ),
@@ -630,7 +632,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                             padding: const EdgeInsets.only(bottom: 4),
                             decoration: const BoxDecoration(
                               border: Border(
-                                bottom: BorderSide(color: Color(0xFF6D28D9), width: 2.0),
+                                bottom: BorderSide(color: Color(0xFF7C3AED), width: 2.0),
                               ),
                             ),
                             child: const Text(
@@ -638,7 +640,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w800,
-                                color: Color(0xFF6D28D9),
+                                color: Color(0xFF7C3AED),
                               ),
                             ),
                           ),
@@ -660,6 +662,218 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       ),
                       const SizedBox(height: 14),
                       _buildTimeSlotGrid(context),
+                      const SizedBox(height: 22),
+
+                      // 5. APPOINTMENT TYPE (ONLINE VS OFFLINE)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'APPOINTMENT TYPE',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.0,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: _selectedAppointmentType == 'Online'
+                                  ? const Color(0xFFECFDF5)
+                                  : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: _selectedAppointmentType == 'Online'
+                                    ? const Color(0xFFA7F3D0)
+                                    : const Color(0xFFCBD5E1),
+                              ),
+                            ),
+                            child: Text(
+                              _selectedAppointmentType == 'Online' ? '⚡ Instant Video Room' : '🏥 Hospital Queue Token',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                color: _selectedAppointmentType == 'Online'
+                                    ? const Color(0xFF047857)
+                                    : const Color(0xFF475569),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          // Online Option Card
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _selectedAppointmentType = 'Online';
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: _selectedAppointmentType == 'Online'
+                                      ? const Color(0xFFFAF5FF)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: _selectedAppointmentType == 'Online'
+                                        ? const Color(0xFF7C3AED)
+                                        : const Color(0xFFE5E7EB),
+                                    width: _selectedAppointmentType == 'Online' ? 2.0 : 1.2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _selectedAppointmentType == 'Online'
+                                          ? const Color(0xFF7C3AED).withValues(alpha: 0.12)
+                                          : Colors.black.withValues(alpha: 0.02),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: _selectedAppointmentType == 'Online'
+                                                ? const Color(0xFF7C3AED)
+                                                : const Color(0xFFF1F5F9),
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: Icon(
+                                            Icons.videocam_rounded,
+                                            size: 20,
+                                            color: _selectedAppointmentType == 'Online'
+                                                ? Colors.white
+                                                : const Color(0xFF64748B),
+                                          ),
+                                        ),
+                                        if (_selectedAppointmentType == 'Online')
+                                          const Icon(Icons.check_circle_rounded, color: Color(0xFF7C3AED), size: 18),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    const Text(
+                                      'Online',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    const Text(
+                                      'Video consultation from home with connect link',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        height: 1.25,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+
+                          // Offline Option Card
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _selectedAppointmentType = 'Offline';
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: _selectedAppointmentType == 'Offline'
+                                      ? const Color(0xFFF0FDF4)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: _selectedAppointmentType == 'Offline'
+                                        ? const Color(0xFF059669)
+                                        : const Color(0xFFE5E7EB),
+                                    width: _selectedAppointmentType == 'Offline' ? 2.0 : 1.2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _selectedAppointmentType == 'Offline'
+                                          ? const Color(0xFF059669).withValues(alpha: 0.12)
+                                          : Colors.black.withValues(alpha: 0.02),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: _selectedAppointmentType == 'Offline'
+                                                ? const Color(0xFF059669)
+                                                : const Color(0xFFF1F5F9),
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: Icon(
+                                            Icons.local_hospital_rounded,
+                                            size: 20,
+                                            color: _selectedAppointmentType == 'Offline'
+                                                ? Colors.white
+                                                : const Color(0xFF64748B),
+                                          ),
+                                        ),
+                                        if (_selectedAppointmentType == 'Offline')
+                                          const Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 18),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    const Text(
+                                      'Offline (OPD)',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    const Text(
+                                      'In-person hospital checkup with queue token',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        height: 1.25,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 22),
 
                       // 5. REASON FOR VISIT (Optional)
@@ -685,13 +899,13 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                     _reasonController.text = reason;
                                   });
                                 },
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(10),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: const Color(0xFFE5E7EB)),
                                   ),
                                   child: Text(
                                     reason,
@@ -710,18 +924,18 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                         decoration: InputDecoration(
                           hintText: 'e.g. Fever, routine health checkup',
                           hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                          prefixIcon: const Icon(Icons.edit_note_rounded, color: Color(0xFF6D28D9)),
+                          prefixIcon: const Icon(Icons.edit_note_rounded, color: Color(0xFF7C3AED)),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(10),
                             borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(10),
                             borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(color: Color(0xFF6D28D9), width: 1.5),
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(color: Color(0xFF7C3AED), width: 1.5),
                           ),
                           filled: true,
                           fillColor: Colors.white,
@@ -736,7 +950,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
           padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.08),
@@ -758,7 +972,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Selected: ${_formatDate(_selectedDate)} • ${_selectedTimeSlot ?? "09:00 AM"}',
+                            'Selected: ${_formatDate(_selectedDate)} • ${_selectedTimeSlot ?? "09:00 AM"} • $_selectedAppointmentType',
                             style: const TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
@@ -773,7 +987,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF6D28D9),
+                              color: Color(0xFF7C3AED),
                             ),
                           ),
                         ],
@@ -813,12 +1027,12 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                   child: FilledButton(
                     onPressed: _isBooking ? null : _handleConfirmBooking,
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF6D28D9),
+                      backgroundColor: const Color(0xFF7C3AED),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      elevation: 4,
-                      shadowColor: const Color(0xFF6D28D9).withValues(alpha: 0.4),
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
                     ),
                     child: _isBooking
                         ? const SizedBox(
@@ -829,13 +1043,13 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                               strokeWidth: 2.2,
                             ),
                           )
-                        : const Row(
+                        : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.check_circle_outline_rounded, size: 20, color: Colors.white),
                               SizedBox(width: 8),
                               Text(
-                                'Confirm & Generate Token (₹0)',
+                                _selectedAppointmentType == 'Online' ? 'Confirm Online Video Appointment' : 'Confirm & Generate Token (₹0)',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w900,
@@ -887,21 +1101,21 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
               margin: const EdgeInsets.only(right: 10),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? const Color(0xFF6D28D9)
+                    ? const Color(0xFF7C3AED)
                     : isSunday
                         ? const Color(0xFFF8FAFC)
                         : Colors.white,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: isSelected
-                      ? const Color(0xFF6D28D9)
-                      : const Color(0xFFE2E8F0),
+                      ? const Color(0xFF7C3AED)
+                      : const Color(0xFFE5E7EB),
                   width: isSelected ? 2.0 : 1.2,
                 ),
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: const Color(0xFF6D28D9).withValues(alpha: 0.35),
+                          color: const Color(0xFF7C3AED).withValues(alpha: 0.35),
                           offset: const Offset(0, 6),
                           blurRadius: 12,
                         ),
@@ -991,7 +1205,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: const Color(0xFFFFF1F2),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: const Color(0xFFFFE4E6)),
         ),
         child: Row(
@@ -1043,19 +1257,19 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
               _selectedTimeSlot = slot;
             });
           },
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(10),
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFF6D28D9) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              color: isSelected ? const Color(0xFF7C3AED) : Colors.white,
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFFE2E8F0),
+                color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFFE5E7EB),
                 width: isSelected ? 2.0 : 1.2,
               ),
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                        color: const Color(0xFF6D28D9).withValues(alpha: 0.3),
+                        color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
                         offset: const Offset(0, 4),
                         blurRadius: 10,
                       ),

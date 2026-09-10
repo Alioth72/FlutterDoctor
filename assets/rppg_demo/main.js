@@ -226,9 +226,6 @@ async function toggleCamera() {
         try {
             stream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    width: { ideal: 640 },
-                    height: { ideal: 480 },
-                    frameRate: { ideal: 30 },
                     facingMode: "user"
                 },
                 audio: false,
@@ -251,7 +248,11 @@ async function toggleCamera() {
                 previewCanvas.height = video.videoHeight;
                 overlayCanvas.width = video.videoWidth;
                 overlayCanvas.height = video.videoHeight;
-                console.log(`Canvas synced to video: ${video.videoWidth}x${video.videoHeight}`);
+                const wrapper = document.getElementById('canvasWrapper') || document.querySelector('.canvas-wrapper');
+                if (wrapper) {
+                    wrapper.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+                }
+                console.log(`Canvas synced to video: ${video.videoWidth}x${video.videoHeight}, aspect ratio: ${video.videoWidth}/${video.videoHeight}`);
             }
         };
 
@@ -273,7 +274,26 @@ async function toggleCamera() {
     }
 }
 
-//cameraButton.addEventListener("click", toggleCamera);
+// Global toggle mirror function callable from both HTML and Flutter
+window.toggleMirror = function() {
+    const wrapper = document.getElementById('canvasWrapper') || document.querySelector('.canvas-wrapper');
+    if (wrapper) {
+        wrapper.classList.toggle('mirrored');
+        const isMirrored = wrapper.classList.contains('mirrored');
+        console.log(`Camera mirror toggled: ${isMirrored}`);
+        return isMirrored;
+    }
+    return false;
+};
+
+const mirrorBtn = document.getElementById("mirrorToggleBtn");
+if (mirrorBtn) {
+    mirrorBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.toggleMirror();
+    });
+}
 
 cameraButton.addEventListener("click", () => {
         if (!faceDetector) {

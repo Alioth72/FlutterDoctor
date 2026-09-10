@@ -1,3 +1,8 @@
+import 'package:sih_project/screens/tabs/appointments_tab.dart';
+import 'package:sih_project/screens/appointments/video_consultation_screen.dart';
+import 'package:sih_project/models/family_member.dart';
+import 'package:sih_project/screens/family/family_data_screen.dart';
+import 'package:sih_project/widgets/patient_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -108,9 +113,16 @@ void main() {
         ),
       );
 
+      // On landing page, tap Sign Up to navigate to Signup form
+      if (find.text('Sign Up').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Sign Up'));
+        await tester.pumpAndSettle();
+      }
+
       expect(find.text('Create Health Profile'), findsOneWidget);
       expect(find.text('Continue'), findsOneWidget);
 
+      await tester.ensureVisible(find.text('Continue'));
       await tester.tap(find.text('Continue'));
       await tester.pump();
 
@@ -138,15 +150,23 @@ void main() {
         ),
       );
 
+      // On landing page, tap Sign Up to navigate to Signup form
+      if (find.text('Sign Up').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Sign Up'));
+        await tester.pumpAndSettle();
+      }
+
       await tester.enterText(find.widgetWithText(TextFormField, 'Full Name'), 'Sneha Reddy');
       await tester.enterText(find.widgetWithText(TextFormField, 'Age'), '29');
-      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.tap(find.byType(DropdownButtonFormField<String>).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Female').last);
       await tester.pumpAndSettle();
 
       await tester.enterText(find.widgetWithText(TextFormField, 'Phone Number'), '9123456789');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'pass1234');
 
+      await tester.ensureVisible(find.text('Continue'));
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
@@ -160,6 +180,44 @@ void main() {
       expect(find.text('CONTACT\nDOCTOR'), findsOneWidget);
       expect(find.text('VOICE'), findsOneWidget);
       expect(find.text('Measure Live Heart Rate'), findsOneWidget);
+    });
+
+    testWidgets('Login tab validates and authenticates patient into Dashboard', (WidgetTester tester) async {
+      final profileProvider = HealthProfileProvider();
+      final appointmentProvider = AppointmentProvider();
+      final schemesProvider = SchemesProvider();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: profileProvider),
+            ChangeNotifierProvider.value(value: appointmentProvider),
+            ChangeNotifierProvider.value(value: schemesProvider),
+          ],
+          child: const MaterialApp(
+            home: SignupScreen(initialTabIndex: 0),
+          ),
+        ),
+      );
+
+      // Transition to Login if on landing
+      if (find.text('Log In').evaluate().isNotEmpty && find.text('Patient Login').evaluate().isEmpty) {
+        await tester.tap(find.text('Log In'));
+        await tester.pumpAndSettle();
+      }
+
+      expect(find.text('Patient Login'), findsOneWidget);
+      expect(find.text('Log In to Ashwini'), findsOneWidget);
+
+      await tester.enterText(find.widgetWithText(TextFormField, 'Full Name'), 'Vikram Malhotra');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Mobile Number'), '9876501234');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'mypass123');
+
+      await tester.ensureVisible(find.text('Log In to Ashwini'));
+      await tester.tap(find.text('Log In to Ashwini'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HomeScreen), findsOneWidget);
     });
   });
 
@@ -332,4 +390,309 @@ void main() {
       expect(list.last.id, apt1.id, reason: 'Earlier appointment (apt1) should be after the latest one');
     });
   });
+
+  group('Family Health Sync & Drawer Header Tests', () {
+    test('FamilyMember model serializes and deserializes correctly', () {
+      final member = FamilyMember(
+        id: 'FAM-1234',
+        name: 'Pooja Malhotra',
+        patientId: 'ASH-PT-4512',
+        relation: 'Spouse',
+        syncedAt: DateTime(2026, 9, 8),
+      );
+
+      final json = member.toJson();
+      expect(json['id'], 'FAM-1234');
+      expect(json['name'], 'Pooja Malhotra');
+      expect(json['patientId'], 'ASH-PT-4512');
+      expect(json['relation'], 'Spouse');
+
+      final deserialized = FamilyMember.fromJson(json);
+      expect(deserialized.id, 'FAM-1234');
+      expect(deserialized.name, 'Pooja Malhotra');
+      expect(deserialized.patientId, 'ASH-PT-4512');
+      expect(deserialized.relation, 'Spouse');
+    });
+
+    testWidgets('PatientDrawer displays Profile header covering top with Patient ID and phone', (WidgetTester tester) async {
+      final profileProvider = HealthProfileProvider();
+      final profile = HealthProfile(
+        name: 'Vikram Malhotra',
+        age: 32,
+        gender: 'Male',
+        phoneNumber: '9876501234',
+        patientId: 'ASH-PT-1234',
+      );
+      await profileProvider.signup(profile);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: profileProvider),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              drawer: PatientDrawer(),
+              body: Center(child: Text('Home')),
+            ),
+          ),
+        ),
+      );
+
+      // Open drawer
+      final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
+      scaffoldState.openDrawer();
+      await tester.pumpAndSettle();
+
+      // Top Ashwini card is gone
+      expect(find.text('Central Hospital & Patient Care'), findsNothing);
+
+      // Profile card covers top with Patient ID, QR Card, and phone
+      expect(find.text('QR Card'), findsOneWidget);
+      expect(find.text('Vikram Malhotra'), findsOneWidget);
+      expect(find.text('+91 9876501234'), findsOneWidget);
+      expect(find.text('ID: ASH-PT-1234'), findsOneWidget);
+      expect(find.text('FAMILY DATA'), findsOneWidget);
+    });
+
+    testWidgets('FamilyDataScreen allows adding and syncing family member', (WidgetTester tester) async {
+      final profileProvider = HealthProfileProvider();
+      final profile = HealthProfile(
+        name: 'Vikram Malhotra',
+        age: 32,
+        gender: 'Male',
+        phoneNumber: '9876501234',
+        patientId: 'ASH-PT-1234',
+      );
+      await profileProvider.signup(profile);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: profileProvider),
+          ],
+          child: const MaterialApp(
+            home: FamilyDataScreen(),
+          ),
+        ),
+      );
+
+      expect(find.text('Family Health Data'), findsOneWidget);
+      expect(find.text('ASH-PT-1234'), findsOneWidget);
+
+      // Tap Add Member
+      await tester.tap(find.text('Add Member'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sync Family Member'), findsOneWidget);
+
+      // Fill Name and Patient ID
+      await tester.enterText(find.widgetWithText(TextFormField, 'Family Member Name'), 'Pooja Malhotra');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Member Patient ID'), 'ASH-PT-4512');
+
+      // Submit
+      await tester.tap(find.text('Sync & Link Family Member'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Pooja Malhotra'), findsOneWidget);
+      expect(find.text('ID: ASH-PT-4512'), findsOneWidget);
+      expect(find.text('Synced'), findsOneWidget);
+    });
+  });
+
+
+  group('Online / Offline Appointment & Video Connect Tests', () {
+    test('Appointment model handles appointmentType and isOnline correctly', () {
+      final onlineApt = Appointment(
+        id: 'APT-ON-101',
+        tokenNumber: 'Token #01',
+        doctorId: 'doc_1',
+        doctorName: 'Dr. Ananya Sharma',
+        doctorSpecialty: 'Cardiology',
+        hospitalName: 'Ashwini Central Hospital',
+        patientName: 'Piyush Patient',
+        patientPhone: '9876501234',
+        appointmentDate: 'Wed, 09 Sep 2026',
+        timeSlot: '10:00 AM',
+        appointmentType: 'Online',
+        bookedAt: DateTime.now(),
+      );
+
+      expect(onlineApt.isOnline, true);
+      final json = onlineApt.toJson();
+      expect(json['appointmentType'], 'Online');
+
+      final fromJson = Appointment.fromJson(json);
+      expect(fromJson.isOnline, true);
+      expect(fromJson.appointmentType, 'Online');
+
+      final offlineApt = Appointment(
+        id: 'APT-OFF-102',
+        tokenNumber: 'Token #02',
+        doctorId: 'doc_2',
+        doctorName: 'Dr. Rajesh Verma',
+        doctorSpecialty: 'Orthopedics',
+        hospitalName: 'Ashwini Central Hospital',
+        patientName: 'Piyush Patient',
+        patientPhone: '9876501234',
+        appointmentDate: 'Wed, 09 Sep 2026',
+        timeSlot: '11:00 AM',
+        appointmentType: 'Offline',
+        bookedAt: DateTime.now(),
+      );
+
+      expect(offlineApt.isOnline, false);
+      expect(offlineApt.toJson()['appointmentType'], 'Offline');
+    });
+
+    testWidgets('AppointmentReceiptScreen displays Connect button for Online appointments', (WidgetTester tester) async {
+      final onlineApt = Appointment(
+        id: 'APT-ON-999',
+        tokenNumber: 'Token #09',
+        doctorId: 'doc_1',
+        doctorName: 'Dr. Ananya Sharma',
+        doctorSpecialty: 'General Physician',
+        hospitalName: 'Ashwini Central Hospital',
+        patientName: 'Aarav Patel',
+        patientPhone: '9123456789',
+        appointmentDate: 'Thu, 10 Sep 2026',
+        timeSlot: '02:00 PM',
+        appointmentType: 'Online',
+        bookedAt: DateTime.now(),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AppointmentReceiptScreen(appointment: onlineApt),
+        ),
+      );
+
+      expect(find.text('ONLINE'), findsOneWidget);
+      expect(find.text('Connect with Doctor (Video Call)'), findsOneWidget);
+
+      // Scroll and Tap Connect button to verify VideoConsultationScreen opens
+      await tester.ensureVisible(find.text('Connect with Doctor (Video Call)'));
+      await tester.tap(find.text('Connect with Doctor (Video Call)'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VideoConsultationScreen), findsOneWidget);
+      expect(find.text('Dr. Ananya Sharma'), findsOneWidget);
+      expect(find.textContaining('LIVE'), findsOneWidget);
+      expect(find.byIcon(Icons.call_end_rounded), findsOneWidget);
+
+      // Cleanly end call so VideoConsultationScreen Timer.periodic is cancelled
+      await tester.tap(find.byIcon(Icons.call_end_rounded));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('End Call'));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('AppointmentReceiptScreen does not display Connect button for Offline appointments', (WidgetTester tester) async {
+      final offlineApt = Appointment(
+        id: 'APT-OFF-888',
+        tokenNumber: 'Token #14',
+        doctorId: 'doc_1',
+        doctorName: 'Dr. Ananya Sharma',
+        doctorSpecialty: 'General Physician',
+        hospitalName: 'Ashwini Central Hospital',
+        patientName: 'Aarav Patel',
+        patientPhone: '9123456789',
+        appointmentDate: 'Thu, 10 Sep 2026',
+        timeSlot: '03:00 PM',
+        appointmentType: 'Offline',
+        bookedAt: DateTime.now(),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AppointmentReceiptScreen(appointment: offlineApt),
+        ),
+      );
+
+      expect(find.text('OFFLINE'), findsOneWidget);
+      expect(find.text('Connect with Doctor (Video Call)'), findsNothing);
+      expect(find.textContaining('Please arrive at the hospital counter'), findsOneWidget);
+    });
+
+    testWidgets('AppointmentsTab shows Connect Video Consultation button for online appointments', (WidgetTester tester) async {
+      final appointmentProvider = AppointmentProvider();
+      final doctor = MockDoctorService().getDoctorById('doc_1')!;
+      final patient = HealthProfile(
+        name: 'Online Patient',
+        age: 30,
+        gender: 'Female',
+        phoneNumber: '9876543210',
+      );
+
+      await tester.runAsync(() async {
+        await appointmentProvider.bookAppointment(
+          doctor: doctor,
+          patient: patient,
+          appointmentDate: 'Fri, 11 Sep 2026',
+          timeSlot: '10:00 AM',
+          appointmentType: 'Online',
+        );
+      });
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: appointmentProvider),
+          ],
+          child: const MaterialApp(
+            home: AppointmentsTab(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('ONLINE'), findsOneWidget);
+      expect(find.text('Connect Video Consultation'), findsOneWidget);
+    });
+
+    testWidgets('AppointmentReceiptScreen Go to My Appointments button navigates to AppointmentsTab', (WidgetTester tester) async {
+      final appointmentProvider = AppointmentProvider();
+      final doctor = MockDoctorService().getDoctorById('doc_1')!;
+      final patient = HealthProfile(
+        name: 'Test Patient',
+        age: 28,
+        gender: 'Male',
+        phoneNumber: '9876543210',
+      );
+
+      late Appointment appt;
+      await tester.runAsync(() async {
+        appt = await appointmentProvider.bookAppointment(
+          doctor: doctor,
+          patient: patient,
+          appointmentDate: 'Fri, 11 Sep 2026',
+          timeSlot: '11:00 AM',
+          appointmentType: 'Online',
+        );
+      });
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: appointmentProvider),
+          ],
+          child: MaterialApp(
+            home: AppointmentReceiptScreen(appointment: appt),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final goToAppointmentsBtn = find.text('Go to My Appointments');
+      expect(goToAppointmentsBtn, findsOneWidget);
+
+      await tester.tap(goToAppointmentsBtn);
+      await tester.pumpAndSettle();
+
+      // Verify that AppointmentsTab is now displayed with My Appointments title
+      expect(find.text('My Appointments'), findsOneWidget);
+      expect(find.byType(AppointmentsTab), findsOneWidget);
+    });
+  });
 }
+

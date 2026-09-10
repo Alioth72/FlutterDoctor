@@ -1,5 +1,1 @@
-package com.example.sih_project
-
-import io.flutter.embedding.android.FlutterActivity
-
-class MainActivity : FlutterActivity()
+// Deprecated - replaced by in.sih.patient_app.MainActivity

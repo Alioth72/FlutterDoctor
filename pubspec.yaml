@@ -1,5 +1,5 @@
 name: sih_project
-description: "A new Flutter project."
+description: "Ashwini Patient Healthcare & Teleconsultation Portal"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -38,6 +38,18 @@ dependencies:
   shared_preferences: ^2.3.2
   http: ^1.2.2
   flutter_inappwebview: ^6.1.5
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
+  geolocator: ^14.0.3
+  firebase_core: ^4.14.0
+  cloud_firestore: ^6.9.0
+  flutter_webrtc: ^1.6.1
+  google_mlkit_face_detection: ^0.15.1
+  flutter_onnxruntime: ^1.8.4
+  image: ^4.5.4
+  path_provider: ^2.1.5
+  teleconsult_vitals:
+    path: ./packages/teleconsult_vitals
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -62,6 +74,12 @@ flutter:
 
   assets:
     - assets/rppg_demo/
+    - assets/images/
+    - assets/schemes/
+    - assets/models/me_rppg_model.onnx
+    - assets/models/me_rppg_state.bin
+    - assets/models/me_rppg_state_manifest.json
+    - assets/models/ME_RPPG_LICENSE.txt
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

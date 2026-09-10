@@ -8,6 +8,11 @@ class SchemeEligibilityProfile {
   final String? disability;
   final String? maritalStatus;
   final String? ruralUrban;
+  final bool? isMinority;
+  final bool? isStudent;
+  final String? employmentStatus;
+  final bool? isBpl;
+  final bool? isHardshipDistress;
 
   const SchemeEligibilityProfile({
     required this.age,
@@ -19,6 +24,11 @@ class SchemeEligibilityProfile {
     this.disability,
     this.maritalStatus,
     this.ruralUrban,
+    this.isMinority,
+    this.isStudent,
+    this.employmentStatus,
+    this.isBpl,
+    this.isHardshipDistress,
   });
 
   String get summaryText {
@@ -36,6 +46,11 @@ class SchemeEligibilityProfile {
       'disability': disability,
       'marital_status': maritalStatus,
       'residence_type': ruralUrban,
+      'is_minority': isMinority,
+      'is_student': isStudent,
+      'employment_status': employmentStatus,
+      'is_bpl': isBpl,
+      'is_hardship_distress': isHardshipDistress,
     };
   }
 
@@ -50,6 +65,11 @@ class SchemeEligibilityProfile {
       disability: json['disability'] as String?,
       maritalStatus: json['marital_status'] as String? ?? json['maritalStatus'] as String?,
       ruralUrban: json['residence_type'] as String? ?? json['ruralUrban'] as String?,
+      isMinority: json['is_minority'] as bool?,
+      isStudent: json['is_student'] as bool?,
+      employmentStatus: json['employment_status'] as String?,
+      isBpl: json['is_bpl'] as bool?,
+      isHardshipDistress: json['is_hardship_distress'] as bool?,
     );
   }
 }

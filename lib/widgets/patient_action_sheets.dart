@@ -120,7 +120,7 @@ class PatientActionSheets {
                     onPressed: () {
                       Navigator.of(ctx).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Connecting to On-Duty Medical Officer...')),
+                        const SnackBar(content: Text('Connecting to Ashwini On-Duty Medical Officer...')),
                       );
                     },
                     icon: const Icon(Icons.call_rounded),
@@ -237,7 +237,7 @@ class PatientActionSheets {
                 ),
                 const SizedBox(width: 12),
                 const Text(
-                  'Buy Medicines & Jan Aushadhi',
+                  'Ashwini Central Pharmacy & Jan Aushadhi',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -252,7 +252,7 @@ class PatientActionSheets {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Generic Jan Aushadhi Alternatives (Up to 80% discount):', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            const Text('Ashwini In-House & Jan Aushadhi Generic Medicines (Up to 80% Off):', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
             const SizedBox(height: 8),
             _buildMedicineTile('Paracetamol 650mg (Jan Aushadhi)', '₹12 for 10 tabs', 'In Stock'),
             _buildMedicineTile('Amoxicillin 500mg', '₹28 for 10 caps', 'In Stock'),

@@ -1,3 +1,4 @@
+import '../services/patient_database_service.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
@@ -91,6 +92,7 @@ class AppointmentProvider with ChangeNotifier {
     required String appointmentDate,
     required String timeSlot,
     String reason = 'General Consultation',
+    String appointmentType = 'Offline',
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -118,6 +120,7 @@ class AppointmentProvider with ChangeNotifier {
       reason: reason.isEmpty ? 'General Consultation' : reason,
       consultationFee: doctor.consultationFee,
       status: 'Confirmed',
+      appointmentType: appointmentType,
       bookedAt: DateTime.now(),
     );
 
@@ -125,6 +128,11 @@ class AppointmentProvider with ChangeNotifier {
     _appointments.insert(0, newAppointment);
     _appointments.sort(_sortAppointments);
     await _persist();
+
+    // Open database integration endpoint dispatch
+    try {
+      await PatientDatabaseService().bookAppointment(newAppointment);
+    } catch (_) {}
 
     _isLoading = false;
     notifyListeners();

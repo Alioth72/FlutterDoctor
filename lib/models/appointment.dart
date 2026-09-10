@@ -12,6 +12,7 @@ class Appointment {
   final String reason;
   final int consultationFee;
   final String status; // Confirmed, Completed, Cancelled
+  final String appointmentType; // Online or Offline
   final DateTime bookedAt;
 
   const Appointment({
@@ -28,8 +29,11 @@ class Appointment {
     this.reason = 'General Consultation',
     this.consultationFee = 0,
     this.status = 'Confirmed',
+    this.appointmentType = 'Offline',
     required this.bookedAt,
   });
+
+  bool get isOnline => appointmentType.toLowerCase() == 'online';
 
   Map<String, dynamic> toJson() {
     return {
@@ -46,6 +50,7 @@ class Appointment {
       'reason': reason,
       'consultationFee': consultationFee,
       'status': status,
+      'appointmentType': appointmentType,
       'bookedAt': bookedAt.toIso8601String(),
     };
   }
@@ -65,6 +70,7 @@ class Appointment {
       reason: json['reason'] as String? ?? 'General Consultation',
       consultationFee: (json['consultationFee'] as num?)?.toInt() ?? 0,
       status: json['status'] as String? ?? 'Confirmed',
+      appointmentType: json['appointmentType'] as String? ?? 'Offline',
       bookedAt: json['bookedAt'] != null
           ? DateTime.tryParse(json['bookedAt'] as String) ?? DateTime.now()
           : DateTime.now(),

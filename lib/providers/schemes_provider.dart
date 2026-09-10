@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/government_scheme.dart';
 import '../models/scheme_eligibility_profile.dart';
 import '../services/scheme_api_service.dart';
+import '../services/local_scheme_engine.dart';
 
 class SchemesProvider with ChangeNotifier {
   static const String _storageKeyProfile = 'schemes_eligibility_profile';
@@ -48,6 +49,9 @@ class SchemesProvider with ChangeNotifier {
 
   /// Initialize and load saved profile from local storage
   Future<void> loadSavedProfile() async {
+    // Warm up the on-device scheme matching engine in background
+    LocalSchemeEngine.ensureInitialized();
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final profileJson = prefs.getString(_storageKeyProfile);

@@ -28,6 +28,10 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Camera access is required for real-time heart rate detection (rPPG).</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Location access is needed to pinpoint your current location and hospital hub on the Leaflet map.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Location access is needed to pinpoint your current location and hospital hub on the Leaflet map.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

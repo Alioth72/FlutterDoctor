@@ -5,9 +5,20 @@ import 'providers/appointment_provider.dart';
 import 'providers/schemes_provider.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
+import 'theme/app_theme.dart';
 
-void main() {
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase init note: $e');
+  }
   runApp(const PatientApp());
 }
 
@@ -29,32 +40,20 @@ class PatientApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'Patient Health Portal',
+        title: 'ASHWINI Patient App',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          scaffoldBackgroundColor: const Color(0xFFF9FAFC),
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF6D28D9), // Vibrant Deep Royal Purple
-            primary: const Color(0xFF6D28D9),
-            brightness: Brightness.light,
-          ),
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-            backgroundColor: Color(0xFFF9FAFC),
-          ),
-          floatingActionButtonTheme: const FloatingActionButtonThemeData(
-            backgroundColor: Color(0xFF6D28D9),
-            foregroundColor: Colors.white,
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
+        theme: AppTheme.lightTheme,
+        builder: (context, child) {
+          final mediaQuery = MediaQuery.of(context);
+          final clampedTextScaler = mediaQuery.textScaler.clamp(
+            minScaleFactor: 0.85,
+            maxScaleFactor: 1.15,
+          );
+          return MediaQuery(
+            data: mediaQuery.copyWith(textScaler: clampedTextScaler),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
         home: const AuthGate(),
       ),
     );

@@ -1,5 +1,7 @@
+import 'video_consultation_screen.dart';
 import 'package:flutter/material.dart';
 import '../../models/appointment.dart';
+import '../tabs/appointments_tab.dart';
 
 class AppointmentReceiptScreen extends StatelessWidget {
   final Appointment appointment;
@@ -69,7 +71,7 @@ class AppointmentReceiptScreen extends StatelessWidget {
             Card(
               elevation: 1,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(12),
                 side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.6)),
               ),
               child: Padding(
@@ -77,6 +79,104 @@ class AppointmentReceiptScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Official Ashwini Hospital Header
+                    Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5F3FF),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Image.asset(
+                            'assets/images/ashwini_logo.png',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'ASHWINI CENTRAL HOSPITAL',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.6,
+                                  color: Color(0xFF4C1D95),
+                                ),
+                              ),
+                              Text(
+                                'Official OPD E-Consultation Slip',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFECFDF5),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFA7F3D0)),
+                              ),
+                              child: const Text(
+                                'VERIFIED',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF047857),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: appointment.isOnline ? const Color(0xFFFAF5FF) : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: appointment.isOnline ? const Color(0xFFDDD6FE) : const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    appointment.isOnline ? Icons.videocam_rounded : Icons.local_hospital_rounded,
+                                    size: 11,
+                                    color: appointment.isOnline ? const Color(0xFF7C3AED) : const Color(0xFF475569),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    appointment.isOnline ? 'ONLINE' : 'OFFLINE',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: appointment.isOnline ? const Color(0xFF7C3AED) : const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    const Divider(),
+                    const SizedBox(height: 12),
+
                     // Token Header
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -108,7 +208,7 @@ class AppointmentReceiptScreen extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             appointment.tokenNumber,
@@ -204,28 +304,74 @@ class AppointmentReceiptScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
+            // Online Video Connect Button
+            if (appointment.isOnline) ...[
+              Container(
+                margin: const EdgeInsets.only(top: 14),
+                width: double.infinity,
+                height: 52,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => VideoConsultationScreen(appointment: appointment),
+                      ),
+                    );
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF7C3AED),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                  ),
+                  icon: const Icon(Icons.videocam_rounded, size: 22, color: Colors.white),
+                  label: const Text(
+                    'Connect with Doctor (Video Call)',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.2,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
             // Instructions Box
             Container(
+              margin: const EdgeInsets.only(top: 14),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                color: appointment.isOnline
+                    ? const Color(0xFFF5F3FF)
+                    : colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                border: Border.all(
+                  color: appointment.isOnline
+                      ? const Color(0xFFDDD6FE)
+                      : colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
-                    Icons.info_outline,
+                    appointment.isOnline ? Icons.videocam_outlined : Icons.info_outline,
                     size: 20,
-                    color: colorScheme.primary,
+                    color: appointment.isOnline ? const Color(0xFF7C3AED) : colorScheme.primary,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Please arrive at the hospital counter 15 minutes before your time slot with your Token Number (${appointment.tokenNumber}).',
+                      appointment.isOnline
+                          ? 'Your teleconsultation room is ready. Tap the Connect button at your scheduled slot (${appointment.timeSlot}) to join the encrypted video call.'
+                          : 'Please arrive at the hospital counter 15 minutes before your time slot with your Token Number (${appointment.tokenNumber}).',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                        color: appointment.isOnline ? const Color(0xFF5B21B6) : colorScheme.onSurfaceVariant,
+                        fontWeight: appointment.isOnline ? FontWeight.w600 : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -258,7 +404,12 @@ class AppointmentReceiptScreen extends StatelessWidget {
             children: [
               FilledButton(
                 onPressed: () {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (_) => const AppointmentsTab(),
+                    ),
+                    (route) => route.isFirst,
+                  );
                 },
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(50),

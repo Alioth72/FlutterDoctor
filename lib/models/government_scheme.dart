@@ -52,14 +52,46 @@ class GovernmentScheme {
   });
 
   factory GovernmentScheme.fromJson(Map<String, dynamic> json) {
+    final rawId = json['scheme_id'] as String? ?? json['id'] as String? ?? 'SCHEME_001';
+    final rawName = json['scheme_name'] as String? ?? json['name'] as String? ?? 'Government Health Scheme';
+    final rawState = json['state'] as String? ?? json['eligible_state'] as String?;
+    final rawLevel = json['level'] as String? ?? (rawState != null ? 'State' : 'Central');
+    final rawDesc = json['short_description'] as String? ?? json['brief_description'] as String? ?? json['details'] as String? ?? '';
+
+    // Parse benefits summary
+    List<String> rawBenefits = [];
+    if (json['benefits_summary'] is List) {
+      rawBenefits = (json['benefits_summary'] as List).map((e) => e.toString()).toList();
+    } else if (json['benefits'] is String && (json['benefits'] as String).isNotEmpty) {
+      rawBenefits = (json['benefits'] as String)
+          .split(RegExp(r'[\n•;.]'))
+          .map((b) => b.trim())
+          .where((b) => b.length > 5)
+          .take(3)
+          .toList();
+    }
+
+    // Parse tags
+    List<String> rawTags = [];
+    if (json['tags'] is List) {
+      rawTags = (json['tags'] as List).map((e) => e.toString()).toList();
+    } else if (json['tags'] is String && (json['tags'] as String).isNotEmpty) {
+      rawTags = (json['tags'] as String)
+          .split(',')
+          .map((t) => t.trim())
+          .where((t) => t.isNotEmpty)
+          .take(4)
+          .toList();
+    }
+
     return GovernmentScheme(
-      schemeId: json['scheme_id'] as String? ?? 'SCHEME_001',
-      schemeName: json['scheme_name'] as String? ?? 'Government Health Scheme',
-      level: json['level'] as String? ?? 'Central',
-      state: json['state'] as String?,
-      shortDescription: json['short_description'] as String? ?? '',
-      benefitsSummary: (json['benefits_summary'] as List?)?.map((e) => e.toString()).toList() ?? [],
-      tags: (json['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      schemeId: rawId,
+      schemeName: rawName,
+      level: rawLevel,
+      state: rawState,
+      shortDescription: rawDesc,
+      benefitsSummary: rawBenefits,
+      tags: rawTags,
       evaluation: json['evaluation'] != null
           ? RuleEvaluation.fromJson(json['evaluation'] as Map<String, dynamic>)
           : const RuleEvaluation(
@@ -110,9 +142,16 @@ class SchemeDetail {
   });
 
   factory SchemeDetail.fromJson(Map<String, dynamic> json) {
-    final rawDocs = json['documents'] as String? ?? '';
-    final rawApp = json['application_process'] as String? ?? '';
+    final rawId = json['scheme_id'] as String? ?? json['id'] as String? ?? '';
+    final rawName = json['scheme_name'] as String? ?? json['name'] as String? ?? '';
+    final rawState = json['state'] as String? ?? json['eligible_state'] as String?;
+    final rawLevel = json['level'] as String? ?? (rawState != null ? 'State' : 'Central');
+    final rawCategory = json['scheme_category'] as String? ?? json['category'] as String? ?? 'Health & Wellness';
+    final rawDetails = json['details'] as String? ?? json['detailed_description'] as String? ?? json['brief_description'] as String? ?? '';
+    final rawDocs = json['documents'] as String? ?? json['documents_required'] as String? ?? '';
+    final rawApp = json['application_process'] as String? ?? json['application'] as String? ?? '';
     final rawBenefits = json['benefits'] as String? ?? '';
+    final rawUrl = json['official_url'] as String? ?? json['apply_url'] as String?;
 
     // Smart documents parser into points
     List<String> parsedDocs = (json['documents_list'] as List?)?.map((e) => e.toString()).toList() ?? [];
@@ -194,21 +233,21 @@ class SchemeDetail {
     }
 
     return SchemeDetail(
-      schemeId: json['scheme_id'] as String? ?? '',
-      schemeName: json['scheme_name'] as String? ?? '',
-      level: json['level'] as String?,
-      state: json['state'] as String?,
-      schemeCategory: json['scheme_category'] as String?,
-      details: json['details'] as String? ?? '',
+      schemeId: rawId,
+      schemeName: rawName,
+      level: rawLevel,
+      state: rawState,
+      schemeCategory: rawCategory,
+      details: rawDetails,
       benefits: rawBenefits,
       benefitsList: parsedBenefits,
-      eligibilityText: json['eligibility_text'] as String? ?? '',
+      eligibilityText: json['eligibility_text'] as String? ?? json['eligibility'] as String? ?? '',
       applicationProcess: rawApp,
       applicationSteps: parsedSteps,
       documents: rawDocs,
       documentsList: parsedDocs,
       tags: (json['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
-      officialUrl: json['official_url'] as String?,
+      officialUrl: rawUrl,
       evaluation: json['evaluation'] != null
           ? RuleEvaluation.fromJson(json['evaluation'] as Map<String, dynamic>)
           : null,
@@ -234,16 +273,28 @@ class EligibilityCheckResult {
   });
 
   factory EligibilityCheckResult.fromJson(Map<String, dynamic> json) {
+    final schemesList = (json['results'] as List?) ?? (json['schemes'] as List?);
+    final parsedSchemes = schemesList
+            ?.map((item) => GovernmentScheme.fromJson(item as Map<String, dynamic>))
+            .toList() ??
+        [];
+
+    final likelyCount = (json['likely_eligible_count'] as num?)?.toInt() ??
+        parsedSchemes.where((s) => s.evaluation.status == 'likely_eligible').length;
+    final verifCount = (json['verification_required_count'] as num?)?.toInt() ??
+        parsedSchemes.where((s) => s.evaluation.status == 'verification_required').length;
+    final notCount = (json['likely_not_eligible_count'] as num?)?.toInt() ??
+        parsedSchemes.where((s) => s.evaluation.status == 'likely_not_eligible').length;
+
     return EligibilityCheckResult(
-      totalEvaluated: (json['total_schemes_evaluated'] as num?)?.toInt() ?? 0,
-      likelyEligibleCount: (json['likely_eligible_count'] as num?)?.toInt() ?? 0,
-      verificationRequiredCount: (json['verification_required_count'] as num?)?.toInt() ?? 0,
-      likelyNotEligibleCount: (json['likely_not_eligible_count'] as num?)?.toInt() ?? 0,
+      totalEvaluated: (json['total_schemes_evaluated'] as num?)?.toInt() ??
+          (json['available_count'] as num?)?.toInt() ??
+          parsedSchemes.length,
+      likelyEligibleCount: likelyCount,
+      verificationRequiredCount: verifCount,
+      likelyNotEligibleCount: notCount,
       profileSummary: json['profile_summary'] as String? ?? '',
-      schemes: (json['results'] as List?)
-              ?.map((item) => GovernmentScheme.fromJson(item as Map<String, dynamic>))
-              .toList() ??
-          [],
+      schemes: parsedSchemes,
     );
   }
 }

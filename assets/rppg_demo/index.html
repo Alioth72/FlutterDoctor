@@ -76,11 +76,20 @@
                         </div>
                     </div>
                     <div class="video-wrapper">
-                    <div class="canvas-wrapper" style="position: relative;">
+                      <div class="canvas-wrapper mirrored" id="canvasWrapper" style="position: relative;">
                         <canvas id="previewCanvas"
                                 style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
                         <canvas id="overlayCanvas"
                                 style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
+                        <button type="button" id="mirrorToggleBtn" class="mirror-toggle-btn" title="Flip camera view">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m16 3 4 4-4 4"></path>
+                                <path d="M20 7H4"></path>
+                                <path d="m8 21-4-4 4-4"></path>
+                                <path d="M4 17h16"></path>
+                            </svg>
+                            <span>Flip</span>
+                        </button>
                       </div>
                     </div>
                 </div>

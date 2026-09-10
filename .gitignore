@@ -56,3 +56,7 @@ testing_website_heartrate/
 
 # Widget Preview related
 .widget_preview/
+
+# Temporary & Archive files
+*.zip
+scheme_db_temp/

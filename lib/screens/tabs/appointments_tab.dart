@@ -1,3 +1,4 @@
+import '../appointments/video_consultation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/appointment.dart';
@@ -14,18 +15,17 @@ class AppointmentsTab extends StatelessWidget {
     final appointments = appointmentProvider.appointments;
 
     return Scaffold(
-      appBar: appointments.isNotEmpty
-          ? AppBar(
-              title: const Text('My Appointments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              actions: [
-                IconButton(
-                  tooltip: 'Clear All Appointments',
-                  icon: const Icon(Icons.delete_sweep_outlined, color: Colors.red),
-                  onPressed: () => _confirmClearAll(context),
-                ),
-              ],
-            )
-          : null,
+      appBar: AppBar(
+        title: const Text('My Appointments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        actions: [
+          if (appointments.isNotEmpty)
+            IconButton(
+              tooltip: 'Clear All Appointments',
+              icon: const Icon(Icons.delete_sweep_outlined, color: Colors.red),
+              onPressed: () => _confirmClearAll(context),
+            ),
+        ],
+      ),
       body: appointments.isEmpty
           ? _buildEmptyState(context)
           : _buildAppointmentsList(context, appointments),
@@ -93,7 +93,7 @@ class AppointmentsTab extends StatelessWidget {
               label: const Text('Book Doctor Appointment'),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ],
@@ -117,7 +117,7 @@ class AppointmentsTab extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 16),
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(10),
             side: BorderSide(
               color: isConfirmed
                   ? colorScheme.outlineVariant.withValues(alpha: 0.7)
@@ -129,24 +129,58 @@ class AppointmentsTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header with Token & Status
+                // Header with Token, Type & Status
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        apt.tokenNumber,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onPrimaryContainer,
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            apt.tokenNumber,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onPrimaryContainer,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: apt.isOnline ? const Color(0xFFFAF5FF) : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: apt.isOnline ? const Color(0xFFDDD6FE) : const Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                apt.isOnline ? Icons.videocam_rounded : Icons.local_hospital_rounded,
+                                size: 13,
+                                color: apt.isOnline ? const Color(0xFF7C3AED) : const Color(0xFF64748B),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                apt.isOnline ? 'ONLINE' : 'OFFLINE',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: apt.isOnline ? const Color(0xFF7C3AED) : const Color(0xFF475569),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -216,6 +250,35 @@ class AppointmentsTab extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
+
+                // If Online & Confirmed, show Connect Video Consultation Button
+                if (apt.isOnline && isConfirmed) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => VideoConsultationScreen(appointment: apt),
+                          ),
+                        );
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF7C3AED),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      icon: const Icon(Icons.videocam_rounded, size: 18, color: Colors.white),
+                      label: const Text(
+                        'Connect Video Consultation',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
 
                 // Action Buttons: View Receipt & Cancel
                 Row(

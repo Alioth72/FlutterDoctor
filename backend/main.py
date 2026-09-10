@@ -54,8 +54,8 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup_event():
-    # Import CSV data if database is empty
-    import_data()
+    # myschemes.db is pre-populated with 4,737 schemes (282 health schemes)
+    pass
 
 @app.get("/")
 def root():
@@ -119,11 +119,14 @@ def get_schemes(
 ):
     q = db.query(Scheme)
     if level and level != "All":
-        q = q.filter(Scheme.level.ilike(f"%{level}%"))
+        if level.lower() == "central":
+            q = q.filter(Scheme.eligible_state.is_(None))
+        else:
+            q = q.filter(Scheme.eligible_state.isnot(None))
     if state and state != "All":
-        q = q.filter((Scheme.state.ilike(f"%{state}%")) | (Scheme.level.ilike("Central")))
+        q = q.filter((Scheme.eligible_state.ilike(f"%{state}%")) | (Scheme.eligible_state.is_(None)))
     if query:
-        q = q.filter((Scheme.scheme_name.ilike(f"%{query}%")) | (Scheme.tags.ilike(f"%{query}%")))
+        q = q.filter((Scheme.name.ilike(f"%{query}%")) | (Scheme.tags.ilike(f"%{query}%")))
 
     schemes = q.offset(offset).limit(limit).all()
 
@@ -164,7 +167,10 @@ def check_eligibility(
     """
     Evaluates patient profile against all health schemes deterministically.
     """
-    all_schemes = db.query(Scheme).all()
+    # Focus on health-relevant schemes from myschemes.db (282 schemes)
+    all_schemes = db.query(Scheme).filter(Scheme.category.ilike('%Health%')).all()
+    if not all_schemes:
+        all_schemes = db.query(Scheme).all()
 
     likely_eligible: List[SchemeItemResponse] = []
     verification_req: List[SchemeItemResponse] = []
@@ -222,7 +228,7 @@ def get_scheme_detail(
     category: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    scheme = db.query(Scheme).filter(Scheme.scheme_id == scheme_id).first()
+    scheme = db.query(Scheme).filter((Scheme.id == scheme_id) | (Scheme.slug == scheme_id)).first()
     if not scheme:
         raise HTTPException(status_code=404, detail="Scheme not found")
 

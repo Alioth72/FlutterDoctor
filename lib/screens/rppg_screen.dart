@@ -126,7 +126,7 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF6D28D9), size: 20),
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF7C3AED), size: 20),
             tooltip: 'Reload Camera Feed',
             onPressed: () {
               setState(() {
@@ -147,12 +147,12 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.circle, color: Color(0xFF6D28D9), size: 7),
+                Icon(Icons.circle, color: Color(0xFF7C3AED), size: 7),
                 SizedBox(width: 5),
                 Text(
                   'ON-DEVICE AI',
                   style: TextStyle(
-                    color: Color(0xFF6D28D9),
+                    color: Color(0xFF7C3AED),
                     fontSize: 9.5,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.5,
@@ -172,14 +172,14 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF4C1D95), Color(0xFF6D28D9)],
+                  colors: [Color(0xFF4C1D95), Color(0xFF7C3AED)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF6D28D9).withValues(alpha: 0.35),
+                    color: const Color(0xFF7C3AED).withValues(alpha: 0.35),
                     offset: const Offset(0, 6),
                     blurRadius: 16,
                   ),
@@ -291,7 +291,7 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF6D28D9).withValues(alpha: 0.06),
+                      color: const Color(0xFF7C3AED).withValues(alpha: 0.06),
                       offset: const Offset(0, 6),
                       blurRadius: 20,
                     ),
@@ -364,7 +364,7 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircularProgressIndicator(color: Color(0xFF6D28D9)),
+                            CircularProgressIndicator(color: Color(0xFF7C3AED)),
                             SizedBox(height: 16),
                             Text(
                               'Starting local rPPG engine...',
@@ -386,7 +386,7 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               CircularProgressIndicator(
-                                color: Color(0xFF6D28D9),
+                                color: Color(0xFF7C3AED),
                                 strokeWidth: 3,
                               ),
                               SizedBox(height: 16),
@@ -430,7 +430,7 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline_rounded, color: Color(0xFF6D28D9), size: 20),
+                  Icon(Icons.info_outline_rounded, color: Color(0xFF7C3AED), size: 20),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(

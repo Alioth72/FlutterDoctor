@@ -48,7 +48,23 @@ def detect_official_url(row: dict) -> str:
         return urls[0]
     return "https://www.myscheme.gov.in"
 
-def import_data(csv_path: str = "/Users/mayankkumar/Desktop/sih_project/updated_data.csv", force: bool = False):
+def get_default_csv_path() -> str:
+    """Dynamically resolve schemes.csv or updated_data.csv path relative to the backend directory."""
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(current_dir, "schemes.csv"),
+        os.path.join(current_dir, "updated_data.csv"),
+        os.path.join(os.path.dirname(current_dir), "schemes.csv"),
+        os.path.join(os.path.dirname(current_dir), "updated_data.csv"),
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return os.path.join(current_dir, "schemes.csv")
+
+def import_data(csv_path: str = None, force: bool = False):
+    if not csv_path:
+        csv_path = get_default_csv_path()
     Base.metadata.create_all(bind=engine)
     db: Session = SessionLocal()
 
