@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import '../../models/doctor.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/health_profile_provider.dart';
+import '../../providers/language_provider.dart';
 import '../../services/mock_doctor_service.dart';
+import '../../widgets/dynamic_translated_text.dart';
 import 'appointment_receipt_screen.dart';
 
 class BookAppointmentScreen extends StatefulWidget {
@@ -170,6 +172,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -205,9 +209,9 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
             ),
           ),
           centerTitle: true,
-          title: const Text(
-            'Book Appointment',
-            style: TextStyle(
+          title: Text(
+            lang.tr('book_appointment_title'),
+            style: const TextStyle(
               fontWeight: FontWeight.w900,
               fontSize: 18,
               letterSpacing: -0.3,
@@ -228,15 +232,22 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'SPECIALTY',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.0,
-                              color: Color(0xFF64748B),
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                lang.tr('specialty_label'),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.0,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 8),
                           InkWell(
                             onTap: () {
                               setState(() {
@@ -245,7 +256,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                               _loadDoctors();
                             },
                             child: Text(
-                              'View All (${_specialties.length})',
+                              '${lang.tr('view_all')} (${_specialties.length})',
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -300,24 +311,24 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      if (isSelected) ...[
-                                        const Icon(Icons.check_rounded, size: 14, color: Colors.white),
-                                        const SizedBox(width: 4),
-                                      ],
-                                      Text(
-                                        spec,
-                                        style: TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: isSelected ? Colors.white : const Color(0xFF1E293B),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                                       if (isSelected) ...[
+                                         const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+                                         const SizedBox(width: 4),
+                                       ],
+                                       DynamicTranslatedText(
+                                         text: spec == 'All' ? lang.tr('cat_all') : spec,
+                                         style: TextStyle(
+                                           fontSize: 12.5,
+                                           fontWeight: FontWeight.w700,
+                                           color: isSelected ? Colors.white : const Color(0xFF1E293B),
+                                         ),
+                                       ),
+                                     ],
+                                   ),
+                                 ),
+                               ),
+                             );
+                           }).toList(),
                         ),
                       ),
                       const SizedBox(height: 22),
@@ -326,14 +337,21 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Available Doctors',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF0F172A),
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                lang.tr('available_doctors'),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
@@ -341,7 +359,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
-                              '${_doctors.length} on duty',
+                              '${_doctors.length} ${lang.tr('on_duty')}',
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
@@ -445,8 +463,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                               child: Column(
                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
-                                                  Text(
-                                                    doc.name,
+                                                  DynamicTranslatedText(
+                                                    text: doc.name,
                                                     maxLines: 1,
                                                     overflow: TextOverflow.ellipsis,
                                                     style: const TextStyle(
@@ -456,8 +474,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                                     ),
                                                   ),
                                                   const SizedBox(height: 2),
-                                                  Text(
-                                                    doc.specialty,
+                                                  DynamicTranslatedText(
+                                                    text: doc.specialty,
                                                     maxLines: 1,
                                                     overflow: TextOverflow.ellipsis,
                                                     style: const TextStyle(
@@ -472,8 +490,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                                       const Icon(Icons.location_on, size: 11, color: Color(0xFF64748B)),
                                                       const SizedBox(width: 2),
                                                       Expanded(
-                                                        child: Text(
-                                                          doc.hospital,
+                                                        child: DynamicTranslatedText(
+                                                          text: doc.hospital,
                                                           maxLines: 1,
                                                           overflow: TextOverflow.ellipsis,
                                                           style: const TextStyle(
@@ -531,9 +549,9 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                                 borderRadius: BorderRadius.circular(10),
                                                 border: Border.all(color: const Color(0xFFA7F3D0), width: 1.0),
                                               ),
-                                              child: const Text(
-                                                'Free (₹0)',
-                                                style: TextStyle(
+                                              child: Text(
+                                                lang.tr('free_price'),
+                                                style: const TextStyle(
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.w800,
                                                   color: Color(0xFF059669),
@@ -576,14 +594,21 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Select Appointment Date',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF0F172A),
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                lang.tr('select_date'),
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 8),
                           const Icon(
                             Icons.keyboard_arrow_down_rounded,
                             color: Color(0xFF7C3AED),
@@ -599,23 +624,30 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Select Available Time Slot',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF0F172A),
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                lang.tr('select_time_slot'),
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF3E8FF),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Text(
-                              '7 slots free',
-                              style: TextStyle(
+                            child: Text(
+                              '7 ${lang.tr('slots_free')}',
+                              style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xFF7C3AED),
@@ -628,19 +660,25 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       // Sub-tabs
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            decoration: const BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(color: Color(0xFF7C3AED), width: 2.0),
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(color: Color(0xFF7C3AED), width: 2.0),
+                                ),
                               ),
-                            ),
-                            child: const Text(
-                              'Morning & Afternoon',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF7C3AED),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  lang.tr('morning_afternoon'),
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF7C3AED),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -650,12 +688,18 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                             style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(width: 8),
-                          const Text(
-                            'Shift A (General OPD)',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF64748B),
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                lang.tr('shift_a_opd'),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -664,40 +708,51 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       _buildTimeSlotGrid(context),
                       const SizedBox(height: 22),
 
-                      // 5. APPOINTMENT TYPE (ONLINE VS OFFLINE)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'APPOINTMENT TYPE',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.0,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: _selectedAppointmentType == 'Online'
-                                  ? const Color(0xFFECFDF5)
-                                  : const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: _selectedAppointmentType == 'Online'
-                                    ? const Color(0xFFA7F3D0)
-                                    : const Color(0xFFCBD5E1),
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                lang.tr('appointment_type'),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.0,
+                                  color: Color(0xFF64748B),
+                                ),
                               ),
                             ),
-                            child: Text(
-                              _selectedAppointmentType == 'Online' ? '⚡ Instant Video Room' : '🏥 Hospital Queue Token',
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w800,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
                                 color: _selectedAppointmentType == 'Online'
-                                    ? const Color(0xFF047857)
-                                    : const Color(0xFF475569),
+                                    ? const Color(0xFFECFDF5)
+                                    : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: _selectedAppointmentType == 'Online'
+                                      ? const Color(0xFFA7F3D0)
+                                      : const Color(0xFFCBD5E1),
+                                ),
+                              ),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  _selectedAppointmentType == 'Online' ? '⚡ ${lang.tr('instant_video_room')}' : '🏥 ${lang.tr('hospital_queue_token')}',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: _selectedAppointmentType == 'Online'
+                                        ? const Color(0xFF047857)
+                                        : const Color(0xFF475569),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -765,18 +820,18 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                       ],
                                     ),
                                     const SizedBox(height: 10),
-                                    const Text(
-                                      'Online',
-                                      style: TextStyle(
+                                    Text(
+                                      lang.tr('online_video_title'),
+                                      style: const TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w900,
                                         color: Color(0xFF0F172A),
                                       ),
                                     ),
                                     const SizedBox(height: 2),
-                                    const Text(
-                                      'Video consultation from home with connect link',
-                                      style: TextStyle(
+                                    Text(
+                                      lang.tr('online_video_sub'),
+                                      style: const TextStyle(
                                         fontSize: 11,
                                         height: 1.25,
                                         fontWeight: FontWeight.w500,
@@ -849,18 +904,18 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                       ],
                                     ),
                                     const SizedBox(height: 10),
-                                    const Text(
-                                      'Offline (OPD)',
-                                      style: TextStyle(
+                                    Text(
+                                      lang.tr('offline_opd_title'),
+                                      style: const TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w900,
                                         color: Color(0xFF0F172A),
                                       ),
                                     ),
                                     const SizedBox(height: 2),
-                                    const Text(
-                                      'In-person hospital checkup with queue token',
-                                      style: TextStyle(
+                                    Text(
+                                      lang.tr('offline_opd_sub'),
+                                      style: const TextStyle(
                                         fontSize: 11,
                                         height: 1.25,
                                         fontWeight: FontWeight.w500,
@@ -877,9 +932,9 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       const SizedBox(height: 22),
 
                       // 5. REASON FOR VISIT (Optional)
-                      const Text(
-                        'Reason for Visit (Optional)',
-                        style: TextStyle(
+                      Text(
+                        lang.tr('reason_for_visit'),
+                        style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF64748B),
@@ -907,8 +962,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(color: const Color(0xFFE5E7EB)),
                                   ),
-                                  child: Text(
-                                    reason,
+                                  child: DynamicTranslatedText(
+                                    text: reason,
                                     style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
                                   ),
                                 ),
@@ -922,7 +977,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                         controller: _reasonController,
                         style: const TextStyle(fontSize: 13.5),
                         decoration: InputDecoration(
-                          hintText: 'e.g. Fever, routine health checkup',
+                          hintText: lang.tr('reason_hint'),
                           hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                           prefixIcon: const Icon(Icons.edit_note_rounded, color: Color(0xFF7C3AED)),
                           border: OutlineInputBorder(
@@ -972,7 +1027,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Selected: ${_formatDate(_selectedDate)} • ${_selectedTimeSlot ?? "09:00 AM"} • $_selectedAppointmentType',
+                            '${lang.tr('slot_selected')}: ${_formatDate(_selectedDate)} • ${_selectedTimeSlot ?? "09:00 AM"} • ${_selectedAppointmentType == 'Online' ? lang.tr('online_badge') : lang.tr('offline_badge')}',
                             style: const TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
@@ -980,8 +1035,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            '${_selectedDoctor?.name ?? "Dr. Ananya Sharma"} (OPD-1)',
+                          DynamicTranslatedText(
+                            text: '${_selectedDoctor?.name ?? "Dr. Ananya Sharma"} (OPD-1)',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -993,22 +1048,22 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                         ],
                       ),
                     ),
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          'TOTAL FEE',
-                          style: TextStyle(
+                          lang.tr('total_fee'),
+                          style: const TextStyle(
                             fontSize: 9.5,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.6,
                             color: Color(0xFF64748B),
                           ),
                         ),
-                        SizedBox(height: 1),
+                        const SizedBox(height: 1),
                         Text(
-                          'Free (₹0)',
-                          style: TextStyle(
+                          lang.tr('free_price'),
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
                             color: Color(0xFF059669),
@@ -1046,15 +1101,20 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.check_circle_outline_rounded, size: 20, color: Colors.white),
-                              SizedBox(width: 8),
-                              Text(
-                                _selectedAppointmentType == 'Online' ? 'Confirm Online Video Appointment' : 'Confirm & Generate Token (₹0)',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.2,
-                                  color: Colors.white,
+                              const Icon(Icons.check_circle_outline_rounded, size: 20, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    _selectedAppointmentType == 'Online' ? lang.tr('confirm_online_appt') : lang.tr('confirm_token_appt'),
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.2,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -1073,7 +1133,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   Widget _buildDateCards(BuildContext context) {
     final now = DateTime.now();
     final days = List.generate(7, (i) => now.add(Duration(days: i)));
-    const dayNames = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    final lang = Provider.of<LanguageProvider>(context);
+    final dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -1131,17 +1192,23 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    dayNames[date.weekday - 1],
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.4,
-                      color: isSelected
-                          ? const Color(0xFFE9D5FF)
-                          : isSunday
-                              ? const Color(0xFF94A3B8)
-                              : const Color(0xFF64748B),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: Text(
+                        lang.tr(dayKeys[date.weekday - 1]),
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.4,
+                          color: isSelected
+                              ? const Color(0xFFE9D5FF)
+                              : isSunday
+                                  ? const Color(0xFF94A3B8)
+                                  : const Color(0xFF64748B),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -1168,12 +1235,15 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       ),
                     )
                   else if (!isDoctorAvailable || isSunday)
-                    const Text(
-                      'Off',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFF43F5E),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        lang.tr('off'),
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFF43F5E),
+                        ),
                       ),
                     )
                   else
@@ -1223,6 +1293,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       );
     }
 
+    final lang = Provider.of<LanguageProvider>(context);
     final slots = _selectedDoctor!.availableTimeSlots;
 
     return GridView.builder(
@@ -1232,7 +1303,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         crossAxisCount: 3,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 2.2,
+        childAspectRatio: 1.85,
       ),
       itemCount: slots.length,
       itemBuilder: (context, index) {
@@ -1240,14 +1311,14 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         final isSelected = _selectedTimeSlot == slot;
 
         // Subtitle tag like "Available", "Fast filling", "Afternoon"
-        String statusLabel = 'Available';
+        String statusLabel = lang.tr('slot_available');
         Color statusColor = const Color(0xFF059669);
 
         if (index == 2) {
-          statusLabel = 'Fast filling';
+          statusLabel = lang.tr('slot_fast_filling');
           statusColor = const Color(0xFFD97706);
         } else if (slot.contains('PM')) {
-          statusLabel = 'Afternoon';
+          statusLabel = lang.tr('slot_afternoon');
           statusColor = const Color(0xFF0D9488);
         }
 
@@ -1282,27 +1353,34 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       ),
                     ],
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  slot,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w900,
-                    color: isSelected ? Colors.white : const Color(0xFF0F172A),
-                  ),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.center,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      slot,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
+                        color: isSelected ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isSelected ? lang.tr('slot_selected') : statusLabel,
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected ? const Color(0xFFDDD6FE) : statusColor,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  isSelected ? 'Selected' : statusLabel,
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w700,
-                    color: isSelected ? const Color(0xFFDDD6FE) : statusColor,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         );

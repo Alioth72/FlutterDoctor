@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/government_scheme.dart';
 import '../../providers/schemes_provider.dart';
+import '../../providers/language_provider.dart';
+import '../../widgets/dynamic_translated_text.dart';
 import 'eligibility_form_screen.dart';
 import 'scheme_detail_screen.dart';
 
@@ -20,19 +22,20 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final provider = Provider.of<SchemesProvider>(context);
+    final langProvider = Provider.of<LanguageProvider>(context);
     final profile = provider.profile;
     final results = provider.results;
 
     if (provider.isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
             Text(
-              'Evaluating government health schemes against your profile...',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
+              langProvider.tr('evaluating_schemes'),
+              style: const TextStyle(fontSize: 13, color: Colors.grey),
             ),
           ],
         ),
@@ -79,9 +82,9 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Based on your profile',
-                              style: TextStyle(
+                            Text(
+                              langProvider.tr('based_on_profile'),
+                              style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF2E7D32),
@@ -89,8 +92,8 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              profile?.summaryText ?? 'Age: 25 • Delhi • ₹1–2.5 L income',
+                            DynamicTranslatedText(
+                              text: profile?.summaryText ?? 'Age: 25 • Delhi • ₹1–2.5 L income',
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -113,9 +116,9 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                             ),
                           );
                         },
-                        child: const Text(
-                          'Update',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                        child: Text(
+                          langProvider.tr('update_btn'),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
                         ),
                       ),
                     ],
@@ -125,7 +128,7 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
 
                 // 2. Header & Subtitle
                 Text(
-                  'Government Health Benefits',
+                  langProvider.tr('govt_health_benefits'),
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w900,
                     color: Colors.black87,
@@ -133,7 +136,7 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Based on your profile, we found ${results?.likelyEligibleCount ?? displayedSchemes.length} schemes you may be eligible for.',
+                  langProvider.tr('schemes_eligible_subtitle'),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -145,7 +148,7 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                   stylusHandwritingEnabled: false,
                   onChanged: (val) => setState(() => _searchQuery = val),
                   decoration: InputDecoration(
-                    hintText: 'Search schemes (e.g. Ayushman, Cancer, Dialysis)...',
+                    hintText: langProvider.tr('search_schemes_hint'),
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
@@ -168,14 +171,14 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                   child: Row(
                     children: [
                       _buildFilterChip(
-                        label: 'All (${results?.totalEvaluated ?? results?.schemes.length ?? 0})',
+                        label: '${langProvider.tr('filter_all')} (${results?.totalEvaluated ?? results?.schemes.length ?? 0})',
                         value: 'all',
                         isSelected: provider.selectedFilter == 'all',
                         onTap: () => provider.setFilter('all'),
                       ),
                       const SizedBox(width: 8),
                       _buildFilterChip(
-                        label: '🟢 You May Be Eligible (${results?.likelyEligibleCount ?? 0})',
+                        label: '🟢 ${langProvider.tr('filter_likely_eligible')} (${results?.likelyEligibleCount ?? 0})',
                         value: 'likely_eligible',
                         isSelected: provider.selectedFilter == 'likely_eligible',
                         activeColor: const Color(0xFFE8F5E9),
@@ -184,7 +187,7 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                       ),
                       const SizedBox(width: 8),
                       _buildFilterChip(
-                        label: '🟡 Verification Required (${results?.verificationRequiredCount ?? 0})',
+                        label: '🟡 ${langProvider.tr('filter_verification_req')} (${results?.verificationRequiredCount ?? 0})',
                         value: 'verification_required',
                         isSelected: provider.selectedFilter == 'verification_required',
                         activeColor: const Color(0xFFFFF8E1),
@@ -193,7 +196,7 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                       ),
                       const SizedBox(width: 8),
                       _buildFilterChip(
-                        label: '🔴 Likely Not Eligible (${results?.likelyNotEligibleCount ?? 0})',
+                        label: '🔴 ${langProvider.tr('filter_likely_not_eligible')} (${results?.likelyNotEligibleCount ?? 0})',
                         value: 'likely_not_eligible',
                         isSelected: provider.selectedFilter == 'likely_not_eligible',
                         activeColor: const Color(0xFFFFEBEE),
@@ -210,16 +213,16 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
 
           // Empty State
           if (displayedSchemes.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 40.0),
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40.0),
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.search_off_rounded, size: 48, color: Colors.grey),
-                    SizedBox(height: 12),
+                    const Icon(Icons.search_off_rounded, size: 48, color: Colors.grey),
+                    const SizedBox(height: 12),
                     Text(
-                      'No matching schemes found in this category.',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black54),
+                      langProvider.tr('no_schemes_found'),
+                      style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54),
                     ),
                   ],
                 ),
@@ -307,8 +310,8 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                 Icon(Icons.local_hospital_rounded, color: theme.colorScheme.primary, size: 22),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    scheme.schemeName,
+                  child: DynamicTranslatedText(
+                    text: scheme.schemeName,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
@@ -330,7 +333,11 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                 border: Border.all(color: badgeBorder, width: 1.2),
               ),
               child: Text(
-                eval.statusBadge,
+                eval.status == 'likely_eligible'
+                    ? '🟢 ${Provider.of<LanguageProvider>(context, listen: false).tr('filter_likely_eligible')}'
+                    : (eval.status == 'verification_required'
+                        ? '🟡 ${Provider.of<LanguageProvider>(context, listen: false).tr('filter_verification_req')}'
+                        : '🔴 ${Provider.of<LanguageProvider>(context, listen: false).tr('filter_likely_not_eligible')}'),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -341,8 +348,8 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
             const SizedBox(height: 10),
 
             // Short Description
-            Text(
-              scheme.shortDescription,
+            DynamicTranslatedText(
+              text: scheme.shortDescription,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -364,8 +371,9 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                       color: theme.colorScheme.primaryContainer.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Text(
-                      '• $benefit',
+                    child: DynamicTranslatedText(
+                      text: benefit,
+                      prefix: '• ',
                       style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: theme.colorScheme.primary),
                     ),
                   );
@@ -392,9 +400,9 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                     ),
                   );
                 },
-                icon: const Text(
-                  'View Details',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                icon: Text(
+                  Provider.of<LanguageProvider>(context, listen: false).tr('view_details'),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
                 label: const Icon(Icons.arrow_forward_rounded, size: 16),
               ),

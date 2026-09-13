@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../models/scheme_eligibility_profile.dart';
 import '../../providers/schemes_provider.dart';
 import '../../providers/health_profile_provider.dart';
+import '../../providers/language_provider.dart';
+import '../../widgets/dynamic_translated_text.dart';
 
 /// Multi-step guided questionnaire for finding government health schemes & benefits.
 /// Features a 6-step progress stepper, visual option cards, and Ashwini Royal Purple theme.
@@ -189,6 +191,7 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
   }
 
   void _showInfoDialog(String title, String description) {
+    final langProvider = Provider.of<LanguageProvider>(context, listen: false);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -198,21 +201,21 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
             const Icon(Icons.info_outline_rounded, color: Color(0xFF7C3AED), size: 22),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                title,
+              child: DynamicTranslatedText(
+                text: title,
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ],
         ),
-        content: Text(
-          description,
+        content: DynamicTranslatedText(
+          text: description,
           style: const TextStyle(fontSize: 13.5, height: 1.4, color: Color(0xFF334155)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Got it', style: TextStyle(color: Color(0xFF7C3AED), fontWeight: FontWeight.bold)),
+            child: Text(langProvider.tr('got_it_btn'), style: const TextStyle(color: Color(0xFF7C3AED), fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -221,11 +224,12 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final langProvider = Provider.of<LanguageProvider>(context);
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: widget.initialProfile != null
           ? AppBar(
-              title: const Text('Update Eligibility Info'),
+              title: Text(langProvider.tr('update_eligibility_title')),
               backgroundColor: const Color(0xFF7C3AED),
               foregroundColor: Colors.white,
               elevation: 0,
@@ -269,16 +273,16 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
                       InkWell(
                         onTap: _prevStep,
                         borderRadius: BorderRadius.circular(8),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.arrow_back_rounded, size: 16, color: Color(0xFF64748B)),
-                              SizedBox(width: 4),
+                              const Icon(Icons.arrow_back_rounded, size: 16, color: Color(0xFF64748B)),
+                              const SizedBox(width: 4),
                               Text(
-                                'Back',
-                                style: TextStyle(
+                                langProvider.tr('back_btn'),
+                                style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   color: Color(0xFF64748B),
@@ -292,9 +296,9 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
                     ],
 
                     // Step Title
-                    const Text(
-                      'Help us find the best schemes for you',
-                      style: TextStyle(
+                    Text(
+                      langProvider.tr('help_find_schemes'),
+                      style: const TextStyle(
                         fontSize: 18.5,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF0F172A),
@@ -319,9 +323,9 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
                       child: TextButton.icon(
                         onPressed: _resetForm,
                         icon: const Icon(Icons.refresh_rounded, size: 15, color: Color(0xFF64748B)),
-                        label: const Text(
-                          'Reset Form',
-                          style: TextStyle(
+                        label: Text(
+                          langProvider.tr('reset_form'),
+                          style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
                             color: Color(0xFF64748B),
@@ -345,6 +349,7 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
   // Top Header Badges: myScheme Health Matcher
   // =========================================================================
   Widget _buildTopHeaderBadges() {
+    final langProvider = Provider.of<LanguageProvider>(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -364,9 +369,9 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
           ),
         ),
         const SizedBox(width: 6),
-        const Text(
-          'Health Matcher',
-          style: TextStyle(
+        Text(
+          langProvider.tr('health_matcher_title'),
+          style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w800,
             color: Color(0xFF0F172A),
@@ -470,6 +475,7 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
 
   // --- STEP 1: AGE (Gender auto-fetched from patient profile) ---
   Widget _buildStep1Age() {
+    final langProvider = Provider.of<LanguageProvider>(context);
     return Column(
       key: const ValueKey('step_1'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -519,9 +525,9 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
               ),
             ),
             const SizedBox(width: 14),
-            const Text(
-              'years old',
-              style: TextStyle(
+            Text(
+              langProvider.tr('years_old'),
+              style: const TextStyle(
                 fontSize: 16.5,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF334155),
@@ -554,8 +560,8 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'GENDER IDENTIFIER',
+                    const DynamicTranslatedText(
+                      text: 'GENDER IDENTIFIER',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
@@ -564,8 +570,8 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      '$_gender (auto-fetched from your registered profile)',
+                    DynamicTranslatedText(
+                      text: '$_gender (auto-fetched from your registered profile)',
                       style: const TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
@@ -588,8 +594,8 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
       key: const ValueKey('step_2'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Please select your state',
+        const DynamicTranslatedText(
+          text: 'Please select your state',
           style: TextStyle(
             fontSize: 14.5,
             fontWeight: FontWeight.w800,
@@ -618,7 +624,7 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
             filled: true,
             fillColor: Colors.white,
           ),
-          items: _states.map((st) => DropdownMenuItem(value: st, child: Text(st))).toList(),
+          items: _states.map((st) => DropdownMenuItem(value: st, child: DynamicTranslatedText(text: st))).toList(),
           onChanged: (val) {
             if (val != null) setState(() => _state = val);
           },
@@ -648,8 +654,8 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'AREA OF RESIDENCE',
+                    const DynamicTranslatedText(
+                      text: 'AREA OF RESIDENCE',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
@@ -658,8 +664,8 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      '$_residenceArea (auto-fetched from your registered profile)',
+                    DynamicTranslatedText(
+                      text: '$_residenceArea (auto-fetched from your registered profile)',
                       style: const TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
@@ -709,8 +715,8 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        category,
+                      child: DynamicTranslatedText(
+                        text: category,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
@@ -883,8 +889,8 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
                     width: isSelected ? 2.0 : 1.2,
                   ),
                 ),
-                child: Text(
-                  status,
+                child: DynamicTranslatedText(
+                  text: status,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
@@ -954,8 +960,8 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
         const SizedBox(height: 20),
 
         // Approximate Annual Family Income (From existing questions)
-        const Text(
-          'Annual Family Income (approximate)',
+        const DynamicTranslatedText(
+          text: 'Annual Family Income (approximate)',
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
@@ -974,7 +980,7 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
             filled: true,
             fillColor: Colors.white,
           ),
-          items: _incomeRanges.map((inc) => DropdownMenuItem(value: inc, child: Text(inc))).toList(),
+          items: _incomeRanges.map((inc) => DropdownMenuItem(value: inc, child: DynamicTranslatedText(text: inc))).toList(),
           onChanged: (val) {
             if (val != null) setState(() => _incomeRange = val);
           },
@@ -987,18 +993,19 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
   // Reusable UI Components
   // =========================================================================
   Widget _buildRequiredLabel(String text) {
-    return RichText(
-      text: TextSpan(
-        children: [
-          const TextSpan(
-            text: '* ',
-            style: TextStyle(
-              color: Color(0xFFDC2626),
-              fontWeight: FontWeight.w900,
-              fontSize: 15,
-            ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '* ',
+          style: TextStyle(
+            color: Color(0xFFDC2626),
+            fontWeight: FontWeight.w900,
+            fontSize: 15,
           ),
-          TextSpan(
+        ),
+        Expanded(
+          child: DynamicTranslatedText(
             text: text,
             style: const TextStyle(
               color: Color(0xFF0F172A),
@@ -1007,8 +1014,8 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
               height: 1.3,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1046,8 +1053,9 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
               ),
               const SizedBox(height: 4),
             ],
-            Text(
-              title,
+            DynamicTranslatedText(
+              text: title,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
@@ -1062,6 +1070,7 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
 
   Widget _buildActionButtons() {
     final isLastStep = _currentStep == 5;
+    final langProvider = Provider.of<LanguageProvider>(context);
 
     return Row(
       children: [
@@ -1074,9 +1083,9 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
               side: const BorderSide(color: Color(0xFF7C3AED), width: 1.6),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text(
-              'Skip to Results',
-              style: TextStyle(
+            child: Text(
+              langProvider.tr('skip_to_results'),
+              style: const TextStyle(
                 fontSize: 14.5,
                 fontWeight: FontWeight.w800,
                 color: Color(0xFF7C3AED),
@@ -1099,7 +1108,7 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: Text(
-              isLastStep ? 'Submit →' : 'Next →',
+              isLastStep ? '${langProvider.tr('submit_btn')} →' : '${langProvider.tr('next_btn')} →',
               style: const TextStyle(
                 fontSize: 14.5,
                 fontWeight: FontWeight.w800,

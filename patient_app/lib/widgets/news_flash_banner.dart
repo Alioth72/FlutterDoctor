@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/language_provider.dart';
 
 /// Data model representing a blank Poster / Banner slot.
 /// Posters and links can be configured here later.
@@ -93,9 +95,11 @@ class _NewsFlashBannerWidgetState extends State<NewsFlashBannerWidget> {
     if (item.targetUrl != null && item.targetUrl!.isNotEmpty) {
       // Future redirect logic when links are added
     } else {
+      final lang = Provider.of<LanguageProvider>(context, listen: false);
+      final labelText = item.id.isNotEmpty ? lang.tr(item.id) : (item.label ?? lang.tr('poster_space'));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${item.label ?? "Poster space"} — Poster and link will be added later.'),
+          content: Text('$labelText — ${lang.tr('poster_sub')}.'),
           duration: const Duration(seconds: 1),
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFF7C3AED),
@@ -106,6 +110,7 @@ class _NewsFlashBannerWidgetState extends State<NewsFlashBannerWidget> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<LanguageProvider>();
     return SizedBox(
       width: double.infinity,
       height: widget.height,
@@ -150,7 +155,7 @@ class _NewsFlashBannerWidgetState extends State<NewsFlashBannerWidget> {
                           child: Image.network(
                             item.imageUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildBlankPlaceholder(item),
+                            errorBuilder: (context, error, stackTrace) => _buildBlankPlaceholder(item),
                           ),
                         )
                       else if (item.assetPath != null)
@@ -158,7 +163,7 @@ class _NewsFlashBannerWidgetState extends State<NewsFlashBannerWidget> {
                           child: Image.asset(
                             item.assetPath!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildBlankPlaceholder(item),
+                            errorBuilder: (context, error, stackTrace) => _buildBlankPlaceholder(item),
                           ),
                         )
                       else
@@ -231,7 +236,9 @@ class _NewsFlashBannerWidgetState extends State<NewsFlashBannerWidget> {
           ),
           const SizedBox(height: 8),
           Text(
-            item.label ?? 'Poster Space',
+            item.id.isNotEmpty
+                ? Provider.of<LanguageProvider>(context, listen: false).tr(item.id)
+                : (item.label ?? Provider.of<LanguageProvider>(context, listen: false).tr('poster_space')),
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
@@ -241,7 +248,7 @@ class _NewsFlashBannerWidgetState extends State<NewsFlashBannerWidget> {
           ),
           const SizedBox(height: 2),
           Text(
-            'Poster and link will be added later',
+            Provider.of<LanguageProvider>(context, listen: false).tr('poster_sub'),
             style: TextStyle(
               fontSize: 11,
               color: Colors.grey.shade500,

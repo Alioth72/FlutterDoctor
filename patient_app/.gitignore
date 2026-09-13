@@ -60,3 +60,5 @@ testing_website_heartrate/
 # Temporary & Archive files
 *.zip
 scheme_db_temp/
+.env
+*.env

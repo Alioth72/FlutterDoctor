@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/language_provider.dart';
 import 'tabs/home_tab.dart';
 import 'tabs/pharmacy_tab.dart';
 import 'tabs/schemes_tab.dart';
@@ -24,15 +26,25 @@ class _HomeScreenState extends State<HomeScreen> {
     ProfileTab(),
   ];
 
-  final List<String> _titles = const [
-    'Patient Portal',
-    'Ashwini Pharmacy',
-    'Govt Schemes',
-    'Personal Profile',
-  ];
+  String _getTitle(int index, LanguageProvider lang) {
+    switch (index) {
+      case 0:
+        return lang.tr('app_name');
+      case 1:
+        return lang.tr('nav_pharmacy');
+      case 2:
+        return lang.tr('nav_schemes');
+      case 3:
+        return lang.tr('nav_profile');
+      default:
+        return lang.tr('app_name');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final langProvider = Provider.of<LanguageProvider>(context);
+
     return Scaffold(
       key: _scaffoldKey,
       drawer: const PatientDrawer(),
@@ -108,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Row(
                                   children: [
                                     Text(
-                                      _currentIndex == 0 ? 'Ashwini' : _titles[_currentIndex],
+                                      _getTitle(_currentIndex, langProvider),
                                       style: const TextStyle(
                                         fontSize: 22,
                                         fontWeight: FontWeight.w900,
@@ -128,9 +140,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                             width: 1,
                                           ),
                                         ),
-                                        child: const Text(
-                                          'PATIENT',
-                                          style: TextStyle(
+                                        child: Text(
+                                          langProvider.tr('patient_badge'),
+                                          style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 9.5,
                                             fontWeight: FontWeight.w900,
@@ -143,7 +155,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 if (_currentIndex == 0)
                                   Text(
-                                    'Healthcare & Teleconsultation Portal',
+                                    langProvider.tr('portal_title'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: Colors.white.withValues(alpha: 0.82),
@@ -212,26 +226,26 @@ class _HomeScreenState extends State<HomeScreen> {
             _currentIndex = index;
           });
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
+            label: langProvider.tr('nav_home'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.medication_outlined),
-            selectedIcon: Icon(Icons.medication_rounded),
-            label: 'Buy Medicine',
+            icon: const Icon(Icons.medication_outlined),
+            selectedIcon: const Icon(Icons.medication_rounded),
+            label: langProvider.tr('nav_pharmacy'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.health_and_safety_outlined),
-            selectedIcon: Icon(Icons.health_and_safety),
-            label: 'Schemes',
+            icon: const Icon(Icons.health_and_safety_outlined),
+            selectedIcon: const Icon(Icons.health_and_safety),
+            label: langProvider.tr('nav_schemes'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
+            label: langProvider.tr('nav_profile'),
           ),
         ],
       ),

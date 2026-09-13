@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/appointment.dart';
 import '../../providers/appointment_provider.dart';
+import '../../providers/language_provider.dart';
+import '../../widgets/dynamic_translated_text.dart';
 import '../appointments/book_appointment_screen.dart';
 import '../appointments/appointment_receipt_screen.dart';
 
@@ -12,15 +14,16 @@ class AppointmentsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appointmentProvider = Provider.of<AppointmentProvider>(context);
+    final langProvider = Provider.of<LanguageProvider>(context);
     final appointments = appointmentProvider.appointments;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Appointments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(langProvider.tr('my_appointments_title'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         actions: [
           if (appointments.isNotEmpty)
             IconButton(
-              tooltip: 'Clear All Appointments',
+              tooltip: langProvider.tr('clear_all_appts'),
               icon: const Icon(Icons.delete_sweep_outlined, color: Colors.red),
               onPressed: () => _confirmClearAll(context),
             ),
@@ -38,7 +41,7 @@ class AppointmentsTab extends StatelessWidget {
           );
         },
         icon: const Icon(Icons.add),
-        label: const Text('Book Appointment'),
+        label: Text(langProvider.tr('book_appointment_title')),
       ),
     );
   }
@@ -47,6 +50,7 @@ class AppointmentsTab extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    final langProvider = Provider.of<LanguageProvider>(context);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -67,14 +71,14 @@ class AppointmentsTab extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'No Appointments Yet',
+              langProvider.tr('no_appointments_yet'),
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Book an in-person or OPD consultation with available government & hospital doctors and get your online token slip.',
+              langProvider.tr('no_appointments_sub'),
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
@@ -90,7 +94,7 @@ class AppointmentsTab extends StatelessWidget {
                 );
               },
               icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Book Doctor Appointment'),
+              label: Text(langProvider.tr('book_doctor_appt_btn')),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -105,6 +109,8 @@ class AppointmentsTab extends StatelessWidget {
   Widget _buildAppointmentsList(BuildContext context, List<Appointment> appointments) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    final langProvider = Provider.of<LanguageProvider>(context);
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
@@ -142,7 +148,7 @@ class AppointmentsTab extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            apt.tokenNumber,
+                            '${langProvider.tr('token_prefix')} ${apt.tokenNumber.replaceAll('Token #', '').trim()}',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -170,7 +176,7 @@ class AppointmentsTab extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                apt.isOnline ? 'ONLINE' : 'OFFLINE',
+                                apt.isOnline ? langProvider.tr('online_badge') : langProvider.tr('offline_badge'),
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
@@ -191,7 +197,7 @@ class AppointmentsTab extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        apt.status,
+                        isConfirmed ? langProvider.tr('status_confirmed') : (apt.status == 'Cancelled' ? langProvider.tr('status_cancelled') : apt.status),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -204,15 +210,15 @@ class AppointmentsTab extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 // Doctor Info
-                Text(
-                  apt.doctorName,
+                DynamicTranslatedText(
+                  text: apt.doctorName,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  apt.doctorSpecialty,
+                DynamicTranslatedText(
+                  text: apt.doctorSpecialty,
                   style: TextStyle(
                     fontSize: 13,
                     color: colorScheme.primary,
@@ -225,8 +231,8 @@ class AppointmentsTab extends StatelessWidget {
                     Icon(Icons.location_on_outlined, size: 14, color: colorScheme.onSurfaceVariant),
                     const SizedBox(width: 4),
                     Expanded(
-                      child: Text(
-                        apt.hospitalName,
+                      child: DynamicTranslatedText(
+                        text: apt.hospitalName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
@@ -271,9 +277,14 @@ class AppointmentsTab extends StatelessWidget {
                         ),
                       ),
                       icon: const Icon(Icons.videocam_rounded, size: 18, color: Colors.white),
-                      label: const Text(
-                        'Connect Video Consultation',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Colors.white),
+                      label: Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            langProvider.tr('connect_video_consultation'),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Colors.white),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -293,20 +304,25 @@ class AppointmentsTab extends StatelessWidget {
                           );
                         },
                         icon: const Icon(Icons.receipt_long_outlined, size: 18),
-                        label: const Text('View Online Receipt'),
+                        label: Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(langProvider.tr('view_online_receipt')),
+                          ),
+                        ),
                       ),
                     ),
                     if (isConfirmed) ...[
                       const SizedBox(width: 8),
                       IconButton.outlined(
-                        tooltip: 'Cancel Appointment',
+                        tooltip: langProvider.tr('cancel_appt_tooltip'),
                         icon: const Icon(Icons.cancel_outlined, color: Colors.red),
                         onPressed: () => _confirmCancel(context, apt),
                       ),
                     ] else ...[
                       const SizedBox(width: 8),
                       IconButton.outlined(
-                        tooltip: 'Delete From History',
+                        tooltip: langProvider.tr('delete_history_tooltip'),
                         icon: const Icon(Icons.delete_outline, color: Colors.grey),
                         onPressed: () => _confirmDelete(context, apt),
                       ),

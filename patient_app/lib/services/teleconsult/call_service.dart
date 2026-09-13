@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:http/http.dart' as http;
 
@@ -48,34 +49,63 @@ class CallService {
   DocumentReference<Map<String, dynamic>> get _callDoc =>
       firestore.collection('teleconsult_calls').doc(appointmentId);
 
+  static const List<Map<String, dynamic>> _fallbackIceServers = [
+    {
+      'urls': [
+        'stun:stun.relay.metered.ca:80',
+        'stun:stun.l.google.com:19302',
+        'stun:stun1.l.google.com:19302',
+      ],
+    },
+    {
+      'urls': [
+        'turn:standard.relay.metered.ca:80',
+        'turn:standard.relay.metered.ca:80?transport=tcp',
+        'turn:standard.relay.metered.ca:443',
+        'turns:standard.relay.metered.ca:443?transport=tcp',
+      ],
+      'username': '7346c17ed03f241ff884d503',
+      'credential': '/vKOrSR0fJUsUflr',
+    },
+  ];
+
   Future<List<Map<String, dynamic>>> fetchIceServers() async {
     if (!AppConfig.hasTurnCredentials) {
-      throw StateError(
-        'TURN_CREDENTIALS_URL is missing. Run with '
-        '--dart-define=TURN_CREDENTIALS_URL=https://<app>.metered.live/'
-        'api/v1/turn/credentials?apiKey=<key>',
-      );
+      debugPrint('[CallService] Using pre-configured fallback ICE servers.');
+      return _fallbackIceServers;
     }
-    final response = await http
-        .get(Uri.parse(AppConfig.turnCredentialsUrl))
-        .timeout(const Duration(seconds: 15));
-    if (response.statusCode != 200) {
-      throw StateError(
-        'TURN credential request failed (${response.statusCode}).',
-      );
+
+    for (int attempt = 1; attempt <= 2; attempt++) {
+      try {
+        final response = await http
+            .get(
+              Uri.parse(AppConfig.turnCredentialsUrl),
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'AshwiniHealth/1.0',
+              },
+            )
+            .timeout(const Duration(seconds: 5));
+
+        if (response.statusCode == 200) {
+          final decoded = jsonDecode(response.body);
+          if (decoded is List) {
+            final servers = decoded
+                .whereType<Map>()
+                .map((entry) => Map<String, dynamic>.from(entry))
+                .toList();
+            if (servers.isNotEmpty) {
+              return servers;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('[CallService] Dynamic TURN fetch attempt $attempt failed ($e), falling back...');
+      }
     }
-    final decoded = jsonDecode(response.body);
-    if (decoded is! List) {
-      throw const FormatException('TURN response was not a JSON array.');
-    }
-    final servers = decoded
-        .whereType<Map>()
-        .map((entry) => Map<String, dynamic>.from(entry))
-        .toList();
-    if (servers.isEmpty) {
-      throw const FormatException('TURN response contained no ICE servers.');
-    }
-    return servers;
+
+    debugPrint('[CallService] Using reliable fallback Metered TURN relay credentials.');
+    return _fallbackIceServers;
   }
 
   Future<void> start() async {

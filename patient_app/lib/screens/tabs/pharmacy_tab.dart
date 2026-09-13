@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/language_provider.dart';
+import '../../services/localization/healthcare_catalog.dart';
+import '../../widgets/dynamic_translated_text.dart';
 
 class PharmacyTab extends StatefulWidget {
   const PharmacyTab({super.key});
@@ -13,13 +17,13 @@ class _PharmacyTabState extends State<PharmacyTab> {
   final TextEditingController _searchController = TextEditingController();
   final Map<String, int> _cart = {};
 
-  final List<String> _categories = const [
-    'All',
-    'Jan Aushadhi',
-    'Pain Relief',
-    'Fever & Cold',
-    'Chronic Care',
-    'Vitamins & Supplements',
+  final List<Map<String, String>> _categories = const [
+    {'id': 'All', 'key': 'cat_all'},
+    {'id': 'Jan Aushadhi', 'key': 'cat_jan_aushadhi'},
+    {'id': 'Pain Relief', 'key': 'cat_pain_relief'},
+    {'id': 'Fever & Cold', 'key': 'cat_fever_cold'},
+    {'id': 'Chronic Care', 'key': 'cat_chronic_care'},
+    {'id': 'Vitamins & Supplements', 'key': 'cat_vitamins'},
   ];
 
   final List<Map<String, dynamic>> _medicines = const [
@@ -151,9 +155,12 @@ class _PharmacyTabState extends State<PharmacyTab> {
     setState(() {
       _cart[medId] = (_cart[medId] ?? 0) + 1;
     });
+    final langProvider = Provider.of<LanguageProvider>(context, listen: false);
+    final addedMsg = langProvider.tr('added_to_cart');
+    final translatedName = HealthcareCatalog.lookup(medName, langProvider.currentLanguageCode) ?? medName;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Added $medName to cart'),
+        content: Text('$addedMsg: $translatedName'),
         duration: const Duration(seconds: 1),
         behavior: SnackBarBehavior.floating,
         backgroundColor: const Color(0xFF7C3AED),
@@ -181,6 +188,7 @@ class _PharmacyTabState extends State<PharmacyTab> {
 
   @override
   Widget build(BuildContext context) {
+    final langProvider = Provider.of<LanguageProvider>(context);
     final filtered = _filteredMedicines;
 
     return Scaffold(
@@ -214,7 +222,7 @@ class _PharmacyTabState extends State<PharmacyTab> {
                         });
                       },
                       decoration: InputDecoration(
-                        hintText: 'Search medicines, generics, salt composition...',
+                        hintText: langProvider.tr('search_pharmacy_hint'),
                         hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
                         prefixIcon: const Icon(Icons.search, color: Color(0xFF7C3AED)),
                         suffixIcon: _searchQuery.isNotEmpty
@@ -268,22 +276,22 @@ class _PharmacyTabState extends State<PharmacyTab> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Order with Prescription',
-                                style: TextStyle(
+                                langProvider.tr('order_with_prescription'),
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w800,
                                   fontSize: 14,
                                 ),
                               ),
-                              SizedBox(height: 2),
+                              const SizedBox(height: 2),
                               Text(
-                                'Upload photo of doctor prescription for fast delivery',
-                                style: TextStyle(
+                                langProvider.tr('upload_prescription_sub'),
+                                style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 11,
                                 ),
@@ -294,9 +302,9 @@ class _PharmacyTabState extends State<PharmacyTab> {
                         ElevatedButton(
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Prescription upload opened. Choose from Camera/Gallery.'),
-                                backgroundColor: Color(0xFF7C3AED),
+                              SnackBar(
+                                content: Text(langProvider.tr('prescription_opened_msg')),
+                                backgroundColor: const Color(0xFF7C3AED),
                               ),
                             );
                           },
@@ -308,7 +316,10 @@ class _PharmacyTabState extends State<PharmacyTab> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          child: const Text('Upload', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(langProvider.tr('upload_btn'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
                         ),
                       ],
                     ),
@@ -323,14 +334,14 @@ class _PharmacyTabState extends State<PharmacyTab> {
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: const Color(0xFFA7F3D0)),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(Icons.verified_rounded, size: 18, color: Color(0xFF059669)),
-                        SizedBox(width: 8),
+                        const Icon(Icons.verified_rounded, size: 18, color: Color(0xFF059669)),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'PM Jan Aushadhi Generic Medicines available at up to 80% discount.',
-                            style: TextStyle(
+                            langProvider.tr('jan_aushadhi_discount_banner'),
+                            style: const TextStyle(
                               color: Color(0xFF065F46),
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
@@ -348,15 +359,17 @@ class _PharmacyTabState extends State<PharmacyTab> {
                     physics: const BouncingScrollPhysics(),
                     child: Row(
                       children: _categories.map((cat) {
-                        final isSelected = _selectedCategory == cat;
+                        final catId = cat['id']!;
+                        final catKey = cat['key']!;
+                        final isSelected = _selectedCategory == catId;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0),
                           child: FilterChip(
-                            label: Text(cat),
+                            label: Text(langProvider.tr(catKey)),
                             selected: isSelected,
                             onSelected: (val) {
                               setState(() {
-                                _selectedCategory = cat;
+                                _selectedCategory = catId;
                               });
                             },
                             backgroundColor: Colors.white,
@@ -395,7 +408,7 @@ class _PharmacyTabState extends State<PharmacyTab> {
                     Icon(Icons.medication_liquid_outlined, size: 56, color: Colors.grey.shade400),
                     const SizedBox(height: 12),
                     Text(
-                      'No medicines found for "$_searchQuery"',
+                      '${langProvider.tr('no_meds_found')} "$_searchQuery"',
                       style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600),
                     ),
                   ],
@@ -458,45 +471,56 @@ class _PharmacyTabState extends State<PharmacyTab> {
                                 Row(
                                   children: [
                                     Expanded(
-                                      child: Text(
-                                        med['name'] as String,
+                                      child: DynamicTranslatedText(
+                                        text: med['name'] as String,
                                         style: const TextStyle(
                                           fontWeight: FontWeight.w800,
                                           fontSize: 14,
                                           color: Color(0xFF0F172A),
                                         ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    if (med['isJanAushadhi'] == true)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFECFDF5),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: const Text(
-                                          'JAN AUSHADHI',
-                                          style: TextStyle(
-                                            color: Color(0xFF059669),
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                      ),
+                                     if (med['isJanAushadhi'] == true) ...[
+                                       const SizedBox(width: 4),
+                                       Flexible(
+                                         child: Container(
+                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                           decoration: BoxDecoration(
+                                             color: const Color(0xFFECFDF5),
+                                             borderRadius: BorderRadius.circular(4),
+                                           ),
+                                           child: FittedBox(
+                                             fit: BoxFit.scaleDown,
+                                             child: Text(
+                                               langProvider.tr('jan_aushadhi_badge'),
+                                               style: const TextStyle(
+                                                 color: Color(0xFF059669),
+                                                 fontSize: 9,
+                                                 fontWeight: FontWeight.w800,
+                                               ),
+                                             ),
+                                           ),
+                                         ),
+                                       ),
+                                     ],
                                   ],
                                 ),
                                 const SizedBox(height: 2),
-                                Text(
-                                  med['generic'] as String,
+                                DynamicTranslatedText(
+                                  text: med['generic'] as String,
                                   style: TextStyle(
                                     color: Colors.grey.shade600,
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w500,
                                   ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 2),
-                                Text(
-                                  med['pack'] as String,
+                                DynamicTranslatedText(
+                                  text: med['pack'] as String,
                                   style: TextStyle(
                                     color: Colors.grey.shade400,
                                     fontSize: 10.5,
@@ -504,8 +528,11 @@ class _PharmacyTabState extends State<PharmacyTab> {
                                 ),
                                 const SizedBox(height: 8),
 
-                                // Price row
-                                Row(
+                                // Price row with Wrap and spacing to prevent overflow
+                                Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 6,
+                                  runSpacing: 4,
                                   children: [
                                     Text(
                                       '₹${price.toStringAsFixed(0)}',
@@ -515,7 +542,6 @@ class _PharmacyTabState extends State<PharmacyTab> {
                                         color: Color(0xFF0F172A),
                                       ),
                                     ),
-                                    const SizedBox(width: 6),
                                     Text(
                                       '₹${mrp.toStringAsFixed(0)}',
                                       style: TextStyle(
@@ -524,7 +550,6 @@ class _PharmacyTabState extends State<PharmacyTab> {
                                         decoration: TextDecoration.lineThrough,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                       decoration: BoxDecoration(
@@ -532,7 +557,7 @@ class _PharmacyTabState extends State<PharmacyTab> {
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
-                                        '$discount% OFF',
+                                        '$discount% ${langProvider.tr('off_badge')}',
                                         style: const TextStyle(
                                           fontSize: 9.5,
                                           fontWeight: FontWeight.w800,
@@ -546,6 +571,8 @@ class _PharmacyTabState extends State<PharmacyTab> {
                             ),
                           ),
 
+                          const SizedBox(width: 8),
+
                           // Add / Quantity Buttons
                           if (count == 0)
                             ElevatedButton(
@@ -554,13 +581,17 @@ class _PharmacyTabState extends State<PharmacyTab> {
                                 backgroundColor: const Color(0xFFF5F3FF),
                                 foregroundColor: const Color(0xFF7C3AED),
                                 elevation: 0,
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                minimumSize: const Size(54, 34),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                   side: const BorderSide(color: Color(0xFFDDD6FE)),
                                 ),
                               ),
-                              child: const Text('ADD', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(langProvider.tr('add_btn'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                              ),
                             )
                           else
                             Container(
@@ -624,7 +655,7 @@ class _PharmacyTabState extends State<PharmacyTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '$_totalCartItems ITEM${_totalCartItems > 1 ? "S" : ""}',
+                        '$_totalCartItems ${langProvider.tr(_totalCartItems > 1 ? "items_plural" : "item_singular")}',
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
@@ -645,9 +676,11 @@ class _PharmacyTabState extends State<PharmacyTab> {
                   const Spacer(),
                   ElevatedButton(
                     onPressed: () {
+                      final itemWord = langProvider.tr(_totalCartItems > 1 ? 'items_plural' : 'item_singular');
+                      final deliveryWord = langProvider.tr('delivery_2_hours');
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Order placed for $_totalCartItems items (₹${_totalCartPrice.toStringAsFixed(0)})! Delivery within 2 hours.'),
+                          content: Text('$_totalCartItems $itemWord (₹${_totalCartPrice.toStringAsFixed(0)})! $deliveryWord.'),
                           backgroundColor: const Color(0xFF059669),
                         ),
                       );
@@ -658,16 +691,25 @@ class _PharmacyTabState extends State<PharmacyTab> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF7C3AED),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('Proceed to Buy', style: TextStyle(fontWeight: FontWeight.bold)),
-                        SizedBox(width: 6),
-                        Icon(Icons.arrow_forward_rounded, size: 16),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              langProvider.tr('place_order_btn'),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.arrow_forward_rounded, size: 16),
                       ],
                     ),
                   ),
