@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/health_profile_provider.dart';
 import 'providers/appointment_provider.dart';
 import 'providers/schemes_provider.dart';
+import 'providers/language_provider.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
@@ -37,6 +38,9 @@ class PatientApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => SchemesProvider()..loadSavedProfile(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => LanguageProvider()..init(),
         ),
       ],
       child: MaterialApp(

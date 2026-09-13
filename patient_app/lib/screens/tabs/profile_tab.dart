@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 import '../../models/health_profile.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/health_profile_provider.dart';
+import '../../providers/language_provider.dart';
 import '../../widgets/location_selection_sheet.dart';
 import '../../widgets/patient_action_sheets.dart';
 import '../family/family_data_screen.dart';
 import '../signup_screen.dart';
+import '../../widgets/dynamic_translated_text.dart';
 
 /// Premium, appealing Personal Health Profile Dashboard for Ashwini Patient App.
 /// Features a rich hero header, digital ABHA health pass, health vitals,
@@ -23,28 +25,31 @@ class _ProfileTabState extends State<ProfileTab> {
   bool _remindersEnabled = true;
 
   Future<void> _handleLogout(BuildContext context) async {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.logout_rounded, color: Color(0xFFDC2626), size: 24),
-            SizedBox(width: 10),
-            Text(
-              'Logout from Ashwini?',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+            const Icon(Icons.logout_rounded, color: Color(0xFFDC2626), size: 24),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                lang.tr('logout_confirm_title'),
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+              ),
             ),
           ],
         ),
-        content: const Text(
-          'You will need to re-enter your mobile number and password to access your appointments and health records.',
-          style: TextStyle(fontSize: 13.5, height: 1.4, color: Color(0xFF475569)),
+        content: Text(
+          lang.tr('logout_confirm_sub'),
+          style: const TextStyle(fontSize: 13.5, height: 1.4, color: Color(0xFF475569)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+            child: Text(lang.tr('cancel_btn'), style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -52,7 +57,7 @@ class _ProfileTabState extends State<ProfileTab> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(lang.tr('logout_btn'), style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -344,8 +349,8 @@ class _ProfileTabState extends State<ProfileTab> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  Text(
-                    profile?.name ?? 'Patient',
+                  DynamicTranslatedText(
+                    text: profile?.name ?? 'Patient',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
@@ -456,7 +461,7 @@ class _ProfileTabState extends State<ProfileTab> {
               child: ListView.separated(
                 physics: const BouncingScrollPhysics(),
                 itemCount: visits.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (context, index) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final v = visits[index];
                   return Container(
@@ -514,6 +519,7 @@ class _ProfileTabState extends State<ProfileTab> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<LanguageProvider>();
     final profileProvider = Provider.of<HealthProfileProvider>(context);
     final profile = profileProvider.profile;
 
@@ -662,8 +668,8 @@ class _ProfileTabState extends State<ProfileTab> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      name,
+                    DynamicTranslatedText(
+                      text: name,
                       style: const TextStyle(
                         fontSize: 21,
                         fontWeight: FontWeight.w900,
@@ -720,33 +726,38 @@ class _ProfileTabState extends State<ProfileTab> {
 
           // Quick Action Bar inside Hero Card
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildHeroQuickBtn(
-                  icon: Icons.qr_code_rounded,
-                  label: 'Digital QR',
-                  onTap: () => _showDigitalQrPassModal(context, profile),
+                Expanded(
+                  child: _buildHeroQuickBtn(
+                    icon: Icons.qr_code_rounded,
+                    label: Provider.of<LanguageProvider>(context, listen: false).tr('digital_qr'),
+                    onTap: () => _showDigitalQrPassModal(context, profile),
+                  ),
                 ),
                 Container(width: 1, height: 24, color: Colors.white.withValues(alpha: 0.25)),
-                _buildHeroQuickBtn(
-                  icon: Icons.edit_rounded,
-                  label: 'Edit Profile',
-                  onTap: () {
-                    if (profile != null) _showEditProfileSheet(context, profile);
-                  },
+                Expanded(
+                  child: _buildHeroQuickBtn(
+                    icon: Icons.edit_rounded,
+                    label: Provider.of<LanguageProvider>(context, listen: false).tr('edit_profile'),
+                    onTap: () {
+                      if (profile != null) _showEditProfileSheet(context, profile);
+                    },
+                  ),
                 ),
                 Container(width: 1, height: 24, color: Colors.white.withValues(alpha: 0.25)),
-                _buildHeroQuickBtn(
-                  icon: Icons.history_edu_rounded,
-                  label: 'Offline QRs',
-                  onTap: () => _showOfflineVisitsQrModal(context),
+                Expanded(
+                  child: _buildHeroQuickBtn(
+                    icon: Icons.history_edu_rounded,
+                    label: Provider.of<LanguageProvider>(context, listen: false).tr('offline_qrs'),
+                    onTap: () => _showOfflineVisitsQrModal(context),
+                  ),
                 ),
               ],
             ),
@@ -768,17 +779,26 @@ class _ProfileTabState extends State<ProfileTab> {
       },
       borderRadius: BorderRadius.circular(10),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 16),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
+            Icon(icon, color: Colors.white, size: 15),
+            const SizedBox(width: 4),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11.5,
+                  ),
+                ),
               ),
             ),
           ],
@@ -823,21 +843,28 @@ class _ProfileTabState extends State<ProfileTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.credit_card_rounded, color: Color(0xFFA78BFA), size: 18),
-                  SizedBox(width: 8),
-                  Text(
-                    'ASHWINI AYUSHMAN DIGITAL ID',
-                    style: TextStyle(
-                      color: Color(0xFFDDD6FE),
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.1,
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(Icons.credit_card_rounded, color: Color(0xFFA78BFA), size: 18),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        Provider.of<LanguageProvider>(context, listen: false).tr('digital_id_title'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFFDDD6FE),
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                 decoration: BoxDecoration(
@@ -845,14 +872,14 @@ class _ProfileTabState extends State<ProfileTab> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: const Color(0xFF10B981), width: 1),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.check_circle_rounded, size: 11, color: Color(0xFF10B981)),
-                    SizedBox(width: 3),
+                    const Icon(Icons.check_circle_rounded, size: 11, color: Color(0xFF10B981)),
+                    const SizedBox(width: 3),
                     Text(
-                      'ACTIVE',
-                      style: TextStyle(
+                      Provider.of<LanguageProvider>(context, listen: false).tr('active_status'),
+                      style: const TextStyle(
                         fontSize: 9.5,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF10B981),
@@ -870,50 +897,60 @@ class _ProfileTabState extends State<ProfileTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'ABHA Health ID Number',
-                    style: TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8)),
-                  ),
-                  const SizedBox(height: 3),
-                  InkWell(
-                    onTap: () => _copyToClipboard('91-8765-0123-4567', 'ABHA ID'),
-                    child: const Row(
-                      children: [
-                        Text(
-                          '91-8765-0123-4567',
-                          style: TextStyle(
-                            fontSize: 16.5,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        SizedBox(width: 6),
-                        Icon(Icons.copy_rounded, size: 13, color: Color(0xFFA78BFA)),
-                      ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      Provider.of<LanguageProvider>(context, listen: false).tr('abha_id_label'),
+                      style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8)),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 3),
+                    InkWell(
+                      onTap: () => _copyToClipboard('91-8765-0123-4567', 'ABHA ID'),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                '91-8765-0123-4567',
+                                style: TextStyle(
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 6),
+                          Icon(Icons.copy_rounded, size: 13, color: Color(0xFFA78BFA)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               InkWell(
                 onTap: () => _showDigitalQrPassModal(context, profile),
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: const Color(0xFF7C3AED),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Row(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.qr_code_2_rounded, size: 16, color: Colors.white),
-                      SizedBox(width: 4),
+                      const Icon(Icons.qr_code_2_rounded, size: 16, color: Colors.white),
+                      const SizedBox(width: 4),
                       Text(
-                        'View QR',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                        Provider.of<LanguageProvider>(context, listen: false).tr('view_qr'),
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                       ),
                     ],
                   ),
@@ -930,6 +967,7 @@ class _ProfileTabState extends State<ProfileTab> {
   // 3. HEALTH VITALS & QUICK STATS ROW
   // =========================================================================
   Widget _buildVitalsRow(BuildContext context, HealthProfileProvider provider) {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     return Row(
       children: [
         Expanded(
@@ -938,7 +976,7 @@ class _ProfileTabState extends State<ProfileTab> {
             iconColor: const Color(0xFFE11D48),
             bgColor: const Color(0xFFFFF1F2),
             value: 'O+',
-            label: 'Blood Group',
+            label: lang.tr('blood_group_label'),
           ),
         ),
         const SizedBox(width: 10),
@@ -948,7 +986,7 @@ class _ProfileTabState extends State<ProfileTab> {
             iconColor: const Color(0xFF0284C7),
             bgColor: const Color(0xFFF0F9FF),
             value: '68 kg',
-            label: 'Weight (22.2)',
+            label: '${lang.tr('weight_label')} (22.2)',
           ),
         ),
         const SizedBox(width: 10),
@@ -957,8 +995,8 @@ class _ProfileTabState extends State<ProfileTab> {
             icon: Icons.health_and_safety_rounded,
             iconColor: const Color(0xFF7C3AED),
             bgColor: const Color(0xFFF5F3FF),
-            value: 'Eligible',
-            label: 'Govt Schemes',
+            value: lang.tr('eligible_label'),
+            label: lang.tr('govt_schemes_label'),
           ),
         ),
         const SizedBox(width: 10),
@@ -976,7 +1014,7 @@ class _ProfileTabState extends State<ProfileTab> {
               iconColor: const Color(0xFF10B981),
               bgColor: const Color(0xFFECFDF5),
               value: '${provider.familyMembers.length}',
-              label: 'Family Sync',
+              label: lang.tr('family_sync_label'),
             ),
           ),
         ),
@@ -1051,6 +1089,7 @@ class _ProfileTabState extends State<ProfileTab> {
     required String residence,
     required HealthProfileProvider profileProvider,
   }) {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -1071,27 +1110,34 @@ class _ProfileTabState extends State<ProfileTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.badge_rounded, color: Color(0xFF7C3AED), size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Personal & Demographic Details',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F172A),
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(Icons.badge_rounded, color: Color(0xFF7C3AED), size: 20),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        lang.tr('personal_details_title'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               InkWell(
                 onTap: () {
                   if (profile != null) _showEditProfileSheet(context, profile);
                 },
-                child: const Text(
-                  'Edit',
-                  style: TextStyle(
+                child: Text(
+                  lang.tr('edit_btn'),
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: Color(0xFF7C3AED),
@@ -1104,28 +1150,30 @@ class _ProfileTabState extends State<ProfileTab> {
 
           _buildDetailRow(
             icon: Icons.person_outline_rounded,
-            label: 'Full Name',
+            label: lang.tr('full_name_label'),
             value: name,
           ),
           const SizedBox(height: 12),
 
           _buildDetailRow(
             icon: Icons.cake_outlined,
-            label: 'Age & DOB',
-            value: '$age years (Born 1998)',
+            label: lang.tr('age_dob_label'),
+            value: '$age (1998)',
           ),
           const SizedBox(height: 12),
 
           _buildDetailRow(
             icon: gender == 'Female' ? Icons.female_rounded : Icons.male_rounded,
-            label: 'Gender',
-            value: gender,
+            label: lang.tr('gender_label'),
+            value: gender == 'Female'
+                ? lang.tr('gender_female')
+                : (gender == 'Male' ? lang.tr('gender_male') : lang.tr('gender_other')),
           ),
           const SizedBox(height: 12),
 
           _buildDetailRow(
             icon: Icons.phone_outlined,
-            label: 'Mobile Phone',
+            label: lang.tr('mobile_phone_label'),
             value: '+91 $phone',
           ),
           const SizedBox(height: 12),
@@ -1146,17 +1194,25 @@ class _ProfileTabState extends State<ProfileTab> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.home_work_outlined, size: 18, color: Color(0xFF64748B)),
-                      SizedBox(width: 10),
-                      Text(
-                        'Area / Residence',
-                        style: TextStyle(color: Color(0xFF64748B), fontSize: 13.5, fontWeight: FontWeight.w500),
-                      ),
-                    ],
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.home_work_outlined, size: 18, color: Color(0xFF64748B)),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            lang.tr('area_residence_label'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Color(0xFF64748B), fontSize: 13.5, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
@@ -1166,7 +1222,7 @@ class _ProfileTabState extends State<ProfileTab> {
                           border: Border.all(color: const Color(0xFFDDD6FE)),
                         ),
                         child: Text(
-                          residence,
+                          residence == 'Rural' ? lang.tr('area_rural') : lang.tr('area_urban'),
                           style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 13,
@@ -1193,22 +1249,30 @@ class _ProfileTabState extends State<ProfileTab> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.location_on_outlined, size: 18, color: Color(0xFF64748B)),
-                      SizedBox(width: 10),
-                      Text(
-                        'City / Location',
-                        style: TextStyle(color: Color(0xFF64748B), fontSize: 13.5, fontWeight: FontWeight.w500),
-                      ),
-                    ],
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.location_on_outlined, size: 18, color: Color(0xFF64748B)),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            lang.tr('city_location_label'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Color(0xFF64748B), fontSize: 13.5, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 160),
-                        child: Text(
-                          profileProvider.currentLocation,
+                        child: DynamicTranslatedText(
+                          text: profileProvider.currentLocation,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -1239,22 +1303,29 @@ class _ProfileTabState extends State<ProfileTab> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Icon(icon, size: 18, color: const Color(0xFF64748B)),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF64748B),
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
+        Expanded(
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: const Color(0xFF64748B)),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        Text(
-          value,
+        const SizedBox(width: 8),
+        DynamicTranslatedText(
+          text: value,
           style: const TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 13.5,
@@ -1269,6 +1340,7 @@ class _ProfileTabState extends State<ProfileTab> {
   // 5. QUICK HEALTHCARE SHORTCUTS CARD
   // =========================================================================
   Widget _buildQuickShortcutsCard(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -1286,13 +1358,15 @@ class _ProfileTabState extends State<ProfileTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.folder_shared_rounded, color: Color(0xFF7C3AED), size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Healthcare Records & Sync',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+              const Icon(Icons.folder_shared_rounded, color: Color(0xFF7C3AED), size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  lang.tr('healthcare_records_title'),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                ),
               ),
             ],
           ),
@@ -1302,8 +1376,8 @@ class _ProfileTabState extends State<ProfileTab> {
           _buildShortcutTile(
             icon: Icons.qr_code_scanner_rounded,
             iconColor: const Color(0xFF7C3AED),
-            title: 'Offline Doctor Visit Passes',
-            subtitle: '5 last consultation QR records',
+            title: lang.tr('offline_passes_title'),
+            subtitle: lang.tr('offline_passes_sub'),
             onTap: () => _showOfflineVisitsQrModal(context),
           ),
           const SizedBox(height: 8),
@@ -1312,8 +1386,8 @@ class _ProfileTabState extends State<ProfileTab> {
           _buildShortcutTile(
             icon: Icons.family_restroom_rounded,
             iconColor: const Color(0xFF0284C7),
-            title: 'Manage Family Members',
-            subtitle: 'Sync health data via camera QR scan',
+            title: lang.tr('family_members_title'),
+            subtitle: lang.tr('family_members_sub'),
             onTap: () {
               Navigator.push(
                 context,
@@ -1387,6 +1461,7 @@ class _ProfileTabState extends State<ProfileTab> {
   // 6. PREFERENCES & SYSTEM CARD
   // =========================================================================
   Widget _buildPreferencesCard(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -1404,13 +1479,15 @@ class _ProfileTabState extends State<ProfileTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.tune_rounded, color: Color(0xFF7C3AED), size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Preferences & Language',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+              const Icon(Icons.tune_rounded, color: Color(0xFF7C3AED), size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  lang.tr('preferences_title'),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                ),
               ),
             ],
           ),
@@ -1420,29 +1497,36 @@ class _ProfileTabState extends State<ProfileTab> {
           InkWell(
             onTap: () => PatientActionSheets.showLanguageSelector(context),
             borderRadius: BorderRadius.circular(8),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 4),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.translate_rounded, size: 18, color: Color(0xFF64748B)),
-                      SizedBox(width: 10),
-                      Text(
-                        'App Language / भाषा',
-                        style: TextStyle(color: Color(0xFF0F172A), fontSize: 13.5, fontWeight: FontWeight.w600),
-                      ),
-                    ],
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.translate_rounded, size: 18, color: Color(0xFF64748B)),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            lang.tr('app_language'),
+                            style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13.5, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'English (हिन्दी)',
-                        style: TextStyle(fontSize: 13, color: Color(0xFF7C3AED), fontWeight: FontWeight.bold),
+                        lang.currentLanguage.nativeName,
+                        style: const TextStyle(fontSize: 13, color: Color(0xFF7C3AED), fontWeight: FontWeight.bold),
                       ),
-                      SizedBox(width: 4),
-                      Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF7C3AED)),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF7C3AED)),
                     ],
                   ),
                 ],
@@ -1455,19 +1539,25 @@ class _ProfileTabState extends State<ProfileTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.notifications_active_outlined, size: 18, color: Color(0xFF64748B)),
-                  SizedBox(width: 10),
-                  Text(
-                    'Medication Timers & Alerts',
-                    style: TextStyle(color: Color(0xFF0F172A), fontSize: 13.5, fontWeight: FontWeight.w600),
-                  ),
-                ],
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(Icons.notifications_active_outlined, size: 18, color: Color(0xFF64748B)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        lang.tr('med_timers_alerts'),
+                        style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13.5, fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Switch.adaptive(
                 value: _remindersEnabled,
-                activeColor: const Color(0xFF7C3AED),
+                activeTrackColor: const Color(0xFF7C3AED),
                 onChanged: (val) {
                   HapticFeedback.selectionClick();
                   setState(() => _remindersEnabled = val);
@@ -1494,18 +1584,23 @@ class _ProfileTabState extends State<ProfileTab> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFFECDD3), width: 1.4),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.logout_rounded, color: Color(0xFFDC2626), size: 19),
-            SizedBox(width: 8),
-            Text(
-              'Log Out of Account',
-              style: TextStyle(
-                color: Color(0xFFDC2626),
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.3,
+            const Icon(Icons.logout_rounded, color: Color(0xFFDC2626), size: 19),
+            const SizedBox(width: 8),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  Provider.of<LanguageProvider>(context, listen: false).tr('logout_btn'),
+                  style: const TextStyle(
+                    color: Color(0xFFDC2626),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.3,
+                  ),
+                ),
               ),
             ),
           ],

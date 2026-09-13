@@ -37,17 +37,6 @@ android {
         }
     }
 
-    packaging {
-        jniLibs {
-            keepDebugSymbols += setOf(
-                "**/libjingle_peerconnection_so.so",
-                "**/libonnxruntime.so",
-                "**/libonnxruntime4j_jni.so",
-                "**/libflutter.so",
-                "**/*.so"
-            )
-        }
-    }
 }
 
 kotlin {

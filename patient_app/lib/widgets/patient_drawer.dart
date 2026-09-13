@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/health_profile.dart';
 import '../providers/appointment_provider.dart';
 import '../providers/health_profile_provider.dart';
+import '../providers/language_provider.dart';
 import '../screens/family/family_data_screen.dart';
 import '../screens/medical_history_screen.dart';
 import '../screens/prescriptions_screen.dart';
@@ -11,31 +12,34 @@ import '../screens/signup_screen.dart';
 import '../screens/tabs/appointments_tab.dart';
 import '../theme/app_colors.dart';
 import 'location_selection_sheet.dart';
+import 'patient_action_sheets.dart';
+import 'dynamic_translated_text.dart';
 
 /// Executive Patient Drawer redesign matching the Doctor App sidebar aesthetic.
 class PatientDrawer extends StatelessWidget {
   const PatientDrawer({super.key});
 
   Future<void> _handleLogout(BuildContext context) async {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.logout, color: AppColors.danger),
-            SizedBox(width: 8),
-            Text('Logout?'),
+            const Icon(Icons.logout, color: AppColors.danger),
+            const SizedBox(width: 8),
+            Text(lang.tr('logout_confirm_title')),
           ],
         ),
-        content: const Text(
-          'Are you sure you want to log out of your Ashwini patient account?',
-          style: TextStyle(fontSize: 14),
+        content: Text(
+          lang.tr('logout_confirm_sub'),
+          style: const TextStyle(fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(lang.tr('cancel_btn')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -43,7 +47,7 @@ class PatientDrawer extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Logout'),
+            child: Text(lang.tr('logout_btn')),
           ),
         ],
       ),
@@ -173,8 +177,8 @@ class PatientDrawer extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  Text(
-                    profile?.name ?? 'Patient',
+                  DynamicTranslatedText(
+                    text: profile?.name ?? 'Patient',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
@@ -760,6 +764,8 @@ class PatientDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<HealthProfileProvider>(context);
+    final langProvider = Provider.of<LanguageProvider>(context);
+    final currentLang = langProvider.currentLanguage;
     final profile = profileProvider.profile;
 
     return Drawer(
@@ -805,18 +811,18 @@ class PatientDrawer extends StatelessWidget {
                               ),
                             ],
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.qr_code_2_rounded,
                                 color: Color(0xFF7C3AED),
                                 size: 22,
                               ),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               Text(
-                                'View QR',
-                                style: TextStyle(
+                                langProvider.tr('drawer_view_qr'),
+                                style: const TextStyle(
                                   color: Color(0xFF7C3AED),
                                   fontSize: 14.5,
                                   fontWeight: FontWeight.w800,
@@ -842,8 +848,8 @@ class PatientDrawer extends StatelessWidget {
                 const SizedBox(height: 14),
 
                 // Patient Name
-                Text(
-                  profile?.name ?? 'Patient',
+                DynamicTranslatedText(
+                  text: profile?.name ?? 'Patient',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -912,8 +918,8 @@ class PatientDrawer extends StatelessWidget {
                         const Icon(Icons.location_on, color: Colors.white, size: 18),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
-                            profile?.location ?? 'New Delhi, Delhi',
+                          child: DynamicTranslatedText(
+                            text: profile?.location ?? 'New Delhi, Delhi',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -929,9 +935,9 @@ class PatientDrawer extends StatelessWidget {
                             color: Colors.yellowAccent.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text(
-                            'Change ▾',
-                            style: TextStyle(
+                          child: Text(
+                            langProvider.tr('drawer_change_city'),
+                            style: const TextStyle(
                               color: Colors.yellowAccent,
                               fontSize: 11.5,
                               fontWeight: FontWeight.w900,
@@ -946,10 +952,41 @@ class PatientDrawer extends StatelessWidget {
             ),
           ),
 
-          // 2. Drawer Navigation Items connected to real screens
+          // 2. Language Switch Tile
+          ListTile(
+            leading: const Icon(Icons.translate_rounded, color: Color(0xFF7C3AED)),
+            title: Text(langProvider.tr('app_language'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+            subtitle: Text('${currentLang.nativeName} (${currentLang.name})', style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F3FF),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFFDDD6FE)),
+              ),
+              child: Text(
+                currentLang.badge,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED)),
+              ),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              PatientActionSheets.showLanguageSelector(context);
+            },
+          ),
+
+          const Divider(
+            height: 1,
+            thickness: 1,
+            color: Color(0xFFE2E8F0),
+            indent: 16,
+            endIndent: 16,
+          ),
+
+          // 3. Drawer Navigation Items connected to real screens
           ListTile(
             leading: const Icon(Icons.event_note_rounded, color: Color(0xFF7C3AED)),
-            title: const Text('MY APPOINTMENTS', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+            title: Text(langProvider.tr('my_appointments'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
             subtitle: const Text('View and manage upcoming & past consultations', style: TextStyle(fontSize: 11, color: AppColors.muted)),
             onTap: () {
               Navigator.pop(context);
@@ -959,7 +996,7 @@ class PatientDrawer extends StatelessWidget {
 
           ListTile(
             leading: const Icon(Icons.history_edu_rounded, color: Color(0xFF7C3AED)),
-            title: const Text('MEDICAL HISTORY', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+            title: Text(langProvider.tr('medical_history'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
             subtitle: const Text('Hospital electronic health records & lab tests', style: TextStyle(fontSize: 11, color: AppColors.muted)),
             onTap: () {
               Navigator.pop(context);
@@ -969,18 +1006,17 @@ class PatientDrawer extends StatelessWidget {
 
           ListTile(
             leading: const Icon(Icons.receipt_long_rounded, color: Color(0xFF7C3AED)),
-            title: const Text('MY PRESCRIPTIONS', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+            title: Text(langProvider.tr('prescriptions'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
             subtitle: const Text('Active and past doctor prescribed medications', style: TextStyle(fontSize: 11, color: AppColors.muted)),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(context, MaterialPageRoute(builder: (_) => const PrescriptionsScreen()));
             },
           ),
-
           ListTile(
             leading: const Icon(Icons.family_restroom, color: AppColors.primary),
-            title: const Text('FAMILY DATA', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
-            subtitle: const Text('Sync and link family medical profiles', style: TextStyle(fontSize: 11, color: AppColors.muted)),
+            title: Text(langProvider.tr('drawer_family_data'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+            subtitle: Text(langProvider.tr('drawer_family_sub'), style: const TextStyle(fontSize: 11, color: AppColors.muted)),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(context, MaterialPageRoute(builder: (_) => const FamilyDataScreen()));
@@ -997,9 +1033,9 @@ class PatientDrawer extends StatelessWidget {
 
           ListTile(
             leading: const Icon(Icons.logout, color: AppColors.danger),
-            title: const Text(
-              'Logout',
-              style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13.5),
+            title: Text(
+              langProvider.tr('drawer_logout'),
+              style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13.5),
             ),
             onTap: () => _handleLogout(context),
           ),

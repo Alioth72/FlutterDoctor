@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/health_profile_provider.dart';
+import '../../providers/language_provider.dart';
 import '../appointments/book_appointment_screen.dart';
 import '../appointments/appointment_receipt_screen.dart';
 import '../appointments/video_consultation_screen.dart';
@@ -15,6 +16,8 @@ import 'appointments_tab.dart';
 import '../../widgets/patient_action_sheets.dart';
 import '../rppg_screen.dart';
 import '../request_asha_visit_screen.dart';
+import '../../widgets/dynamic_translated_text.dart';
+import '../../services/localization/healthcare_catalog.dart';
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
@@ -436,6 +439,8 @@ class HomeTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<HealthProfileProvider>(context);
     final appointmentProvider = Provider.of<AppointmentProvider>(context);
+    final langProvider = Provider.of<LanguageProvider>(context);
+    final currentLang = langProvider.currentLanguage;
     final patientName = profileProvider.profile?.name ?? 'Ashwini Patient';
     final nextAppt = appointmentProvider.nextUpcomingAppointment;
 
@@ -455,32 +460,35 @@ class HomeTab extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'WELCOME BACK',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.1,
-                      color: Color(0xFF8B5CF6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      langProvider.tr('welcome_back'),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.1,
+                        color: Color(0xFF8B5CF6), // Soft lavender purple
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    patientName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                      color: Color(0xFF0F172A),
+                    const SizedBox(height: 3),
+                    DynamicTranslatedText(
+                      text: patientName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                        color: Color(0xFF0F172A),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -553,23 +561,27 @@ class HomeTab extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'APP LANGUAGE • भाषा',
-                          style: TextStyle(
+                          langProvider.tr('app_language'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
                             color: Color(0xFF6D28D9),
                             letterSpacing: 0.8,
                           ),
                         ),
-                        SizedBox(height: 1),
+                        const SizedBox(height: 1),
                         Text(
-                          'English / हिन्दी (Change Language)',
-                          style: TextStyle(
+                          '${currentLang.nativeName} (${currentLang.name}) • ${langProvider.tr('change_language')}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF1E1B4B),
@@ -585,19 +597,19 @@ class HomeTab extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: const Color(0xFFDDD6FE), width: 1),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'EN / HI',
-                          style: TextStyle(
+                          currentLang.badge,
+                          style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
                             color: Color(0xFF7C3AED),
                           ),
                         ),
-                        SizedBox(width: 3),
-                        Icon(
+                        const SizedBox(width: 3),
+                        const Icon(
                           Icons.arrow_forward_ios_rounded,
                           size: 10,
                           color: Color(0xFF7C3AED),
@@ -658,8 +670,9 @@ class HomeTab extends StatelessWidget {
                   Expanded(
                     child: _buildMainServiceCard(
                       context,
-                      category: 'CONSULTATION',
-                      title: 'Book\nConsultation',
+                      cardKey: const ValueKey('card_book_appointment'),
+                      category: langProvider.tr('consultation_sub'),
+                      title: langProvider.tr('book_appointment'),
                       icon: Icons.calendar_month_outlined,
                       onTap: () {
                         Navigator.of(context).push(
@@ -674,8 +687,9 @@ class HomeTab extends StatelessWidget {
                   Expanded(
                     child: _buildMainServiceCard(
                       context,
-                      category: 'SCHEDULE',
-                      title: 'My\nAppointments',
+                      cardKey: const ValueKey('card_my_appointments'),
+                      category: langProvider.tr('schedule_sub'),
+                      title: langProvider.tr('my_appointments'),
                       icon: Icons.event_note_rounded,
                       onTap: () {
                         Navigator.of(context).push(
@@ -734,8 +748,9 @@ class HomeTab extends StatelessWidget {
                   Expanded(
                     child: _buildMainServiceCard(
                       context,
-                      category: 'SYMPTOM CHECKER',
-                      title: 'AI\nAssistant',
+                      cardKey: const ValueKey('card_ai_assistant'),
+                      category: langProvider.tr('instant_ai_sub'),
+                      title: langProvider.tr('ai_assistant'),
                       icon: Icons.auto_awesome_rounded,
                       onTap: () => PatientActionSheets.showAiAssistant(context),
                     ),
@@ -744,6 +759,9 @@ class HomeTab extends StatelessWidget {
                   Expanded(
                     child: _buildEmergencyCard(
                       context,
+                      cardKey: const ValueKey('card_emergency'),
+                      category: langProvider.tr('immediate_sub'),
+                      title: langProvider.tr('emergency'),
                       onTap: () => PatientActionSheets.showEmergency(context),
                     ),
                   ),
@@ -856,10 +874,10 @@ class HomeTab extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 14),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Patient Vitals',
-                        style: TextStyle(
+                        langProvider.tr('patient_vitals'),
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -929,32 +947,36 @@ class HomeTab extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 14),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'LIVE VITALS',
-                          style: TextStyle(
+                          langProvider.tr('live_vitals'),
+                          style: const TextStyle(
                             color: Color(0xFF7C3AED),
                             fontSize: 10.5,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.8,
                           ),
                         ),
-                        SizedBox(height: 3),
+                        const SizedBox(height: 3),
                         Text(
-                          'Measure Live Heart Rate',
-                          style: TextStyle(
+                          langProvider.tr('measure_heart_rate'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
                             color: Color(0xFF0F172A),
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          'Instant pulse scan via on-device AI camera',
-                          style: TextStyle(
+                          langProvider.tr('pulse_scan_sub'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
                             color: Color(0xFF64748B),
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -1197,17 +1219,19 @@ class HomeTab extends StatelessWidget {
   /// White Service Card with watermark & purple accents
   Widget _buildMainServiceCard(
     BuildContext context, {
+    Key? cardKey,
     required String category,
     required String title,
     required IconData icon,
     required VoidCallback onTap,
   }) {
     return InkWell(
+      key: cardKey,
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
       child: Container(
         height: 155,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(15),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
@@ -1253,23 +1277,39 @@ class HomeTab extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                Text(
-                  category,
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.6,
-                    color: Color(0xFF7C3AED),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    category,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.6,
+                      color: Color(0xFF7C3AED),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    height: 1.2,
-                    color: Color(0xFF0F172A),
+                SizedBox(
+                  height: 42,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        title,
+                        maxLines: 2,
+                        style: const TextStyle(
+                          fontSize: 16.5,
+                          fontWeight: FontWeight.w900,
+                          height: 1.2,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -1283,14 +1323,18 @@ class HomeTab extends StatelessWidget {
   /// Emergency Card with soft coral gradient
   Widget _buildEmergencyCard(
     BuildContext context, {
+    Key? cardKey,
+    required String category,
+    required String title,
     required VoidCallback onTap,
   }) {
     return InkWell(
+      key: cardKey,
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
       child: Container(
         height: 155,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(15),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
@@ -1345,23 +1389,39 @@ class HomeTab extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                const Text(
-                  '24/7 HOTLINE',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.6,
-                    color: Color(0xFFDC2626),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    category,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.6,
+                      color: Color(0xFFDC2626),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 3),
-                const Text(
-                  'EMERGENCY',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    height: 1.2,
-                    color: Color(0xFF991B1B),
+                SizedBox(
+                  height: 42,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        title,
+                        maxLines: 2,
+                        style: const TextStyle(
+                          fontSize: 16.5,
+                          fontWeight: FontWeight.w900,
+                          height: 1.2,
+                          color: Color(0xFF991B1B),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -1532,6 +1592,23 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
     );
   }
 
+  String _translateMealTiming(String meal, LanguageProvider langProvider) {
+    switch (meal) {
+      case 'After Lunch':
+        return langProvider.tr('after_lunch');
+      case 'Evening Snack':
+        return langProvider.tr('evening_snack');
+      case 'After Dinner':
+        return langProvider.tr('after_dinner');
+      case 'Before Bedtime':
+        return langProvider.tr('before_bedtime');
+      case 'Before Breakfast':
+        return langProvider.tr('before_breakfast');
+      default:
+        return meal;
+    }
+  }
+
   void _showDoseDetails() {
     showModalBottomSheet(
       context: context,
@@ -1539,6 +1616,7 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (modalCtx, setModalState) {
+          final langProvider = Provider.of<LanguageProvider>(context);
           final currentDose = _allCompleted
               ? _prescribedDoses.last
               : _prescribedDoses[_currentDoseIndex];
@@ -1625,21 +1703,28 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                             ],
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            _allCompleted
-                                ? 'All Prescribed Doses Completed!'
-                                : currentDose.medicineName,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF0F172A),
-                            ),
-                          ),
+                          _allCompleted
+                              ? Text(
+                                  langProvider.tr('all_meds_taken'),
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                )
+                              : DynamicTranslatedText(
+                                  text: currentDose.medicineName,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
                           const SizedBox(height: 2),
                           Text(
                             _allCompleted
-                                ? 'Next dose tomorrow at 8:00 AM'
-                                : '${currentDose.dosage} • ${currentDose.mealTiming} (${currentDose.timing})',
+                                ? langProvider.tr('next_dose_tomorrow')
+                                : '${HealthcareCatalog.lookup(currentDose.dosage, langProvider.currentLanguageCode) ?? currentDose.dosage} • ${_translateMealTiming(currentDose.mealTiming, langProvider)} (${currentDose.timing})',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey.shade600,
@@ -1656,9 +1741,9 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                 const SizedBox(height: 10),
 
                 // Today's Doctor Prescribed Schedule List
-                const Text(
-                  'TODAY\'S PRESCRIBED DOSES (DOCTOR QUEUE)',
-                  style: TextStyle(
+                Text(
+                  langProvider.tr('doctor_queue'),
+                  style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.8,
@@ -1672,7 +1757,7 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                     shrinkWrap: true,
                     physics: const BouncingScrollPhysics(),
                     itemCount: _prescribedDoses.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (context, index) => const SizedBox(height: 8),
                     itemBuilder: (context, i) {
                       final dose = _prescribedDoses[i];
                       final isTaken = _allCompleted || i < _currentDoseIndex;
@@ -1719,8 +1804,8 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                                 children: [
                                   Row(
                                     children: [
-                                      Text(
-                                        dose.medicineName,
+                                      DynamicTranslatedText(
+                                        text: dose.medicineName,
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.bold,
@@ -1737,7 +1822,7 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '${dose.dosage} • ${dose.doctorName}',
+                                    '${HealthcareCatalog.lookup(dose.dosage, langProvider.currentLanguageCode) ?? dose.dosage} • ${HealthcareCatalog.lookup(dose.doctorName, langProvider.currentLanguageCode) ?? dose.doctorName}',
                                     style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                                   ),
                                 ],
@@ -1753,8 +1838,8 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                               ),
                               child: Text(
                                 isTaken
-                                    ? 'TAKEN ✓'
-                                    : (isCurrent ? 'DUE NEXT' : 'UPCOMING'),
+                                    ? langProvider.tr('dose_taken_badge')
+                                    : (isCurrent ? langProvider.tr('due_next_badge') : langProvider.tr('upcoming_badge')),
                                 style: TextStyle(
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w800,
@@ -1780,15 +1865,15 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                         onPressed: () {
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Reminder snoozed for 15 minutes.'),
+                            SnackBar(
+                              content: Text(langProvider.tr('reminder_snoozed')),
                               behavior: SnackBarBehavior.floating,
-                              backgroundColor: Color(0xFF475569),
+                              backgroundColor: const Color(0xFF475569),
                             ),
                           );
                         },
                         icon: const Icon(Icons.snooze_rounded, size: 16),
-                        label: const Text('Snooze 15m'),
+                        label: Text(langProvider.tr('snooze_15m')),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           side: const BorderSide(color: Color(0xFFCBD5E1)),
@@ -1812,7 +1897,7 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                           _allCompleted ? Icons.restart_alt_rounded : Icons.check_circle_outline_rounded,
                           size: 16,
                         ),
-                        label: Text(_allCompleted ? 'Reset Schedule' : 'Mark as taken'),
+                        label: Text(_allCompleted ? langProvider.tr('reset_schedule') : langProvider.tr('mark_as_taken')),
                         style: FilledButton.styleFrom(
                           backgroundColor: _allCompleted ? const Color(0xFF475569) : const Color(0xFF7C3AED),
                           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1832,6 +1917,8 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
 
   @override
   Widget build(BuildContext context) {
+    final langProvider = Provider.of<LanguageProvider>(context);
+
     if (_allCompleted) {
       // Completed State for today
       return InkWell(
@@ -1879,32 +1966,32 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                 child: const Icon(Icons.verified_rounded, size: 24, color: Colors.white),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'ALL DOSES COMPLETED TODAY ✓',
-                      style: TextStyle(
+                      langProvider.tr('dose_taken_badge'),
+                      style: const TextStyle(
                         fontSize: 9.5,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.6,
                         color: Color(0xFF16A34A),
                       ),
                     ),
-                    SizedBox(height: 3),
+                    const SizedBox(height: 3),
                     Text(
-                      'All Today\'s Medicines Taken!',
-                      style: TextStyle(
+                      langProvider.tr('all_meds_taken'),
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF0F172A),
                       ),
                     ),
-                    SizedBox(height: 1),
+                    const SizedBox(height: 1),
                     Text(
-                      'Next prescription dose starts tomorrow at 8:00 AM',
-                      style: TextStyle(
+                      langProvider.tr('next_dose_tomorrow'),
+                      style: const TextStyle(
                         fontSize: 11,
                         color: Color(0xFF16A34A),
                         fontWeight: FontWeight.w600,
@@ -1926,14 +2013,14 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: const Color(0xFF86EFAC)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.restart_alt_rounded, size: 14, color: Color(0xFF15803D)),
-                        SizedBox(width: 4),
+                        const Icon(Icons.restart_alt_rounded, size: 14, color: Color(0xFF15803D)),
+                        const SizedBox(width: 4),
                         Text(
-                          'Reset',
-                          style: TextStyle(
+                          langProvider.tr('reset_btn'),
+                          style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF15803D),
@@ -2015,34 +2102,40 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEDE9FE),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 5,
-                              height: 5,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF7C3AED),
-                                shape: BoxShape.circle,
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEDE9FE),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 5,
+                                height: 5,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF7C3AED),
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 3.5),
-                            const Text(
-                              'REMINDER',
-                              style: TextStyle(
-                                fontSize: 8.5,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.5,
-                                color: Color(0xFF6D28D9),
+                              const SizedBox(width: 3.5),
+                              Flexible(
+                                child: Text(
+                                  langProvider.tr('reminder'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.5,
+                                    color: Color(0xFF6D28D9),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(width: 5),
@@ -2068,7 +2161,10 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                               const SizedBox(width: 3),
                               Flexible(
                                 child: Text(
-                                  currentDose.timerBadge,
+                                  HealthcareCatalog.lookup(currentDose.timerBadge, langProvider.currentLanguageCode) ??
+                                      (currentDose.timerBadge == 'Due in 15 mins'
+                                          ? langProvider.tr('due_in_15')
+                                          : currentDose.timerBadge),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -2085,8 +2181,8 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                     ],
                   ),
                   const SizedBox(height: 3),
-                  Text(
-                    currentDose.medicineName,
+                  DynamicTranslatedText(
+                    text: currentDose.medicineName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -2098,7 +2194,7 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                   ),
                   const SizedBox(height: 1.5),
                   Text(
-                    '${currentDose.timing} • ${currentDose.mealTiming} • ${currentDose.doctorName.split(' ')[0]} ${currentDose.doctorName.split(' ')[1]}',
+                    '${currentDose.timing} • ${_translateMealTiming(currentDose.mealTiming, langProvider)} • ${HealthcareCatalog.lookup(currentDose.doctorName, langProvider.currentLanguageCode) ?? currentDose.doctorName}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -2116,10 +2212,12 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
             Material(
               color: Colors.transparent,
               child: InkWell(
+                key: const ValueKey('btn_mark_taken'),
                 onTap: _markCurrentDoseAsTaken,
                 borderRadius: BorderRadius.circular(18),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
+                  constraints: const BoxConstraints(maxWidth: 110),
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7.5),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -2151,13 +2249,18 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                         color: Colors.white,
                       ),
                       const SizedBox(width: 3.5),
-                      Text(
-                        _isTransitioning ? 'Done!' : 'Mark as taken',
-                        style: const TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.1,
-                          color: Colors.white,
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            _isTransitioning ? 'Done!' : langProvider.tr('mark_as_taken'),
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.1,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                     ],

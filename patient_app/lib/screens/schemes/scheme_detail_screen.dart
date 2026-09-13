@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/government_scheme.dart';
 import '../../providers/schemes_provider.dart';
+import '../../providers/language_provider.dart';
+import '../../widgets/dynamic_translated_text.dart';
 
 class SchemeDetailScreen extends StatefulWidget {
   final String schemeId;
@@ -66,9 +68,11 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
     final scheme = _detail;
     final eval = scheme?.evaluation ?? widget.basicScheme?.evaluation;
 
+    final langProvider = Provider.of<LanguageProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Government Benefits'),
+        title: Text(langProvider.tr('govt_benefits_title')),
         elevation: 0,
       ),
       bottomNavigationBar: Container(
@@ -95,27 +99,27 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
               showDialog(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  title: const Text('Official Scheme Portal'),
-                  content: Text('Official Application Link:\n$url\n\nYou will be redirected to the Government of India portal.'),
+                  title: Text(langProvider.tr('official_portal_title')),
+                  content: Text('${langProvider.tr('official_portal_title')}:\n$url\n\n${langProvider.tr('eligibility_engine_note')}.'),
                   actions: [
-                    TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Close')),
+                    TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(langProvider.tr('close_btn'))),
                     FilledButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Opening official portal: $url')),
+                          SnackBar(content: Text('${langProvider.tr('open_portal_btn')}: $url')),
                         );
                       },
-                      child: const Text('Open Portal'),
+                      child: Text(langProvider.tr('open_portal_btn')),
                     ),
                   ],
                 ),
               );
             },
             icon: const Icon(Icons.open_in_new_rounded, size: 20),
-            label: const Text(
-              'Apply / Official Website →',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            label: Text(
+              langProvider.tr('apply_website_btn'),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
         ),
@@ -149,16 +153,16 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              scheme?.schemeName ?? widget.basicScheme?.schemeName ?? 'Government Health Scheme',
+                            DynamicTranslatedText(
+                              text: scheme?.schemeName ?? widget.basicScheme?.schemeName ?? 'Government Health Scheme',
                               style: theme.textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.w900,
                                 height: 1.2,
                               ),
                             ),
                             const SizedBox(height: 6),
-                            Text(
-                              '${scheme?.level ?? "National"} • ${scheme?.schemeCategory ?? "Health & Family Welfare"}',
+                            DynamicTranslatedText(
+                              text: '${scheme?.level ?? "National"} • ${scheme?.schemeCategory ?? "Health & Family Welfare"}',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -173,30 +177,30 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                   const SizedBox(height: 16),
 
                   // Eligibility Status Banner
-                  if (eval != null) _buildStatusBanner(eval),
+                  if (eval != null) _buildStatusBanner(context, eval),
                   const SizedBox(height: 22),
 
                   // 1. DETAILS Section
-                  _buildSectionHeader(context, title: 'ABOUT', icon: Icons.info_outline_rounded),
+                  _buildSectionHeader(context, title: langProvider.tr('scheme_details_title'), icon: Icons.info_outline_rounded),
                   const SizedBox(height: 10),
-                  Text(
-                    scheme?.details ?? 'Detailed information regarding the scheme and clinical subsidies.',
+                  DynamicTranslatedText(
+                    text: scheme?.details ?? 'Detailed information regarding the scheme and clinical subsidies.',
                     style: const TextStyle(fontSize: 14, height: 1.45, color: Colors.black87),
                   ),
                   const SizedBox(height: 22),
 
                   // 2. BENEFITS Section
-                  _buildSectionHeader(context, title: 'BENEFITS', icon: Icons.verified_rounded),
+                  _buildSectionHeader(context, title: langProvider.tr('benefits_title'), icon: Icons.verified_rounded),
                   const SizedBox(height: 10),
                   if (scheme != null && scheme.benefitsList.isNotEmpty)
                     ...scheme.benefitsList.map((b) => _buildBulletItem(b, icon: Icons.check_circle_outline, color: theme.colorScheme.primary))
                   else
-                    Text(scheme?.benefits ?? 'Comprehensive healthcare coverage.'),
+                    DynamicTranslatedText(text: scheme?.benefits ?? 'Comprehensive healthcare coverage.'),
                   const SizedBox(height: 22),
 
                   // 3. WHY YOU MAY BE ELIGIBLE
                   if (eval != null) ...[
-                    _buildSectionHeader(context, title: 'WHY YOU MAY BE ELIGIBLE', icon: Icons.rule_rounded),
+                    _buildSectionHeader(context, title: langProvider.tr('why_eligible_title'), icon: Icons.rule_rounded),
                     const SizedBox(height: 10),
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -218,12 +222,12 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                           if (eval.matchedRules.isNotEmpty)
                             ...eval.matchedRules.map((m) => _buildCheckItem(m, isPass: true)),
                           if (eval.missingInformation.isNotEmpty)
-                            ...eval.missingInformation.map((m) => _buildCheckItem('Verification required: $m', isPass: false, isWarning: true)),
+                            ...eval.missingInformation.map((m) => _buildCheckItem(m, isPass: false, isWarning: true)),
                           if (eval.failedRules.isNotEmpty)
                             ...eval.failedRules.map((f) => _buildCheckItem(f, isPass: false)),
                           const SizedBox(height: 8),
-                          Text(
-                            'Summary: ${eval.reason}',
+                          DynamicTranslatedText(
+                            text: eval.reason,
                             style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.black87),
                           ),
                         ],
@@ -233,23 +237,23 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                   ],
 
                   // 4. DOCUMENTS REQUIRED
-                  _buildSectionHeader(context, title: 'DOCUMENTS REQUIRED', icon: Icons.description_outlined),
+                  _buildSectionHeader(context, title: langProvider.tr('documents_required'), icon: Icons.description_outlined),
                   const SizedBox(height: 10),
                   if (scheme != null && scheme.documentsList.isNotEmpty)
                     ...scheme.documentsList.map((d) => _buildBulletItem(d, icon: Icons.article_outlined, color: Colors.indigo))
                   else
-                    Text(scheme?.documents ?? 'Aadhaar Card, Income Proof, Residence Certificate.'),
+                    DynamicTranslatedText(text: scheme?.documents ?? 'Aadhaar Card, Income Proof, Residence Certificate.'),
                   const SizedBox(height: 22),
 
                   // 5. HOW TO APPLY
-                  _buildSectionHeader(context, title: 'HOW TO APPLY', icon: Icons.how_to_reg_rounded),
+                  _buildSectionHeader(context, title: langProvider.tr('how_to_apply'), icon: Icons.how_to_reg_rounded),
                   const SizedBox(height: 10),
                   if (scheme != null && scheme.applicationSteps.isNotEmpty)
                     ...scheme.applicationSteps.asMap().entries.map((entry) {
                       return _buildNumberedStep(context, entry.key + 1, entry.value);
                     })
                   else
-                    Text(scheme?.applicationProcess ?? 'Apply online or visit your local health centre.'),
+                    DynamicTranslatedText(text: scheme?.applicationProcess ?? 'Apply online or visit your local health centre.'),
                   const SizedBox(height: 24),
 
                   // 6. GROUNDED AI EXPLAINER CARD
@@ -261,7 +265,8 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
     );
   }
 
-  Widget _buildStatusBanner(RuleEvaluation eval) {
+  Widget _buildStatusBanner(BuildContext context, RuleEvaluation eval) {
+    final langProvider = Provider.of<LanguageProvider>(context, listen: false);
     Color bg;
     Color border;
     Color text;
@@ -299,8 +304,8 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  eval.statusLabel,
+                DynamicTranslatedText(
+                  text: eval.statusLabel,
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
@@ -308,7 +313,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                   ),
                 ),
                 Text(
-                  'Determined by deterministic government rules engine',
+                  langProvider.tr('eligibility_engine_note'),
                   style: TextStyle(fontSize: 11, color: text.withValues(alpha: 0.8)),
                 ),
               ],
@@ -352,8 +357,8 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
           Icon(icon, size: 18, color: color),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              text,
+            child: DynamicTranslatedText(
+              text: text,
               style: const TextStyle(fontSize: 13, height: 1.4, fontWeight: FontWeight.w600, color: Colors.black87),
             ),
           ),
@@ -377,8 +382,8 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              text,
+            child: DynamicTranslatedText(
+              text: text,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -393,6 +398,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
 
   Widget _buildNumberedStep(BuildContext context, int stepNum, String stepText) {
     final theme = Theme.of(context);
+    final langProvider = Provider.of<LanguageProvider>(context, listen: false);
     return Container(
       margin: const EdgeInsets.only(bottom: 10.0),
       padding: const EdgeInsets.all(12),
@@ -411,14 +417,14 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              'Step $stepNum',
+              '${langProvider.tr('step_label')} $stepNum',
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              stepText,
+            child: DynamicTranslatedText(
+              text: stepText,
               style: const TextStyle(fontSize: 13, height: 1.45, fontWeight: FontWeight.w500, color: Colors.black87),
             ),
           ),
@@ -428,6 +434,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
   }
 
   Widget _buildAiExplainerCard(BuildContext context) {
+    final langProvider = Provider.of<LanguageProvider>(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -438,26 +445,26 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              CircleAvatar(
+              const CircleAvatar(
                 radius: 16,
                 backgroundColor: Color(0xFF8E24AA),
                 child: Icon(Icons.auto_awesome_rounded, size: 18, color: Colors.white),
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'AI Scheme Explainer (Rural & Offline Guide)',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF6A1B9A)),
+                  langProvider.tr('ai_explainer_title'),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF6A1B9A)),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Get a simple-language explanation of this scheme, exhaustive document checklist, and step-by-step village-level application guide.',
-            style: TextStyle(fontSize: 12, color: Colors.black87),
+          Text(
+            langProvider.tr('ai_explainer_sub'),
+            style: const TextStyle(fontSize: 12, color: Colors.black87),
           ),
           const SizedBox(height: 12),
           if (_aiExplanation == null) ...[
@@ -466,7 +473,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
               icon: _isAiLoading
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.psychology_rounded),
-              label: Text(_isAiLoading ? 'Analyzing Scheme with Gemini AI...' : 'Explain in Simple Language (Rural Guide)'),
+              label: Text(_isAiLoading ? langProvider.tr('analyzing_scheme_msg') : langProvider.tr('explain_simple_btn')),
             ),
           ] else ...[
             Container(
@@ -479,20 +486,20 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    _aiExplanation!.explanation,
+                  DynamicTranslatedText(
+                    text: _aiExplanation!.explanation,
                     style: const TextStyle(fontSize: 13, height: 1.45, color: Colors.black87),
                   ),
                   if (_aiExplanation!.keyHighlights.isNotEmpty) ...[
                     const SizedBox(height: 14),
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.star_rounded, size: 16, color: Color(0xFF8E24AA)),
-                        SizedBox(width: 6),
+                        const Icon(Icons.star_rounded, size: 16, color: Color(0xFF8E24AA)),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            'Key Highlights & Benefits:',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF6A1B9A)),
+                            langProvider.tr('key_highlights_title'),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF6A1B9A)),
                           ),
                         ),
                       ],
@@ -505,7 +512,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8E24AA))),
-                            Expanded(child: Text(h, style: const TextStyle(fontSize: 12, height: 1.3))),
+                            Expanded(child: DynamicTranslatedText(text: h, style: const TextStyle(fontSize: 12, height: 1.3))),
                           ],
                         ),
                       ),
@@ -513,14 +520,14 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                   ],
                   if (_aiExplanation!.requiredDocuments.isNotEmpty) ...[
                     const SizedBox(height: 14),
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.folder_shared_rounded, size: 16, color: Color(0xFF1565C0)),
-                        SizedBox(width: 6),
+                        const Icon(Icons.folder_shared_rounded, size: 16, color: Color(0xFF1565C0)),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            'Complete Required Documents Checklist:',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1)),
+                            langProvider.tr('docs_checklist_title'),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1)),
                           ),
                         ),
                       ],
@@ -534,7 +541,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                           children: [
                             const Icon(Icons.check_circle_outline_rounded, size: 15, color: Color(0xFF1976D2)),
                             const SizedBox(width: 6),
-                            Expanded(child: Text(d, style: const TextStyle(fontSize: 12, height: 1.35, color: Colors.black87))),
+                            Expanded(child: DynamicTranslatedText(text: d, style: const TextStyle(fontSize: 12, height: 1.35, color: Colors.black87))),
                           ],
                         ),
                       ),
@@ -542,14 +549,14 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                   ],
                   if (_aiExplanation!.nextSteps.isNotEmpty) ...[
                     const SizedBox(height: 14),
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.directions_walk_rounded, size: 16, color: Color(0xFF2E7D32)),
-                        SizedBox(width: 6),
+                        const Icon(Icons.directions_walk_rounded, size: 16, color: Color(0xFF2E7D32)),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            'Village & Offline Step-by-Step Application Guide:',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1B5E20)),
+                            langProvider.tr('village_guide_title'),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1B5E20)),
                           ),
                         ),
                       ],
@@ -570,15 +577,15 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Expanded(child: Text(entry.value, style: const TextStyle(fontSize: 12, height: 1.35, color: Colors.black87))),
+                            Expanded(child: DynamicTranslatedText(text: entry.value, style: const TextStyle(fontSize: 12, height: 1.35, color: Colors.black87))),
                           ],
                         ),
                       ),
                     ),
                   ],
                   const SizedBox(height: 10),
-                  Text(
-                    'Source: ${_aiExplanation!.source}',
+                  DynamicTranslatedText(
+                    text: 'Source: ${_aiExplanation!.source}',
                     style: const TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: Colors.grey),
                   ),
                 ],

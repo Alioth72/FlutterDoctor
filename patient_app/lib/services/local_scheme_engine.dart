@@ -295,8 +295,8 @@ class LocalSchemeEngine {
       List<String> benefits = [];
       if (raw['benefits'] is String && (raw['benefits'] as String).isNotEmpty) {
         benefits = (raw['benefits'] as String)
-            .split(RegExp(r'[\n•;]'))
-            .map((b) => b.trim())
+            .split(RegExp(r'[\n•;]|\s+-\s+'))
+            .map((b) => b.replaceAll(RegExp(r'^[•\-\s]+'), '').trim())
             .where((b) => b.length > 5)
             .take(3)
             .toList();

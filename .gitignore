@@ -5,3 +5,7 @@
 **/packages/**/pubspec.lock
 *.env
 test_apks/
+.idea/
+packages/
+sih_project_doctor_app/
+sih_project_patient_app/

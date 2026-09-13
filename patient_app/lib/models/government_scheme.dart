@@ -64,8 +64,8 @@ class GovernmentScheme {
       rawBenefits = (json['benefits_summary'] as List).map((e) => e.toString()).toList();
     } else if (json['benefits'] is String && (json['benefits'] as String).isNotEmpty) {
       rawBenefits = (json['benefits'] as String)
-          .split(RegExp(r'[\n•;.]'))
-          .map((b) => b.trim())
+          .split(RegExp(r'[\n•;]|\s+-\s+'))
+          .map((b) => b.replaceAll(RegExp(r'^[•\-\s]+'), '').trim())
           .where((b) => b.length > 5)
           .take(3)
           .toList();
