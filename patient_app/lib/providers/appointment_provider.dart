@@ -216,4 +216,48 @@ class AppointmentProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// Returns all ASHA visit requests
+  List<Appointment> get ashaVisitRequests {
+    return _appointments.where((a) => a.isAshaVisit).toList();
+  }
+
+  /// Returns the latest active ASHA visit request
+  Appointment? get latestAshaRequest {
+    final list = ashaVisitRequests;
+    if (list.isEmpty) return null;
+    return list.first;
+  }
+
+  /// Request an ASHA Worker Home Visit via backend and update state
+  Future<Appointment> requestAshaVisit({
+    required String reason,
+    required String urgency,
+    String? address,
+    Map<String, dynamic>? symptomsData,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final appt = await PatientDatabaseService().requestAshaVisit(
+        reason: reason,
+        urgency: urgency,
+        address: address,
+        symptomsData: symptomsData,
+      );
+
+      _appointments.removeWhere((a) => a.id == appt.id);
+      _appointments.add(appt);
+      _appointments.sort(_sortAppointments);
+      await _persist();
+      _isLoading = false;
+      notifyListeners();
+      return appt;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
 }

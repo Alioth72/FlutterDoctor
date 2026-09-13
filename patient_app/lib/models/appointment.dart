@@ -12,8 +12,9 @@ class Appointment {
   final String reason;
   final int consultationFee;
   final String status; // Confirmed, Completed, Cancelled
-  final String appointmentType; // Online or Offline
+  final String appointmentType; // Online, Offline, or home_visit
   final DateTime bookedAt;
+  final Map<String, dynamic>? notes;
 
   const Appointment({
     required this.id,
@@ -31,11 +32,16 @@ class Appointment {
     this.status = 'Confirmed',
     this.appointmentType = 'Offline',
     required this.bookedAt,
+    this.notes,
   });
 
   bool get isOnline =>
       appointmentType.toLowerCase() == 'online' ||
       appointmentType.toLowerCase() == 'telehealth';
+
+  bool get isAshaVisit =>
+      appointmentType.toLowerCase() == 'home_visit' ||
+      (notes != null && notes!['request_type'] == 'asha_visit');
 
   Map<String, dynamic> toJson() {
     return {
@@ -54,6 +60,7 @@ class Appointment {
       'status': status,
       'appointmentType': appointmentType,
       'bookedAt': bookedAt.toIso8601String(),
+      'notes': notes,
     };
   }
 
@@ -76,6 +83,7 @@ class Appointment {
       bookedAt: json['bookedAt'] != null
           ? DateTime.tryParse(json['bookedAt'] as String) ?? DateTime.now()
           : DateTime.now(),
+      notes: json['notes'] is Map ? Map<String, dynamic>.from(json['notes'] as Map) : null,
     );
   }
 
@@ -133,7 +141,9 @@ class Appointment {
     }
 
     final rawType = (json['appointment_type'] as String? ?? 'clinic').toLowerCase();
-    final normalizedType = (rawType == 'telehealth' || rawType == 'online') ? 'telehealth' : 'clinic';
+    final normalizedType = (rawType == 'telehealth' || rawType == 'online')
+        ? 'telehealth'
+        : (rawType == 'home_visit' ? 'home_visit' : 'clinic');
 
     int parsedFee = 0;
     final rawFee = notes['consultation_fee'] ?? json['consultation_fee'];
@@ -154,9 +164,9 @@ class Appointment {
       id: json['appointment_id'] as String? ?? json['id'] as String? ?? '',
       tokenNumber: tokenNo,
       doctorId: json['provider_user_id'] as String? ?? json['doctorId'] as String? ?? '',
-      doctorName: json['doctor_name'] as String? ?? json['doctorName'] as String? ?? 'Dr. Rajesh V. Sharma',
-      doctorSpecialty: json['doctor_specialty'] as String? ?? json['doctorSpecialty'] as String? ?? notes['doctor_specialty']?.toString() ?? 'General Physician',
-      hospitalName: json['facility_name'] as String? ?? json['hospitalName'] as String? ?? 'Ashwini Central Hospital',
+      doctorName: json['doctor_name'] as String? ?? json['doctorName'] as String? ?? (normalizedType == 'home_visit' ? 'ASHA Health Worker' : 'Dr. Rajesh V. Sharma'),
+      doctorSpecialty: json['doctor_specialty'] as String? ?? json['doctorSpecialty'] as String? ?? notes['doctor_specialty']?.toString() ?? (normalizedType == 'home_visit' ? 'Community Health Care' : 'General Physician'),
+      hospitalName: json['facility_name'] as String? ?? json['hospitalName'] as String? ?? (normalizedType == 'home_visit' ? 'Village Health Post' : 'Ashwini Central Hospital'),
       patientName: json['patient_name'] as String? ?? json['patientName'] as String? ?? '',
       patientPhone: json['patient_phone'] as String? ?? json['patientPhone'] as String? ?? '',
       appointmentDate: finalDate,
@@ -168,6 +178,7 @@ class Appointment {
       bookedAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)?.toLocal() ?? DateTime.now()
           : DateTime.now(),
+      notes: notes is Map<String, dynamic> ? notes : Map<String, dynamic>.from(notes),
     );
   }
 

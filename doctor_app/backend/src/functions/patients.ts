@@ -399,6 +399,131 @@ export async function getPatientPrescriptions(request: HttpRequest, context: Inv
     }
 }
 
+// POST /api/patients/{patient_id}/records (Create Clinical / Assessment Record)
+export async function createPatientRecord(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    const authResult = authenticate(request);
+    if ("status" in authResult) {
+        return authResult;
+    }
+    const auth = authResult as TokenPayload;
+
+    // Strict Role Authorization: Healthcare workers, nurses, doctors, and admins
+    if (auth.role !== "nurse" && auth.role !== "worker" && auth.role !== "doctor" && auth.role !== "admin") {
+        return errorResponse(403, "Access denied. Only healthcare workers, nurses, doctors, and administrators can record clinical assessments.");
+    }
+
+    try {
+        const patientId = request.params.patient_id;
+
+        if (!isValidUuid(patientId)) {
+            return errorResponse(400, "Invalid patient_id format. Must be a valid UUID.");
+        }
+
+        // Verify patient exists
+        const patientCheck = await query("SELECT patient_id FROM health.patients WHERE patient_id = $1::uuid", [patientId]);
+        if (patientCheck.rows.length === 0) {
+            return errorResponse(404, `Patient with ID ${patientId} not found.`);
+        }
+
+        let body: any = {};
+        try {
+            body = await request.json();
+        } catch {
+            return errorResponse(400, "Invalid JSON payload in request body.");
+        }
+
+        const {
+            appointment_id,
+            record_type = "triage",
+            diagnosis,
+            symptoms = [],
+            clinical_data = {},
+            confidence,
+            is_preliminary = true,
+        } = body;
+
+        // Verify appointment_id if provided
+        let validAppointmentId: string | null = null;
+        if (appointment_id) {
+            if (!isValidUuid(appointment_id)) {
+                return errorResponse(400, "Field 'appointment_id' must be a valid UUID.");
+            }
+            const apptCheck = await query(
+                "SELECT appointment_id FROM health.appointments WHERE appointment_id = $1::uuid AND patient_id = $2::uuid",
+                [appointment_id, patientId]
+            );
+            if (apptCheck.rows.length === 0) {
+                return errorResponse(400, `Appointment '${appointment_id}' not found for patient '${patientId}'.`);
+            }
+            validAppointmentId = appointment_id;
+        }
+
+        // Validate record_type against database check constraint:
+        // CHECK (record_type = ANY (ARRAY['triage', 'diagnosis', 'progress_note', 'lab_result', 'imaging', 'discharge']))
+        const VALID_RECORD_TYPES = new Set(["triage", "diagnosis", "progress_note", "lab_result", "imaging", "discharge"]);
+        let safeRecordType = String(record_type).toLowerCase().trim();
+        const mergedClinicalData = (clinical_data && typeof clinical_data === "object" && !Array.isArray(clinical_data))
+            ? { ...clinical_data }
+            : {};
+
+        if (safeRecordType === "asha_assessment" || !VALID_RECORD_TYPES.has(safeRecordType)) {
+            // Map asha_assessment to valid schema constraint 'triage' while recording original assessment_type in clinical_data
+            mergedClinicalData["assessment_type"] = safeRecordType;
+            safeRecordType = "triage";
+        }
+
+        // Validate symptoms format (must be JSON-compatible)
+        const safeSymptoms = Array.isArray(symptoms) ? symptoms : (symptoms ? [symptoms] : []);
+
+        const insertSql = `
+            INSERT INTO health.medical_records (
+                patient_id,
+                author_user_id,
+                appointment_id,
+                record_type,
+                recorded_at,
+                diagnosis,
+                symptoms,
+                clinical_data,
+                confidence,
+                is_preliminary
+            ) VALUES (
+                $1::uuid,
+                $2::uuid,
+                $3::uuid,
+                $4,
+                NOW(),
+                $5,
+                $6::jsonb,
+                $7::jsonb,
+                $8,
+                $9
+            ) RETURNING *;
+        `;
+
+        const result = await query(insertSql, [
+            patientId,
+            auth.user_id,
+            validAppointmentId,
+            safeRecordType,
+            diagnosis || "Field Health Assessment",
+            JSON.stringify(safeSymptoms),
+            JSON.stringify(mergedClinicalData),
+            confidence !== undefined ? confidence : null,
+            is_preliminary !== undefined ? Boolean(is_preliminary) : true,
+        ]);
+
+        return jsonResponse(201, {
+            success: true,
+            message: "Clinical assessment recorded successfully.",
+            data: result.rows[0],
+        });
+    } catch (err: any) {
+        context.error("Error in createPatientRecord:", err);
+        return errorResponse(500, "Internal server error creating clinical assessment record.");
+    }
+}
+
 // Patient-scoped self-service routes
 app.http("getMe", {
     methods: ["GET"],
@@ -443,9 +568,17 @@ app.http("getPatientRecords", {
     handler: getPatientRecords,
 });
 
+app.http("createPatientRecord", {
+    methods: ["POST"],
+    authLevel: "anonymous",
+    route: "patients/{patient_id}/records",
+    handler: createPatientRecord,
+});
+
 app.http("getPatientPrescriptions", {
     methods: ["GET"],
     authLevel: "anonymous",
     route: "patients/{patient_id}/prescriptions",
     handler: getPatientPrescriptions,
 });
+

@@ -25,11 +25,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   late HospitalDetailInfo _hospital;
   bool _isOnFieldDuty = true;
   String _searchQuery = '';
-  String _activeFilter = 'All'; // 'All', 'Appointments', 'Admitted', 'Forwarded'
+  String _activeFilter = 'NewRequests'; // 'NewRequests', 'ActiveCases', 'Today', 'Referrals', 'Recent', 'All'
 
   List<AppointmentItem> _liveAppointments = [];
+  List<AppointmentItem> _liveAshaRequests = [];
   bool _isLoadingAppointments = false;
   bool _isLoadingPatients = false;
+  bool _isLoadingAsha = false;
 
   @override
   void initState() {
@@ -39,6 +41,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     _loadLivePatients();
     _loadLiveDoctors();
     _loadLiveAppointments();
+    _loadLiveAshaRequests();
   }
 
   Future<void> _loadLiveDoctors() async {
@@ -161,6 +164,97 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     }
   }
 
+  Future<void> _loadLiveAshaRequests() async {
+    setState(() => _isLoadingAsha = true);
+    try {
+      final list = await ApiClient.getAshaRequests();
+      if (!mounted) return;
+      setState(() {
+        _liveAshaRequests = list;
+        _isLoadingAsha = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading asha requests in worker screen: $e');
+      if (mounted) setState(() => _isLoadingAsha = false);
+    }
+  }
+
+  Future<void> _acceptAshaRequest(AppointmentItem req) async {
+    try {
+      final res = await ApiClient.updateAppointment(
+        appointmentId: req.id,
+        status: 'confirmed',
+      );
+      if (res['success'] == true) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Request for ${req.patientName} accepted! Case is now active.'),
+            backgroundColor: const Color(0xFF0F766E),
+          ),
+        );
+        await _loadLiveAshaRequests();
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['error']?.toString() ?? 'Failed to accept request.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent),
+      );
+    }
+  }
+
+  void _openPatientAssessment(AppointmentItem req) {
+    final existing = HospitalAdminRepository.getPatients(_hospitalId)
+        .where((p) => p.id == req.patientId)
+        .toList();
+
+    final pat = existing.isNotEmpty
+        ? existing.first
+        : HospitalAdminPatient(
+            id: req.patientId ?? 'pat_${DateTime.now().millisecondsSinceEpoch}',
+            name: req.patientName.isNotEmpty ? req.patientName : 'Field Patient',
+            phone: (req.patientPhone != null && req.patientPhone!.isNotEmpty) ? req.patientPhone! : 'Field Patient',
+            password: '••••',
+            age: req.age > 0 ? req.age : 30,
+            gender: req.gender.isNotEmpty ? req.gender : 'Other',
+            diagnosis: req.diagnosis.isNotEmpty ? req.diagnosis : 'Primary Health Assessment',
+            department: 'Field Medicine',
+            hospitalId: _hospitalId,
+            hospitalName: _hospital.name,
+            roomNo: 'Field Visit',
+            bedNo: 'N/A',
+            isAdmitted: false,
+            assignedDoctor: 'ASHA Worker Unit',
+            admissionDate: DateTime.now().toIso8601String().split('T').first,
+            medicalRecordNumber: req.medicalRecordNumber ?? 'MRN-FIELD',
+            bloodGroup: req.bloodGroup ?? 'N/A',
+          );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PatientDetailScreen(
+          patient: pat,
+          userProfile: widget.userProfile,
+          initialAshaRequest: req,
+          openAssessmentImmediately: true,
+        ),
+      ),
+    ).then((_) {
+      _loadLiveAshaRequests();
+      _loadLiveAppointments();
+      _loadLivePatients();
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -181,6 +275,15 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       if (_activeFilter == 'Forwarded') return p.forwardedToDoctor != null;
       return true;
     }).toList();
+
+    final newRequests = _liveAshaRequests.where((r) => r.status.toLowerCase() == 'queued').toList();
+    final activeCases = _liveAshaRequests.where((r) => r.status.toLowerCase() == 'confirmed' || r.status.toLowerCase() == 'in_progress').toList();
+    final todayAppts = _liveAppointments.where((a) {
+      final t = a.timing.toLowerCase();
+      return t.contains('today') || t.contains('now');
+    }).toList();
+    final referrals = _liveAppointments.where((a) => (a.notes != null && a.notes!['referral_type'] == 'asha_referral') || a.diagnosis.toLowerCase().contains('referral') || a.diagnosis.toLowerCase().contains('referred')).toList();
+    final recentCases = _liveAshaRequests.where((r) => r.status.toLowerCase() == 'completed').toList();
 
     return Scaffold(
       key: _scaffoldKey,
@@ -271,7 +374,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                   ],
                                 ),
                               ),
-                              // QR Scanner quick button
                               IconButton(
                                 icon: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 26),
                                 tooltip: 'Scan Patient QR',
@@ -286,7 +388,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                           ),
                           const SizedBox(height: 8),
 
-                          // Worker Badge & Duty Status
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
@@ -387,20 +488,43 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
 
             const SizedBox(height: 10),
 
-            // Filter Chips: All | Appointments | Inpatient | Forwarded
+            // Filter Chips Bar: New Requests | Active Cases | Today | Referrals | Recent | All
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _buildFilterChip('All Patients (${patients.length})', 'All'),
+                    _buildFilterChip(
+                      label: 'New Requests (${newRequests.length})',
+                      filterKey: 'NewRequests',
+                      isHighlight: newRequests.isNotEmpty,
+                    ),
                     const SizedBox(width: 8),
-                    _buildFilterChip('Appointments (${_liveAppointments.length})', 'Appointments'),
+                    _buildFilterChip(
+                      label: 'Active Cases (${activeCases.length})',
+                      filterKey: 'ActiveCases',
+                    ),
                     const SizedBox(width: 8),
-                    _buildFilterChip('Admitted (${patients.where((p) => p.isAdmitted).length})', 'Admitted'),
+                    _buildFilterChip(
+                      label: 'Today (${todayAppts.length})',
+                      filterKey: 'Today',
+                    ),
                     const SizedBox(width: 8),
-                    _buildFilterChip('Forwarded (${patients.where((p) => p.forwardedToDoctor != null).length})', 'Forwarded'),
+                    _buildFilterChip(
+                      label: 'Referrals (${referrals.length})',
+                      filterKey: 'Referrals',
+                    ),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(
+                      label: 'Recent (${recentCases.length})',
+                      filterKey: 'Recent',
+                    ),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(
+                      label: 'All Patients (${patients.length})',
+                      filterKey: 'All',
+                    ),
                   ],
                 ),
               ),
@@ -408,41 +532,16 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
 
             const SizedBox(height: 10),
 
-            // Patient List or Appointments List
+            // Tab Content
             Expanded(
-              child: _activeFilter == 'Appointments'
-                  ? _buildAppointmentsTab()
-                  : (filteredPatients.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.person_search_rounded, size: 54, color: Color(0xFF94A3B8)),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'No patients found in your field roster',
-                                style: TextStyle(fontSize: 15, color: Color(0xFF64748B)),
-                              ),
-                            ],
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: () async {
-                            await Future.wait([
-                              _loadLivePatients(),
-                              _loadLiveAppointments(),
-                              _loadLiveDoctors(),
-                            ]);
-                          },
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                            itemCount: filteredPatients.length,
-                            itemBuilder: (context, index) {
-                              final pat = filteredPatients[index];
-                              return _buildPatientCard(pat);
-                            },
-                          ),
-                        )),
+              child: _buildSelectedTabContent(
+                newRequests: newRequests,
+                activeCases: activeCases,
+                todayAppts: todayAppts,
+                referrals: referrals,
+                recentCases: recentCases,
+                filteredPatients: filteredPatients,
+              ),
             ),
           ],
         ),
@@ -450,7 +549,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  Widget _buildFilterChip(String label, String filterKey) {
+  Widget _buildFilterChip({
+    required String label,
+    required String filterKey,
+    bool isHighlight = false,
+  }) {
     final isSelected = _activeFilter == filterKey;
     return InkWell(
       onTap: () => setState(() => _activeFilter = filterKey),
@@ -458,10 +561,15 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF0F766E) : Colors.white,
+          color: isSelected
+              ? const Color(0xFF0F766E)
+              : (isHighlight ? const Color(0xFFFEF3C7) : Colors.white),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFF0F766E) : const Color(0xFFCBD5E1),
+            color: isSelected
+                ? const Color(0xFF0F766E)
+                : (isHighlight ? const Color(0xFFF59E0B) : const Color(0xFFCBD5E1)),
+            width: isHighlight ? 1.5 : 1.0,
           ),
         ),
         child: Text(
@@ -469,69 +577,79 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: isSelected ? Colors.white : const Color(0xFF334155),
+            color: isSelected
+                ? Colors.white
+                : (isHighlight ? const Color(0xFFB45309) : const Color(0xFF334155)),
           ),
         ),
       ),
     );
   }
 
-  // ==========================================
-  // APPOINTMENTS TAB FOR WORKER
-  // ==========================================
-  Widget _buildAppointmentsTab() {
-    if (_isLoadingAppointments) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF0F766E)),
-      );
+  Widget _buildSelectedTabContent({
+    required List<AppointmentItem> newRequests,
+    required List<AppointmentItem> activeCases,
+    required List<AppointmentItem> todayAppts,
+    required List<AppointmentItem> referrals,
+    required List<AppointmentItem> recentCases,
+    required List<HospitalAdminPatient> filteredPatients,
+  }) {
+    switch (_activeFilter) {
+      case 'NewRequests':
+        return _buildAshaRequestsList(newRequests, isNew: true, emptyMessage: 'No incoming ASHA visit requests.');
+      case 'ActiveCases':
+        return _buildAshaRequestsList(activeCases, isNew: false, emptyMessage: 'No active assessment cases in progress.');
+      case 'Today':
+        return _buildAppointmentsList(todayAppts, emptyMessage: 'No visits or consultations scheduled for today.');
+      case 'Referrals':
+        return _buildAppointmentsList(referrals, emptyMessage: 'No patients referred to doctors yet.');
+      case 'Recent':
+        return _buildAshaRequestsList(recentCases, isNew: false, emptyMessage: 'No completed field cases yet.');
+      case 'All':
+      default:
+        return _buildPatientsRosterTab(filteredPatients);
     }
+  }
 
-    if (_liveAppointments.isEmpty) {
+  Widget _buildAshaRequestsList(List<AppointmentItem> list, {required bool isNew, required String emptyMessage}) {
+    if (_isLoadingAsha) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF0F766E)));
+    }
+    if (list.isEmpty) {
       return RefreshIndicator(
         onRefresh: () async {
-          await Future.wait([
-            _loadLivePatients(),
-            _loadLiveAppointments(),
-            _loadLiveDoctors(),
-          ]);
+          await Future.wait([_loadLiveAshaRequests(), _loadLiveAppointments(), _loadLivePatients()]);
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 50),
           children: [
             Center(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       color: const Color(0xFF0F766E).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.calendar_month_outlined, size: 56, color: Color(0xFF0F766E)),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'No Appointments Scheduled Yet',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Select a patient from "All Patients" and tap "Schedule Consultation" to book an appointment with a specialist doctor.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    onPressed: () => setState(() => _activeFilter = 'All'),
-                    icon: const Icon(Icons.people_alt_rounded, size: 18, color: Colors.white),
-                    label: const Text('View All Patients', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F766E),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Icon(
+                      isNew ? Icons.inbox_rounded : Icons.check_circle_outline_rounded,
+                      size: 48,
+                      color: const Color(0xFF0F766E),
                     ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    emptyMessage,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Pull down to refresh live state from Azure PostgreSQL.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -543,36 +661,240 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
 
     return RefreshIndicator(
       onRefresh: () async {
-        await Future.wait([
-          _loadLivePatients(),
-          _loadLiveAppointments(),
-          _loadLiveDoctors(),
-        ]);
+        await Future.wait([_loadLiveAshaRequests(), _loadLiveAppointments(), _loadLivePatients()]);
       },
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: _liveAppointments.length,
+        itemCount: list.length,
         itemBuilder: (context, index) {
-          final appt = _liveAppointments[index];
-          final isConfirmed = appt.status.toLowerCase() == 'confirmed';
-          final isQueued = appt.status.toLowerCase() == 'queued';
+          final req = list[index];
+          return _buildAshaRequestCard(req, isNew: isNew);
+        },
+      ),
+    );
+  }
 
-          Color statusBg = const Color(0xFFF1F5F9);
-          Color statusTextColor = const Color(0xFF475569);
-          if (isConfirmed) {
-            statusBg = const Color(0xFFECFDF5);
-            statusTextColor = const Color(0xFF059669);
-          } else if (isQueued) {
-            statusBg = const Color(0xFFFFFBEB);
-            statusTextColor = const Color(0xFFD97706);
-          } else if (appt.status.toLowerCase() == 'in_progress') {
-            statusBg = const Color(0xFFEFF6FF);
-            statusTextColor = const Color(0xFF2563EB);
-          }
+  Widget _buildAshaRequestCard(AppointmentItem req, {required bool isNew}) {
+    final urgency = req.notes?['urgency']?.toString().toLowerCase() ?? 'routine';
+    Color urgencyBg = const Color(0xFFECFDF5);
+    Color urgencyColor = const Color(0xFF059669);
+    if (urgency == 'emergency') {
+      urgencyBg = const Color(0xFFFEE2E2);
+      urgencyColor = const Color(0xFFDC2626);
+    } else if (urgency == 'priority') {
+      urgencyBg = const Color(0xFFFEF3C7);
+      urgencyColor = const Color(0xFFD97706);
+    }
 
+    final isQueued = req.status.toLowerCase() == 'queued';
+    final isConfirmed = req.status.toLowerCase() == 'confirmed';
+    final isInProgress = req.status.toLowerCase() == 'in_progress';
+    final isCompleted = req.status.toLowerCase() == 'completed';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isQueued ? const Color(0xFFF59E0B) : const Color(0xFFE2E8F0),
+          width: isQueued ? 1.5 : 1.0,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Row: Patient Name & Urgency Badge
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: const Color(0xFFCCFBF1),
+                        child: const Icon(Icons.person, color: Color(0xFF0F766E), size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              req.patientName,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              'Phone: ${(req.patientPhone != null && req.patientPhone!.isNotEmpty) ? req.patientPhone! : "Not listed"}',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: urgencyBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    urgency.toUpperCase(),
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: urgencyColor),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Reason / Symptoms box
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFF1F5F9)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Reported Reason / Symptoms:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+                  const SizedBox(height: 2),
+                  Text(
+                    req.diagnosis.isNotEmpty ? req.diagnosis : 'Primary care evaluation requested',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B)),
+                  ),
+                  if (req.timing.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Requested Timing: ${req.timing}',
+                      style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Action Buttons
+            Row(
+              children: [
+                if (isQueued) ...[
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _acceptAshaRequest(req),
+                      icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                      label: const Text('Accept Request', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F766E),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton(
+                    onPressed: () => _openPatientAssessment(req),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF0F766E),
+                      side: const BorderSide(color: Color(0xFF0F766E)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    child: const Text('View & Assess', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                ] else if (isConfirmed || isInProgress) ...[
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _openPatientAssessment(req),
+                      icon: const Icon(Icons.medical_services_rounded, size: 16, color: Colors.white),
+                      label: const Text('Assess Patient (Vitals & Clinical)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F766E),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                ] else if (isCompleted) ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _openPatientAssessment(req),
+                      icon: const Icon(Icons.visibility_rounded, size: 16, color: Color(0xFF059669)),
+                      label: const Text('Completed Case History', style: TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold, fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFF059669)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppointmentsList(List<AppointmentItem> list, {required String emptyMessage}) {
+    if (_isLoadingAppointments) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF0F766E)));
+    }
+    if (list.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: () async {
+          await Future.wait([_loadLiveAshaRequests(), _loadLiveAppointments(), _loadLivePatients()]);
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 50),
+          children: [
+            Center(
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F766E).withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.event_note_rounded, size: 48, color: Color(0xFF0F766E)),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    emptyMessage,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await Future.wait([_loadLiveAshaRequests(), _loadLiveAppointments(), _loadLivePatients()]);
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: list.length,
+        itemBuilder: (context, index) {
+          final appt = list[index];
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
-            elevation: 2,
+            elevation: 1.5,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -582,110 +904,97 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => AppointmentDetailScreen(appointment: appt),
-                  ),
+                  MaterialPageRoute(builder: (context) => AppointmentDetailScreen(appointment: appt)),
                 );
               },
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header Row: APT No & Status
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0F766E).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.calendar_today_rounded, size: 16, color: Color(0xFF0F766E)),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              appt.appointmentNo.isNotEmpty ? appt.appointmentNo : appt.id,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
-                            ),
-                          ],
+                        Text(
+                          appt.appointmentNo.isNotEmpty ? appt.appointmentNo : appt.id,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: statusBg,
-                            borderRadius: BorderRadius.circular(20),
+                            color: const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             appt.status.toUpperCase(),
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusTextColor),
+                            style: const TextStyle(color: Color(0xFF059669), fontSize: 10, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
                     ),
-                    const Divider(height: 16, color: Color(0xFFF1F5F9)),
-
-                    // Patient & Doctor Info
-                    Row(
-                      children: [
-                        const CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Color(0xFFF1F5F9),
-                          child: Icon(Icons.person_rounded, color: Color(0xFF0F766E), size: 20),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                appt.patientName,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
-                              ),
-                              if (appt.doctorName != null && appt.doctorName!.isNotEmpty)
-                                Text(
-                                  'Doctor: ${appt.doctorName}',
-                                  style: const TextStyle(fontSize: 12, color: Color(0xFF4338CA), fontWeight: FontWeight.w500),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 6),
+                    Text(
+                      appt.patientName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B)),
                     ),
-
-                    const SizedBox(height: 10),
-
-                    // Timing & Reason
-                    Row(
-                      children: [
-                        const Icon(Icons.access_time_rounded, size: 14, color: Color(0xFF64748B)),
-                        const SizedBox(width: 4),
-                        Text(
-                          appt.timing,
-                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                        ),
-                        if (appt.diagnosis.isNotEmpty) ...[
-                          const SizedBox(width: 12),
-                          const Icon(Icons.notes_rounded, size: 14, color: Color(0xFF64748B)),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              appt.diagnosis,
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF475569)),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ],
+                    Text(
+                      'Timing: ${appt.timing} • Doctor: ${appt.doctorName ?? "Assigned Doctor"}',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Reason: ${appt.diagnosis}',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF334155)),
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
           );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPatientsRosterTab(List<HospitalAdminPatient> filteredPatients) {
+    if (filteredPatients.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.person_search_rounded, size: 54, color: Color(0xFF94A3B8)),
+            SizedBox(height: 12),
+            Text(
+              'No patients found in your field roster',
+              style: TextStyle(fontSize: 15, color: Color(0xFF64748B)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await Future.wait([
+          _loadLivePatients(),
+          _loadLiveAppointments(),
+          _loadLiveAshaRequests(),
+          _loadLiveDoctors(),
+        ]);
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        itemCount: filteredPatients.length,
+        itemBuilder: (context, index) {
+          final pat = filteredPatients[index];
+          return _buildPatientCard(pat);
         },
       ),
     );

@@ -3,17 +3,22 @@ import '../models/user_profile.dart';
 import '../models/hospital_admin_repository.dart';
 import '../models/appointment_model.dart';
 import '../services/api_client.dart';
+import '../widgets/rppg_camera_modal.dart';
 
 class PatientDetailScreen extends StatefulWidget {
   final HospitalAdminPatient patient;
   final UserProfile? userProfile;
   final VoidCallback? onAppointmentCreated;
+  final AppointmentItem? initialAshaRequest;
+  final bool openAssessmentImmediately;
 
   const PatientDetailScreen({
     super.key,
     required this.patient,
     this.userProfile,
     this.onAppointmentCreated,
+    this.initialAshaRequest,
+    this.openAssessmentImmediately = false,
   });
 
   @override
@@ -22,7 +27,9 @@ class PatientDetailScreen extends StatefulWidget {
 
 class _PatientDetailScreenState extends State<PatientDetailScreen> {
   bool _isLoadingAppointments = false;
+  bool _isLoadingRecords = false;
   List<AppointmentItem> _patientAppointments = [];
+  List<Map<String, dynamic>> _patientMedicalRecords = [];
   List<Map<String, dynamic>> _liveDoctors = [];
   List<Map<String, dynamic>> _liveFacilities = [];
 
@@ -30,7 +37,14 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   void initState() {
     super.initState();
     _loadPatientAppointments();
+    _loadPatientMedicalRecords();
     _loadDoctorsAndFacilities();
+
+    if (widget.openAssessmentImmediately) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _openAshaAssessmentModal(widget.initialAshaRequest);
+      });
+    }
   }
 
   Future<void> _loadPatientAppointments() async {
@@ -45,6 +59,21 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     } catch (e) {
       debugPrint('Error loading patient appointments: $e');
       if (mounted) setState(() => _isLoadingAppointments = false);
+    }
+  }
+
+  Future<void> _loadPatientMedicalRecords() async {
+    setState(() => _isLoadingRecords = true);
+    try {
+      final records = await ApiClient.getPatientMedicalRecords(widget.patient.id);
+      if (!mounted) return;
+      setState(() {
+        _patientMedicalRecords = records;
+        _isLoadingRecords = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading patient medical records: $e');
+      if (mounted) setState(() => _isLoadingRecords = false);
     }
   }
 
@@ -93,6 +122,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
             children: [
               // 1. Patient Profile Card
               _buildPatientProfileCard(p),
+
+              const SizedBox(height: 16),
+
+              // 1b. ASHA Field Health Assessment Banner
+              _buildAshaAssessmentBanner(),
 
               const SizedBox(height: 16),
 
@@ -152,6 +186,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
               const SizedBox(height: 10),
 
               _buildAppointmentsList(),
+
+              const SizedBox(height: 24),
+
+              // 4. Clinical Assessments & Medical Records Section
+              _buildMedicalRecordsSection(),
             ],
           ),
         ),
@@ -275,6 +314,87 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
           style: const TextStyle(fontSize: 12, color: Color(0xFF334155), fontWeight: FontWeight.w500),
         ),
       ],
+    );
+  }
+
+  // ==========================================================
+  // ASHA ASSESSMENT BANNER
+  // ==========================================================
+  Widget _buildAshaAssessmentBanner() {
+    final hasAshaReq = widget.initialAshaRequest != null;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0D9488), Color(0xFF0F766E), Color(0xFF134E4A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F766E).withValues(alpha: 0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.health_and_safety_rounded, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text(
+                      'ASHA Clinical Assessment',
+                      style: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.bold),
+                    ),
+                    if (hasAshaReq) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text('ACTIVE REQUEST', style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Measure camera rPPG heart rate, physical vitals, and manage or refer.',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => _openAshaAssessmentModal(widget.initialAshaRequest),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2DD4BF),
+              foregroundColor: const Color(0xFF134E4A),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              elevation: 0,
+            ),
+            child: const Text('Assess', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1587,6 +1707,1154 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ==========================================================
+  // MEDICAL RECORDS & FIELD CARE SECTION
+  // ==========================================================
+  Widget _buildMedicalRecordsSection() {
+    if (_isLoadingRecords) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: CircularProgressIndicator(color: Color(0xFF0F766E)),
+        ),
+      );
+    }
+
+    if (_patientMedicalRecords.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.assignment_turned_in_rounded, color: Color(0xFF0F766E), size: 20),
+            const SizedBox(width: 8),
+            const Text(
+              'Field Care & Clinical Records',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFCCFBF1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '${_patientMedicalRecords.length}',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F766E)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        ..._patientMedicalRecords.map((rec) => _buildMedicalRecordCard(rec)),
+      ],
+    );
+  }
+
+  Widget _buildMedicalRecordCard(Map<String, dynamic> rec) {
+    final clinicalData = rec['clinical_data'] is Map ? rec['clinical_data'] as Map : {};
+    final assessmentType = clinicalData['assessment_type']?.toString() ?? rec['record_type']?.toString() ?? 'triage';
+    final decision = clinicalData['decision']?.toString() ?? 'managed';
+    final vitals = clinicalData['vitals'] is Map ? clinicalData['vitals'] as Map : {};
+    final createdAt = rec['created_at']?.toString() ?? '';
+    final isAsha = assessmentType == 'asha_assessment';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 1.5,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F766E).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.verified_user_rounded, size: 16, color: Color(0xFF0F766E)),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isAsha ? 'ASHA Field Assessment' : 'Clinical Record',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: decision == 'referred_to_doctor' ? const Color(0xFFEDE9FE) : const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    decision == 'referred_to_doctor' ? 'REFERRED TO DOCTOR' : 'MANAGED IN FIELD',
+                    style: TextStyle(
+                      color: decision == 'referred_to_doctor' ? const Color(0xFF6D28D9) : const Color(0xFF059669),
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Vitals Chips
+            if (vitals.isNotEmpty) ...[
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  if (vitals['heart_rate_bpm'] != null)
+                    _buildClinicalRecordBadge(Icons.favorite_rounded, '${vitals['heart_rate_bpm']} BPM', Colors.red.shade600),
+                  if (vitals['blood_pressure'] != null)
+                    _buildClinicalRecordBadge(Icons.speed_rounded, 'BP: ${vitals['blood_pressure']} mmHg', Colors.indigo.shade600),
+                  if (vitals['spo2_percent'] != null)
+                    _buildClinicalRecordBadge(Icons.air_rounded, 'SpO2: ${vitals['spo2_percent']}%', Colors.teal.shade700),
+                  if (vitals['temperature_c'] != null)
+                    _buildClinicalRecordBadge(Icons.thermostat_rounded, '${vitals['temperature_c']}°C', Colors.amber.shade800),
+                  if (vitals['blood_glucose_mg_dl'] != null)
+                    _buildClinicalRecordBadge(Icons.water_drop_rounded, 'Glu: ${vitals['blood_glucose_mg_dl']} mg/dL', Colors.purple.shade700),
+                  if (vitals['weight_kg'] != null)
+                    _buildClinicalRecordBadge(Icons.monitor_weight_rounded, '${vitals['weight_kg']} kg', Colors.blueGrey.shade700),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+
+            if (clinicalData['symptoms'] != null && clinicalData['symptoms'].toString().isNotEmpty) ...[
+              Text(
+                'Symptoms: ${clinicalData['symptoms']}',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF334155), fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 4),
+            ],
+
+            if (clinicalData['field_care_advice'] != null && clinicalData['field_care_advice'].toString().isNotEmpty) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                ),
+                child: Text(
+                  'Advice: ${clinicalData['field_care_advice']}',
+                  style: const TextStyle(fontSize: 11.5, color: Color(0xFF166534)),
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
+
+            if (createdAt.isNotEmpty)
+              Text(
+                'Recorded: ${createdAt.replaceAll("T", " ").split(".").first}',
+                style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClinicalRecordBadge(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+        ],
+      ),
+    );
+  }
+
+  // ==========================================================
+  // ASHA CLINICAL ASSESSMENT & VITALS MODAL
+  // ==========================================================
+  void _openAshaAssessmentModal(AppointmentItem? ashaReq) {
+    // Vitals Controllers - Completely empty initially per requirements
+    final hrController = TextEditingController();
+    final bpSysController = TextEditingController();
+    final bpDiaController = TextEditingController();
+    final spo2Controller = TextEditingController();
+    final tempController = TextEditingController();
+    final glucoseController = TextEditingController();
+    final weightController = TextEditingController();
+    final rrController = TextEditingController();
+
+    // Clinical Details
+    final symptomsController = TextEditingController(text: ashaReq?.diagnosis ?? '');
+    final observationsController = TextEditingController();
+    final fieldCareController = TextEditingController();
+
+    // Decision Mode: 'manage' or 'refer'
+    String decisionMode = 'manage';
+
+    // Doctor Referral Parameters
+    final doctorsList = _liveDoctors.isNotEmpty
+        ? _liveDoctors
+        : HospitalAdminRepository.getAllDoctors().map((d) => {
+              'user_id': d.id,
+              'full_name': d.name,
+              'specialties': [d.department],
+            }).toList();
+
+    String? selectedDoctorId = widget.patient.assignedDoctorUserId;
+    if (selectedDoctorId == null || !doctorsList.any((d) => d['user_id']?.toString() == selectedDoctorId)) {
+      selectedDoctorId = doctorsList.isNotEmpty ? doctorsList.first['user_id']?.toString() : null;
+    }
+
+    DateTime selectedDate = DateTime.now();
+    final timeSlots = [
+      '09:00 - 09:30 AM',
+      '09:30 - 10:00 AM',
+      '10:00 - 10:30 AM',
+      '10:30 - 11:00 AM',
+      '11:00 - 11:30 AM',
+      '11:30 - 12:00 PM',
+      '02:00 - 02:30 PM',
+      '02:30 - 03:00 PM',
+      '03:00 - 03:30 PM',
+      '03:30 - 04:00 PM',
+      '04:00 - 04:30 PM',
+    ];
+    String selectedSlot = timeSlots[2]; // 10:00 - 10:30 AM
+    String selectedConsultationType = 'telehealth'; // telehealth or clinic
+    final referralReasonController = TextEditingController(
+      text: ashaReq?.diagnosis.isNotEmpty ?? false
+          ? ashaReq!.diagnosis
+          : 'Referred by ASHA Worker for specialist doctor clinical consultation',
+    );
+
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              top: 20,
+              left: 20,
+              right: 20,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.92,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle Bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Modal Header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCCFBF1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.health_and_safety_rounded, color: Color(0xFF0F766E), size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'ASHA Clinical Field Assessment',
+                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                            ),
+                            Text(
+                              'Patient: ${widget.patient.name} (${widget.patient.age} yrs, ${widget.patient.gender})',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ==========================================
+                  // 1. VITALS SECTION
+                  // ==========================================
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '1. Vital Signs (Real Camera rPPG + Manual Device Inputs)',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Heart rate uses real phone camera rPPG. All other vitals are entered manually from physical diagnostic devices.',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Real Camera Heart Rate Card
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF1F2),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFFECDD3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.favorite_rounded, color: Color(0xFFE11D48), size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Heart Rate (BPM)',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF9F1239)),
+                              ),
+                              Text(
+                                hrController.text.isNotEmpty
+                                    ? '${hrController.text} BPM Measured'
+                                    : 'Scan with camera or enter manually',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFFBE123C)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          width: 70,
+                          child: TextField(
+                            controller: hrController,
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF9F1239)),
+                            decoration: InputDecoration(
+                              hintText: 'BPM',
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            final bpm = await showModalBottomSheet<double>(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (c) => const RppgCameraModal(),
+                            );
+                            if (bpm != null) {
+                              setModalState(() {
+                                hrController.text = bpm.toStringAsFixed(0);
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.camera_alt_rounded, size: 14, color: Colors.white),
+                          label: const Text('Measure', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE11D48),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Manual Inputs Grid (All start EMPTY, validation on submit)
+                  Row(
+                    children: [
+                      // Blood Pressure Systolic
+                      Expanded(
+                        child: TextField(
+                          controller: bpSysController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'BP Systolic',
+                            hintText: 'mmHg',
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Blood Pressure Diastolic
+                      Expanded(
+                        child: TextField(
+                          controller: bpDiaController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'BP Diastolic',
+                            hintText: 'mmHg',
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  Row(
+                    children: [
+                      // SpO2
+                      Expanded(
+                        child: TextField(
+                          controller: spo2Controller,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: InputDecoration(
+                            labelText: 'SpO2 (%)',
+                            hintText: 'e.g. 98',
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Temp
+                      Expanded(
+                        child: TextField(
+                          controller: tempController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: InputDecoration(
+                            labelText: 'Temperature (°C)',
+                            hintText: 'e.g. 37.0',
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  Row(
+                    children: [
+                      // Glucose
+                      Expanded(
+                        child: TextField(
+                          controller: glucoseController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: InputDecoration(
+                            labelText: 'Blood Glucose',
+                            hintText: 'mg/dL',
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Weight
+                      Expanded(
+                        child: TextField(
+                          controller: weightController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: InputDecoration(
+                            labelText: 'Weight (kg)',
+                            hintText: 'e.g. 68.5',
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Respiratory Rate
+                  TextField(
+                    controller: rrController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Respiratory Rate (breaths/min)',
+                      hintText: 'e.g. 18',
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ==========================================
+                  // 2. CLINICAL OBSERVATIONS & FIELD CARE
+                  // ==========================================
+                  const Text(
+                    '2. Observed Symptoms & Field Care Advice',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: symptomsController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      labelText: 'Patient Symptoms',
+                      hintText: 'Enter observed symptoms...',
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.all(12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: observationsController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      labelText: 'Physical Examination Findings',
+                      hintText: 'Chest clear, mild pallor, edema...',
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.all(12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: fieldCareController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      labelText: 'Field Care / OTC Guidance & Instructions',
+                      hintText: 'Prescribe OTC hydration, rest, or dietary adjustment...',
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.all(12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ==========================================
+                  // 3. DECISION SELECTION
+                  // ==========================================
+                  const Text(
+                    '3. Clinical Decision',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                  ),
+                  const SizedBox(height: 8),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setModalState(() => decisionMode = 'manage'),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: decisionMode == 'manage' ? const Color(0xFFECFDF5) : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: decisionMode == 'manage' ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
+                                width: decisionMode == 'manage' ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(Icons.healing_rounded, color: decisionMode == 'manage' ? const Color(0xFF059669) : const Color(0xFF64748B), size: 24),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Manage in Field',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    color: decisionMode == 'manage' ? const Color(0xFF065F46) : const Color(0xFF334155),
+                                  ),
+                                ),
+                                Text(
+                                  'OTC care & home monitoring',
+                                  style: TextStyle(fontSize: 9.5, color: Colors.grey.shade600),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setModalState(() => decisionMode = 'refer'),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: decisionMode == 'refer' ? const Color(0xFFEDE9FE) : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: decisionMode == 'refer' ? const Color(0xFF7C3AED) : const Color(0xFFCBD5E1),
+                                width: decisionMode == 'refer' ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(Icons.send_rounded, color: decisionMode == 'refer' ? const Color(0xFF7C3AED) : const Color(0xFF64748B), size: 24),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Refer to Doctor',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    color: decisionMode == 'refer' ? const Color(0xFF5B21B6) : const Color(0xFF334155),
+                                  ),
+                                ),
+                                Text(
+                                  'Book specialist slot (Max 3/slot)',
+                                  style: TextStyle(fontSize: 9.5, color: Colors.grey.shade600),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ==========================================
+                  // REFERRAL DETAILS FORM (IF REFER SELECTED)
+                  // ==========================================
+                  if (decisionMode == 'refer') ...[
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Referral Doctor & Slot Booking',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B)),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Select Doctor
+                          DropdownButtonFormField<String>(
+                            value: selectedDoctorId,
+                            decoration: InputDecoration(
+                              labelText: 'Select Specialist Doctor',
+                              filled: true,
+                              fillColor: Colors.white,
+                              prefixIcon: const Icon(Icons.medical_services_outlined, color: Color(0xFF0F766E), size: 18),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            items: doctorsList.map((d) {
+                              final docId = d['user_id']?.toString() ?? '';
+                              final docName = d['full_name']?.toString() ?? 'Doctor';
+                              final specList = d['specialties'] is List ? (d['specialties'] as List).join(', ') : '';
+                              return DropdownMenuItem<String>(
+                                value: docId,
+                                child: Text(specList.isNotEmpty ? '$docName ($specList)' : docName, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                              );
+                            }).toList(),
+                            onChanged: (val) => setModalState(() => selectedDoctorId = val),
+                          ),
+                          const SizedBox(height: 10),
+
+                          // Consultation Type: Telehealth vs Clinic
+                          Row(
+                            children: [
+                              _buildTypeChoiceChip(
+                                label: 'Telehealth Consultation',
+                                icon: Icons.videocam_rounded,
+                                typeKey: 'telehealth',
+                                selectedType: selectedConsultationType,
+                                onTap: () => setModalState(() => selectedConsultationType = 'telehealth'),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildTypeChoiceChip(
+                                label: 'In-Person Hospital Visit',
+                                icon: Icons.local_hospital_rounded,
+                                typeKey: 'clinic',
+                                selectedType: selectedConsultationType,
+                                onTap: () => setModalState(() => selectedConsultationType = 'clinic'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+
+                          // 30-Minute Time Slot Picker with Live Capacity Check
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Select 30-Min Slot (Max 3/slot):', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
+                              TextButton(
+                                onPressed: () async {
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: selectedDate,
+                                    firstDate: DateTime.now(),
+                                    lastDate: DateTime.now().add(const Duration(days: 30)),
+                                  );
+                                  if (picked != null) {
+                                    setModalState(() => selectedDate = picked);
+                                  }
+                                },
+                                child: Text(
+                                  'Date: ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F766E)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: timeSlots.map((slot) {
+                              // Calculate how many patients currently booked in this slot
+                              final countInSlot = _patientAppointments.where((a) {
+                                final isSameSlot = a.timing.contains(slot.split(' - ').first);
+                                final isNotCancelled = a.status.toLowerCase() != 'cancelled';
+                                return isSameSlot && isNotCancelled;
+                              }).length;
+
+                              final spotsRemaining = 3 - countInSlot;
+                              final isFull = spotsRemaining <= 0;
+                              final isSelected = selectedSlot == slot;
+
+                              return InkWell(
+                                onTap: isFull
+                                    ? () {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('This 30-minute slot is FULL (Maximum 3 patients reached). Please pick another slot.'),
+                                            backgroundColor: Colors.redAccent,
+                                          ),
+                                        );
+                                      }
+                                    : () => setModalState(() => selectedSlot = slot),
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? const Color(0xFF0F766E)
+                                        : (isFull ? const Color(0xFFF1F5F9) : Colors.white),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? const Color(0xFF0F766E)
+                                          : (isFull ? const Color(0xFFCBD5E1) : const Color(0xFF94A3B8)),
+                                      width: isSelected ? 1.8 : 1,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        slot,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : (isFull ? const Color(0xFF94A3B8) : const Color(0xFF1E293B)),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        isFull ? 'FULL' : '$spotsRemaining / 3 spots available',
+                                        style: TextStyle(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: isSelected
+                                              ? const Color(0xFFCCFBF1)
+                                              : (isFull ? const Color(0xFFDC2626) : const Color(0xFF059669)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 10),
+
+                          TextField(
+                            controller: referralReasonController,
+                            decoration: InputDecoration(
+                              labelText: 'Referral Reason / Specialist Note',
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // SUBMIT ACTION BUTTON
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              // 1. Build and validate vitals map (omitting empty fields)
+                              final vitalsMap = <String, dynamic>{};
+
+                              if (hrController.text.trim().isNotEmpty) {
+                                final hr = num.tryParse(hrController.text.trim());
+                                if (hr == null || hr < 30 || hr > 250) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Invalid Heart Rate. Must be between 30 and 250 BPM.'), backgroundColor: Colors.redAccent),
+                                  );
+                                  return;
+                                }
+                                vitalsMap['heart_rate_bpm'] = hr;
+                              }
+
+                              if (bpSysController.text.trim().isNotEmpty || bpDiaController.text.trim().isNotEmpty) {
+                                final sys = num.tryParse(bpSysController.text.trim());
+                                final dia = num.tryParse(bpDiaController.text.trim());
+                                if (sys == null || sys < 50 || sys > 260 || dia == null || dia < 30 || dia > 160) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Invalid Blood Pressure. Systolic (50-260), Diastolic (30-160).'), backgroundColor: Colors.redAccent),
+                                  );
+                                  return;
+                                }
+                                vitalsMap['blood_pressure'] = '$sys/$dia';
+                                vitalsMap['blood_pressure_systolic'] = sys;
+                                vitalsMap['blood_pressure_diastolic'] = dia;
+                              }
+
+                              if (spo2Controller.text.trim().isNotEmpty) {
+                                final spo2 = num.tryParse(spo2Controller.text.trim());
+                                if (spo2 == null || spo2 < 50 || spo2 > 100) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Invalid SpO2. Must be between 50 and 100%.'), backgroundColor: Colors.redAccent),
+                                  );
+                                  return;
+                                }
+                                vitalsMap['spo2_percent'] = spo2;
+                              }
+
+                              if (tempController.text.trim().isNotEmpty) {
+                                final temp = num.tryParse(tempController.text.trim());
+                                if (temp == null || temp < 30 || temp > 45) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Invalid Temperature. Must be between 30 and 45 °C.'), backgroundColor: Colors.redAccent),
+                                  );
+                                  return;
+                                }
+                                vitalsMap['temperature_c'] = temp;
+                              }
+
+                              if (glucoseController.text.trim().isNotEmpty) {
+                                final glu = num.tryParse(glucoseController.text.trim());
+                                if (glu == null || glu < 20 || glu > 800) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Invalid Glucose reading. Must be between 20 and 800 mg/dL.'), backgroundColor: Colors.redAccent),
+                                  );
+                                  return;
+                                }
+                                vitalsMap['blood_glucose_mg_dl'] = glu;
+                              }
+
+                              if (weightController.text.trim().isNotEmpty) {
+                                final wt = num.tryParse(weightController.text.trim());
+                                if (wt == null || wt < 1 || wt > 300) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Invalid Weight. Must be between 1 and 300 kg.'), backgroundColor: Colors.redAccent),
+                                  );
+                                  return;
+                                }
+                                vitalsMap['weight_kg'] = wt;
+                              }
+
+                              if (rrController.text.trim().isNotEmpty) {
+                                final rr = num.tryParse(rrController.text.trim());
+                                if (rr == null || rr < 4 || rr > 80) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Invalid Respiratory Rate. Must be between 4 and 80.'), backgroundColor: Colors.redAccent),
+                                  );
+                                  return;
+                                }
+                                vitalsMap['respiratory_rate'] = rr;
+                              }
+
+                              setModalState(() => isSubmitting = true);
+
+                              try {
+                                // 2. Create triage medical record on PostgreSQL
+                                final clinicalDataPayload = {
+                                  'assessment_type': 'asha_assessment',
+                                  'decision': decisionMode == 'refer' ? 'referred_to_doctor' : 'managed',
+                                  'vitals': vitalsMap,
+                                  'symptoms': symptomsController.text.trim(),
+                                  'observations': observationsController.text.trim(),
+                                  'field_care_advice': fieldCareController.text.trim(),
+                                  'asha_appointment_id': ashaReq?.id,
+                                  'recorded_at': DateTime.now().toIso8601String(),
+                                };
+
+                                final recordRes = await ApiClient.createMedicalRecord(
+                                  patientId: widget.patient.id,
+                                  recordType: 'triage',
+                                  clinicalData: clinicalDataPayload,
+                                );
+
+                                final recordData = recordRes['data'] is Map ? recordRes['data'] as Map : {};
+                                final recordId = recordData['record_id']?.toString();
+
+                                if (decisionMode == 'manage') {
+                                  // Update ASHA request to completed with managed_in_field
+                                  if (ashaReq != null) {
+                                    await ApiClient.updateAppointment(
+                                      appointmentId: ashaReq.id,
+                                      status: 'completed',
+                                      notes: {
+                                        'resolution': 'managed_in_field',
+                                        'managed_at': DateTime.now().toIso8601String(),
+                                        'asha_assessment_id': recordId,
+                                      },
+                                    );
+                                  }
+
+                                  if (!mounted) return;
+                                  Navigator.pop(ctx);
+                                  _loadPatientMedicalRecords();
+                                  _loadPatientAppointments();
+                                  widget.onAppointmentCreated?.call();
+
+                                  showDialog(
+                                    context: context,
+                                    builder: (c) => AlertDialog(
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                      title: const Row(
+                                        children: [
+                                          Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 26),
+                                          SizedBox(width: 8),
+                                          Text('Case Managed in Field'),
+                                        ],
+                                      ),
+                                      content: Text(
+                                        'ASHA assessment & field care advice for ${widget.patient.name} recorded to medical records.',
+                                      ),
+                                      actions: [
+                                        TextButton(onPressed: () => Navigator.pop(c), child: const Text('OK')),
+                                      ],
+                                    ),
+                                  );
+                                } else {
+                                  // Refer to Doctor: parse slot timing
+                                  final slotParts = selectedSlot.split(' - ');
+                                  final startParts = slotParts.first.split(':');
+                                  int hour = int.parse(startParts[0]);
+                                  final minAndPeriod = startParts[1].split(' ');
+                                  int min = int.parse(minAndPeriod[0]);
+                                  final period = minAndPeriod[1].toUpperCase();
+                                  if (period == 'PM' && hour != 12) hour += 12;
+                                  if (period == 'AM' && hour == 12) hour = 0;
+
+                                  final scheduledStart = DateTime(
+                                    selectedDate.year,
+                                    selectedDate.month,
+                                    selectedDate.day,
+                                    hour,
+                                    min,
+                                  );
+
+                                  final apptRes = await ApiClient.createAppointment(
+                                    patientId: widget.patient.id,
+                                    doctorUserId: selectedDoctorId!,
+                                    appointmentType: selectedConsultationType,
+                                    scheduledStart: scheduledStart,
+                                    status: 'confirmed',
+                                    reason: referralReasonController.text.trim().isNotEmpty
+                                        ? referralReasonController.text.trim()
+                                        : 'ASHA Clinical Referral',
+                                    notes: {
+                                      'referral_type': 'asha_referral',
+                                      'asha_referral_id': ashaReq?.id,
+                                      'asha_assessment_id': recordId,
+                                      'vitals': vitalsMap,
+                                      'symptoms': symptomsController.text.trim(),
+                                      'field_care_advice': fieldCareController.text.trim(),
+                                      'slot_time': selectedSlot,
+                                    },
+                                  );
+
+                                  if (apptRes['success'] == true) {
+                                    final apptData = apptRes['data'] is Map ? apptRes['data'] as Map : {};
+                                    final newApptId = apptData['appointment_id']?.toString() ?? apptData['id']?.toString();
+
+                                    // Mark original request as completed (resolution: referred_to_doctor)
+                                    if (ashaReq != null) {
+                                      await ApiClient.updateAppointment(
+                                        appointmentId: ashaReq.id,
+                                        status: 'completed',
+                                        notes: {
+                                          'resolution': 'referred_to_doctor',
+                                          'referred_appointment_id': newApptId,
+                                          'asha_assessment_id': recordId,
+                                        },
+                                      );
+                                    }
+
+                                    if (!mounted) return;
+                                    Navigator.pop(ctx);
+                                    _loadPatientAppointments();
+                                    _loadPatientMedicalRecords();
+                                    widget.onAppointmentCreated?.call();
+
+                                    showDialog(
+                                      context: context,
+                                      builder: (c) => AlertDialog(
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                        title: const Row(
+                                          children: [
+                                            Icon(Icons.check_circle_rounded, color: Color(0xFF7C3AED), size: 26),
+                                            SizedBox(width: 8),
+                                            Text('Referred to Doctor!'),
+                                          ],
+                                        ),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Doctor consultation confirmed for ${widget.patient.name}.'),
+                                            const SizedBox(height: 8),
+                                            Text('Slot: $selectedSlot on ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'),
+                                            Text('Mode: ${selectedConsultationType.toUpperCase()}'),
+                                            const SizedBox(height: 8),
+                                            const Text(
+                                              'Doctor and Patient can view full assessment and vitals immediately.',
+                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F766E)),
+                                            ),
+                                          ],
+                                        ),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Done')),
+                                        ],
+                                      ),
+                                    );
+                                  } else {
+                                    setModalState(() => isSubmitting = false);
+                                    final err = apptRes['error']?.toString() ?? 'Failed to book consultation.';
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(err), backgroundColor: Colors.redAccent),
+                                    );
+                                  }
+                                }
+                              } catch (e) {
+                                setModalState(() => isSubmitting = false);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent),
+                                );
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: decisionMode == 'refer' ? const Color(0xFF7C3AED) : const Color(0xFF0F766E),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: isSubmitting
+                          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : Text(
+                              decisionMode == 'refer'
+                                  ? 'Confirm Doctor Referral & Book Slot'
+                                  : 'Save Field Care Assessment (Managed)',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -63,6 +63,9 @@ class AppointmentItem {
   final Map<String, dynamic>? clinicalData;
   final List<String>? allergies;
   final Map<String, dynamic>? emergencyContact;
+  final Map<String, dynamic>? notes;
+  final String? appointmentType;
+  final String? reason;
 
   AppointmentItem({
     required this.id,
@@ -94,5 +97,8 @@ class AppointmentItem {
     this.clinicalData,
     this.allergies,
     this.emergencyContact,
+    this.notes,
+    this.appointmentType,
+    this.reason,
   }) : _isCompleted = isCompleted;
 }

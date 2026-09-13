@@ -100,6 +100,7 @@ export async function getAppointments(request: HttpRequest, context: InvocationC
         const status = request.query.get("status") || null;
         const providerUserId = request.query.get("provider_user_id") || null;
         const patientId = request.query.get("patient_id") || null;
+        const appointmentType = request.query.get("appointment_type") || null;
 
         if (providerUserId && !isValidUuid(providerUserId)) {
             return errorResponse(400, "Invalid provider_user_id format. Must be a valid UUID.");
@@ -109,12 +110,19 @@ export async function getAppointments(request: HttpRequest, context: InvocationC
         }
 
         // Ownership enforcement: if caller is a patient, they can only query their own appointments
+        let effectivePatientId = patientId;
         if (auth.role === "patient") {
             if (patientId && patientId !== auth.patient_id) {
                 return errorResponse(403, "Forbidden. Patients can only query their own appointments.");
             }
+            effectivePatientId = auth.patient_id || null;
         }
-        const effectivePatientId = auth.role === "patient" ? auth.patient_id : patientId;
+
+        // Doctor isolation: doctors can only query appointments assigned to them (cannot see unreferred ASHA visits)
+        let effectiveProviderId = providerUserId;
+        if (auth.role === "doctor") {
+            effectiveProviderId = auth.user_id;
+        }
 
         const sql = `
             SELECT 
@@ -172,10 +180,11 @@ export async function getAppointments(request: HttpRequest, context: InvocationC
             WHERE ($1::text IS NULL OR a.status = $1)
               AND ($2::uuid IS NULL OR a.provider_user_id = $2)
               AND ($3::uuid IS NULL OR a.patient_id = $3)
+              AND ($4::text IS NULL OR a.appointment_type = $4)
             ORDER BY a.scheduled_start ASC;
         `;
 
-        const result = await query(sql, [status, providerUserId, effectivePatientId]);
+        const result = await query(sql, [status, effectiveProviderId, effectivePatientId, appointmentType]);
         return jsonResponse(200, {
             success: true,
             count: result.rows.length,
@@ -298,9 +307,9 @@ export async function updateAppointment(request: HttpRequest, context: Invocatio
 
     const authPayload = authResult as TokenPayload;
 
-    // 2. Authorize role: only doctor or admin can modify appointments (403 for other roles)
-    if (authPayload.role !== "doctor" && authPayload.role !== "admin") {
-        return errorResponse(403, "Access denied. Only doctors and administrators can modify appointments.");
+    // 2. Authorize role: doctor, admin, or worker/nurse can modify appointments
+    if (authPayload.role !== "doctor" && authPayload.role !== "admin" && authPayload.role !== "nurse" && authPayload.role !== "worker") {
+        return errorResponse(403, "Access denied. Only doctors, healthcare workers, and administrators can modify appointments.");
     }
 
     try {
@@ -313,7 +322,7 @@ export async function updateAppointment(request: HttpRequest, context: Invocatio
 
         // 4. Fetch existing appointment to verify existence and check ownership
         const existingResult = await query(
-            `SELECT appointment_id, patient_id, provider_user_id, status, notes, scheduled_start, scheduled_end, reason
+            `SELECT appointment_id, patient_id, provider_user_id, appointment_type, status, notes, scheduled_start, scheduled_end, reason
              FROM health.appointments
              WHERE appointment_id = $1::uuid`,
             [appointmentId]
@@ -325,9 +334,15 @@ export async function updateAppointment(request: HttpRequest, context: Invocatio
 
         const existingAppt = existingResult.rows[0];
 
-        // 5. Enforce Doctor ownership: doctor can ONLY modify their own appointment
+        // 5. Enforce role-based ownership:
+        // Doctor: can ONLY modify their own assigned appointment
         if (authPayload.role === "doctor" && existingAppt.provider_user_id !== authPayload.user_id) {
             return errorResponse(403, "Access denied. You are not authorized to modify another doctor's appointment.");
+        }
+
+        // Worker/Nurse: can ONLY modify home_visit appointments (ASHA requests)
+        if ((authPayload.role === "nurse" || authPayload.role === "worker") && existingAppt.appointment_type !== "home_visit") {
+            return errorResponse(403, "Access denied. Healthcare workers can only update home visit / ASHA requests.");
         }
 
         // 6. Parse JSON request body
@@ -448,6 +463,11 @@ export async function updateAppointment(request: HttpRequest, context: Invocatio
             const savedPrescriptions: any[] = [];
 
             if (Array.isArray(rxList) && rxList.length > 0) {
+                if (authPayload.role !== "doctor" && authPayload.role !== "admin") {
+                    await client.query("ROLLBACK;");
+                    return errorResponse(403, "Access denied. Only doctors and administrators are authorized to issue formal prescriptions.");
+                }
+
                 // Delete previous prescriptions specifically linked to this appointment to prevent duplicate entries
                 await client.query(
                     `DELETE FROM health.prescriptions WHERE appointment_id = $1::uuid;`,

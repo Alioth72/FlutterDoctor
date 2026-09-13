@@ -713,6 +713,85 @@ class PatientDatabaseService {
       throw Exception(errorMsg);
     }
   }
+
+  /// Request an ASHA Worker Home Visit on backend: POST /appointments
+  /// appointment_type: 'home_visit', status: 'queued'
+  Future<Appointment> requestAshaVisit({
+    required String reason,
+    required String urgency,
+    String? address,
+    Map<String, dynamic>? symptomsData,
+  }) async {
+    final token = await _storageService.getAuthToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication required. Please log in to request an ASHA visit.');
+    }
+
+    String? patientId = await _storageService.getPatientId();
+    if (patientId == null || patientId.length < 32) {
+      patientId = _extractPatientIdFromToken(token);
+      if (patientId != null && patientId.length >= 32) {
+        await _storageService.savePatientId(patientId);
+      }
+    }
+
+    if (patientId == null || patientId.length < 32) {
+      try {
+        final profile = await fetchMyProfile();
+        patientId = profile?.patientId;
+        if (patientId != null && patientId.length >= 32) {
+          await _storageService.savePatientId(patientId);
+        }
+      } catch (_) {}
+    }
+
+    final now = DateTime.now();
+    final payload = {
+      if (patientId != null && patientId.isNotEmpty) 'patient_id': patientId,
+      'provider_user_id': null,
+      'appointment_type': 'home_visit',
+      'scheduled_start': now.toIso8601String(),
+      'status': 'queued',
+      'reason': reason,
+      'source': 'online',
+      'notes': {
+        'request_type': 'asha_visit',
+        'urgency': urgency,
+        'patient_address': address ?? '',
+        if (symptomsData != null) 'symptoms_data': symptomsData,
+        'requested_at': now.toIso8601String(),
+      },
+    };
+
+    debugPrint('[PatientDatabaseService] POST /appointments (ASHA visit request) -> $payload');
+
+    final url = Uri.parse('$apiBaseUrl/appointments');
+    final response = await _httpClient
+        .post(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode(payload),
+        )
+        .timeout(requestTimeout);
+
+    debugPrint('[PatientDatabaseService] ASHA visit request response: ${response.statusCode}');
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final apptData = data['data'] is Map ? data['data'] as Map<String, dynamic> : data;
+      return Appointment.fromDatabaseJson(apptData);
+    } else {
+      String errorMsg = 'Failed to request ASHA visit (${response.statusCode})';
+      try {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (data['error'] != null) errorMsg = data['error'].toString();
+      } catch (_) {}
+      throw Exception(errorMsg);
+    }
+  }
 }
 
 class SlotFullException implements Exception {
