@@ -1,49 +1,220 @@
-import '../appointments/video_consultation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/appointment.dart';
 import '../../providers/appointment_provider.dart';
-import '../appointments/book_appointment_screen.dart';
+import '../../services/patient_database_service.dart';
 import '../appointments/appointment_receipt_screen.dart';
+import '../appointments/book_appointment_screen.dart';
+import '../appointments/video_consultation_screen.dart';
 
-class AppointmentsTab extends StatelessWidget {
+class AppointmentsTab extends StatefulWidget {
   const AppointmentsTab({super.key});
+
+  @override
+  State<AppointmentsTab> createState() => _AppointmentsTabState();
+}
+
+class _AppointmentsTabState extends State<AppointmentsTab> {
+  final _dbService = PatientDatabaseService();
+
+  Future<void> _joinTelehealth(BuildContext context, Appointment appointment) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: Color(0xFF7C3AED)),
+                SizedBox(height: 16),
+                Text(
+                  'Verifying consultation room access...',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      await _dbService.requestTelehealthAccess(appointment.id);
+      if (context.mounted) {
+        Navigator.of(context).pop(); // dismiss loading dialog
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => VideoConsultationScreen(appointment: appointment),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // dismiss loading dialog
+        final msg = e.toString().replaceAll('Exception: ', '');
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            icon: const Icon(Icons.lock_clock_rounded, color: Color(0xFF7C3AED), size: 40),
+            title: const Text('Consultation Room Locked', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: Text(
+              msg.contains('join window')
+                  ? 'The secure video consultation room opens 15 minutes before your scheduled appointment time (${appointment.timeSlot}). Please return closer to your slot.'
+                  : msg,
+              style: const TextStyle(fontSize: 14, height: 1.4),
+            ),
+            actions: [
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Understood'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final appointmentProvider = Provider.of<AppointmentProvider>(context);
-    final appointments = appointmentProvider.appointments;
+    final upcomingAppointments = appointmentProvider.upcomingAppointments;
+    final pastAppointments = appointmentProvider.pastAppointments;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Appointments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        actions: [
-          if (appointments.isNotEmpty)
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('My Appointments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          actions: [
             IconButton(
-              tooltip: 'Clear All Appointments',
-              icon: const Icon(Icons.delete_sweep_outlined, color: Colors.red),
-              onPressed: () => _confirmClearAll(context),
+              tooltip: 'Sync Appointments',
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: () async {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Syncing appointments with health system...'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+                await appointmentProvider.refreshAppointmentsFromBackend();
+              },
             ),
-        ],
-      ),
-      body: appointments.isEmpty
-          ? _buildEmptyState(context)
-          : _buildAppointmentsList(context, appointments),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const BookAppointmentScreen(),
+            if (appointmentProvider.appointments.isNotEmpty)
+              IconButton(
+                tooltip: 'Clear All Appointments',
+                icon: const Icon(Icons.delete_sweep_outlined, color: Colors.red),
+                onPressed: () => _confirmClearAll(context),
+              ),
+          ],
+          bottom: TabBar(
+            labelColor: const Color(0xFF7C3AED),
+            unselectedLabelColor: const Color(0xFF64748B),
+            indicatorColor: const Color(0xFF7C3AED),
+            indicatorWeight: 3,
+            tabs: [
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Upcoming', style: TextStyle(fontWeight: FontWeight.bold)),
+                    if (upcomingAppointments.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF7C3AED),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${upcomingAppointments.length}',
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('History', style: TextStyle(fontWeight: FontWeight.bold)),
+                    if (pastAppointments.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${pastAppointments.length}',
+                          style: const TextStyle(color: Color(0xFF475569), fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            // Tab 1: Upcoming
+            RefreshIndicator(
+              onRefresh: () => appointmentProvider.refreshAppointmentsFromBackend(),
+              child: upcomingAppointments.isEmpty
+                  ? _buildEmptyState(
+                      context,
+                      title: 'No Upcoming Consultations',
+                      subtitle: 'You have no scheduled appointments at the moment. Book a teleconsultation or OPD visit with available doctors.',
+                      showBookButton: true,
+                    )
+                  : _buildAppointmentsList(context, upcomingAppointments, isUpcoming: true),
             ),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Book Appointment'),
+            // Tab 2: Past / History
+            RefreshIndicator(
+              onRefresh: () => appointmentProvider.refreshAppointmentsFromBackend(),
+              child: pastAppointments.isEmpty
+                  ? _buildEmptyState(
+                      context,
+                      title: 'No Past Appointments',
+                      subtitle: 'Your completed and cancelled consultation records will appear here.',
+                      showBookButton: false,
+                    )
+                  : _buildAppointmentsList(context, pastAppointments, isUpcoming: false),
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: const Color(0xFF7C3AED),
+          foregroundColor: Colors.white,
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const BookAppointmentScreen(),
+              ),
+            );
+          },
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Book Consultation', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
       ),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required bool showBookButton,
+  }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -67,42 +238,49 @@ class AppointmentsTab extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'No Appointments Yet',
+              title,
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Book an in-person or OPD consultation with available government & hospital doctors and get your online token slip.',
+              subtitle,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 28),
-            FilledButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const BookAppointmentScreen(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Book Doctor Appointment'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            if (showBookButton) ...[
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const BookAppointmentScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.add_circle_outline),
+                label: const Text('Book Doctor Consultation'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF7C3AED),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAppointmentsList(BuildContext context, List<Appointment> appointments) {
+  Widget _buildAppointmentsList(
+    BuildContext context,
+    List<Appointment> appointments, {
+    required bool isUpcoming,
+  }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -111,15 +289,17 @@ class AppointmentsTab extends StatelessWidget {
       itemCount: appointments.length,
       itemBuilder: (context, index) {
         final apt = appointments[index];
-        final isConfirmed = apt.status == 'Confirmed';
+        final isConfirmed = apt.status.toLowerCase() == 'confirmed';
+        final isCompleted = apt.status.toLowerCase() == 'completed';
+        final isInProgress = apt.status.toLowerCase() == 'in progress' || apt.status.toLowerCase() == 'in_progress';
 
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             side: BorderSide(
-              color: isConfirmed
+              color: (isConfirmed || isCompleted || isInProgress)
                   ? colorScheme.outlineVariant.withValues(alpha: 0.7)
                   : colorScheme.error.withValues(alpha: 0.3),
             ),
@@ -170,7 +350,11 @@ class AppointmentsTab extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                apt.isOnline ? 'ONLINE' : 'OFFLINE',
+                                apt.isOnline
+                                    ? (apt.appointmentType.toLowerCase() == 'telehealth'
+                                        ? 'TELEHEALTH'
+                                        : 'ONLINE')
+                                    : 'CLINIC',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
@@ -185,9 +369,7 @@ class AppointmentsTab extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: isConfirmed
-                            ? Colors.green.withValues(alpha: 0.12)
-                            : Colors.red.withValues(alpha: 0.12),
+                        color: _statusBgColor(apt.status),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -195,7 +377,7 @@ class AppointmentsTab extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: isConfirmed ? Colors.green : Colors.red,
+                          color: _statusTextColor(apt.status),
                         ),
                       ),
                     ),
@@ -213,9 +395,9 @@ class AppointmentsTab extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   apt.doctorSpecialty,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13,
-                    color: colorScheme.primary,
+                    color: Color(0xFF7C3AED),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -241,7 +423,7 @@ class AppointmentsTab extends StatelessWidget {
                 // Date & Time Box
                 Row(
                   children: [
-                    Icon(Icons.access_time_rounded, size: 16, color: colorScheme.primary),
+                    const Icon(Icons.access_time_rounded, size: 16, color: Color(0xFF7C3AED)),
                     const SizedBox(width: 6),
                     Text(
                       '${apt.appointmentDate} • ${apt.timeSlot}',
@@ -251,19 +433,13 @@ class AppointmentsTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
 
-                // If Online & Confirmed, show Connect Video Consultation Button
-                if (apt.isOnline && isConfirmed) ...[
+                // If Online/Telehealth & Active in Upcoming, show Join Consultation button
+                if (isUpcoming && apt.isOnline && (isConfirmed || isInProgress || apt.status.toLowerCase() == 'queued')) ...[
                   SizedBox(
                     width: double.infinity,
                     height: 44,
                     child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => VideoConsultationScreen(appointment: apt),
-                          ),
-                        );
-                      },
+                      onPressed: () => _joinTelehealth(context, apt),
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF7C3AED),
                         shape: RoundedRectangleBorder(
@@ -272,7 +448,7 @@ class AppointmentsTab extends StatelessWidget {
                       ),
                       icon: const Icon(Icons.videocam_rounded, size: 18, color: Colors.white),
                       label: const Text(
-                        'Connect Video Consultation',
+                        'Join Video Consultation Room',
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Colors.white),
                       ),
                     ),
@@ -293,7 +469,7 @@ class AppointmentsTab extends StatelessWidget {
                           );
                         },
                         icon: const Icon(Icons.receipt_long_outlined, size: 18),
-                        label: const Text('View Online Receipt'),
+                        label: const Text('View Token / Receipt'),
                       ),
                     ),
                     if (isConfirmed) ...[
@@ -388,7 +564,7 @@ class AppointmentsTab extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Clear All Appointments?'),
-        content: const Text('This will delete all appointment records from your phone. You can book fresh test appointments anytime.'),
+        content: const Text('This will delete all appointment records from your local storage. You can refresh from the backend anytime.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -411,6 +587,40 @@ class AppointmentsTab extends StatelessWidget {
           const SnackBar(content: Text('All appointments cleared.')),
         );
       }
+    }
+  }
+
+  Color _statusBgColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+        return Colors.green.withValues(alpha: 0.12);
+      case 'in progress':
+      case 'in_progress':
+        return Colors.orange.withValues(alpha: 0.15);
+      case 'completed':
+        return Colors.blue.withValues(alpha: 0.12);
+      case 'queued':
+        return Colors.purple.withValues(alpha: 0.12);
+      case 'cancelled':
+      default:
+        return Colors.red.withValues(alpha: 0.12);
+    }
+  }
+
+  Color _statusTextColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+        return Colors.green.shade700;
+      case 'in progress':
+      case 'in_progress':
+        return Colors.orange.shade800;
+      case 'completed':
+        return Colors.blue.shade700;
+      case 'queued':
+        return Colors.purple.shade700;
+      case 'cancelled':
+      default:
+        return Colors.red.shade700;
     }
   }
 }

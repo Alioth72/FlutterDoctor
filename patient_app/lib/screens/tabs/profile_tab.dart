@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../models/health_profile.dart';
+import '../../providers/appointment_provider.dart';
 import '../../providers/health_profile_provider.dart';
 import '../../widgets/location_selection_sheet.dart';
 import '../../widgets/patient_action_sheets.dart';
@@ -62,6 +63,11 @@ class _ProfileTabState extends State<ProfileTab> {
       final provider = Provider.of<HealthProfileProvider>(context, listen: false);
       await provider.clearProfile();
 
+      try {
+        final apptProvider = Provider.of<AppointmentProvider>(context, listen: false);
+        await apptProvider.clearAllAppointments();
+      } catch (_) {}
+
       nav.pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const SignupScreen()),
         (route) => false,
@@ -85,7 +91,6 @@ class _ProfileTabState extends State<ProfileTab> {
   void _showEditProfileSheet(BuildContext context, HealthProfile profile) {
     final nameController = TextEditingController(text: profile.name);
     final ageController = TextEditingController(text: profile.age.toString());
-    final phoneController = TextEditingController(text: profile.phoneNumber);
     String selectedGender = profile.gender;
     String selectedResidence = profile.residenceType;
 
@@ -340,7 +345,7 @@ class _ProfileTabState extends State<ProfileTab> {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    profile?.name ?? 'Vikram Malhotra',
+                    profile?.name ?? 'Patient',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
@@ -512,11 +517,12 @@ class _ProfileTabState extends State<ProfileTab> {
     final profileProvider = Provider.of<HealthProfileProvider>(context);
     final profile = profileProvider.profile;
 
-    final name = profile?.name ?? 'Vikram Malhotra';
+    final name = profile?.name ?? 'Patient';
     final age = profile?.age ?? 28;
-    final gender = profile?.gender ?? 'Male';
-    final phone = profile?.phoneNumber ?? '9876501234';
-    final patientId = profile?.patientId ?? 'ASH-PT-1234';
+    final gender = profile?.gender ?? 'Other';
+    final phone = profile?.phoneNumber ?? '';
+    final mrn = profile?.tier2Data?['medical_record_number'] as String? ?? profile?.patientId ?? 'ASH-PT-1001';
+    final patientId = mrn;
     final residence = profile?.residenceType ?? 'Rural';
 
     return SingleChildScrollView(

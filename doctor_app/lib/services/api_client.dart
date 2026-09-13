@@ -262,6 +262,62 @@ class ApiClient {
   }
 
   // ==========================================================
+  // CREATE APPOINTMENT (POST /api/appointments)
+  // ==========================================================
+  static Future<Map<String, dynamic>> createAppointment({
+    required String patientId,
+    required String doctorUserId,
+    String? facilityId,
+    String appointmentType = 'clinic',
+    DateTime? scheduledStart,
+    DateTime? scheduledEnd,
+    String status = 'confirmed',
+    String? reason,
+    Map<String, dynamic>? notes,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/appointments');
+      final headers = await _headers();
+      final bodyMap = <String, dynamic>{
+        'patient_id': patientId,
+        'provider_user_id': doctorUserId,
+        if (facilityId != null && facilityId.isNotEmpty) 'facility_id': facilityId,
+        'appointment_type': appointmentType,
+        if (scheduledStart != null) 'scheduled_start': scheduledStart.toUtc().toIso8601String(),
+        if (scheduledEnd != null) 'scheduled_end': scheduledEnd.toUtc().toIso8601String(),
+        'status': status,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+        if (notes != null) 'notes': notes,
+      };
+
+      final response = await http.post(uri, headers: headers, body: jsonEncode(bodyMap));
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return {
+          'success': true,
+          'statusCode': response.statusCode,
+          'data': data['data'],
+          'message': data['message'] ?? 'Appointment created successfully.',
+        };
+      } else {
+        return {
+          'success': false,
+          'statusCode': response.statusCode,
+          'error': data['error'] ?? 'Failed to create appointment (${response.statusCode})',
+        };
+      }
+    } catch (e) {
+      debugPrint('ApiClient.createAppointment error: $e');
+      return {
+        'success': false,
+        'statusCode': 500,
+        'error': 'Network or client error: $e',
+      };
+    }
+  }
+
+  // ==========================================================
   // UPDATE APPOINTMENT (PATCH /api/appointments/{id})
   // ==========================================================
   static Future<Map<String, dynamic>> updateAppointment({
@@ -775,6 +831,27 @@ class ApiClient {
         'error': 'Network or client error: $e',
       };
     }
+  }
+
+  // ==========================================================
+  // FACILITIES (GET /api/facilities)
+  // ==========================================================
+  static Future<List<Map<String, dynamic>>> getFacilities() async {
+    try {
+      final uri = Uri.parse('$baseUrl/facilities');
+      final headers = await _headers();
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] is List) {
+          return List<Map<String, dynamic>>.from(data['data']);
+        }
+      }
+    } catch (e) {
+      debugPrint('ApiClient.getFacilities error: $e');
+    }
+    return [];
   }
 }
 

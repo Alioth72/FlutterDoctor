@@ -1006,93 +1006,98 @@ class _DashboardScreenState extends State<DashboardScreen> {
               // Header Row: Avatar, Patient Info, Appt No & Reddish Delete Button
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      // Patient Avatar Badge with Gradient Ring
-                      Container(
-                        padding: const EdgeInsets.all(2.5),
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: AppColors.gradientPrimaryToAccent,
-                        ),
-                        child: CircleAvatar(
-                          radius: 21,
-                          backgroundColor: AppColors.surface,
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Patient Avatar Badge with Gradient Ring
+                        Container(
+                          padding: const EdgeInsets.all(2.5),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: AppColors.gradientPrimaryToAccent,
+                          ),
                           child: CircleAvatar(
-                            radius: 19,
-                            backgroundColor: AppColors.primaryLight,
-                            child: Text(
-                              patientInitial,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primaryDark,
-                                fontSize: 16,
+                            radius: 21,
+                            backgroundColor: AppColors.surface,
+                            child: CircleAvatar(
+                              radius: 19,
+                              backgroundColor: AppColors.primaryLight,
+                              child: Text(
+                                patientInitial,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryDark,
+                                  fontSize: 16,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
+                        const SizedBox(width: 12),
 
-                      // Patient Name & Appointment No
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                        // Patient Name & Appointment No
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Appointment ${index + 1}',
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.headingText,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primaryLight,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  appt.appointmentNo,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryDark,
+                              Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
+                                  Text(
+                                    'Appointment ${index + 1}',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.headingText,
+                                    ),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: appt.status == 'completed'
-                                      ? AppColors.successBg
-                                      : (appt.status == 'in_progress' ? const Color(0xFFFEF3C7) : const Color(0xFFF3F4F6)),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: appt.status == 'completed'
-                                        ? AppColors.success.withValues(alpha: 0.4)
-                                        : (appt.status == 'in_progress' ? const Color(0xFFF59E0B) : const Color(0xFFE5E7EB)),
-                                    width: 0.8,
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryLight,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      appt.appointmentNo,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primaryDark,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                child: Text(
-                                  appt.status.toUpperCase(),
-                                  style: TextStyle(
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.bold,
-                                    color: appt.status == 'completed'
-                                        ? AppColors.successText
-                                        : (appt.status == 'in_progress' ? const Color(0xFFB45309) : const Color(0xFF4B5563)),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: appt.status == 'completed'
+                                          ? AppColors.successBg
+                                          : (appt.status == 'in_progress' ? const Color(0xFFFEF3C7) : const Color(0xFFF3F4F6)),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: appt.status == 'completed'
+                                            ? AppColors.success.withValues(alpha: 0.4)
+                                            : (appt.status == 'in_progress' ? const Color(0xFFF59E0B) : const Color(0xFFE5E7EB)),
+                                        width: 0.8,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      appt.status.toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: appt.status == 'completed'
+                                            ? AppColors.successText
+                                            : (appt.status == 'in_progress' ? const Color(0xFFB45309) : const Color(0xFF4B5563)),
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
                           const SizedBox(height: 2),
                           Text(
                             '${appt.patientName} (${appt.age} yrs, ${appt.gender})',
@@ -1184,8 +1189,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
+              ),
 
                   // Reddish Delete Button
                   Container(

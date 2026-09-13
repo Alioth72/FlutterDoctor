@@ -1,154 +1,218 @@
 import '../models/doctor.dart';
+import 'patient_database_service.dart';
 
 class MockDoctorService {
+  static List<Doctor>? _cachedLiveDoctors;
+
   static final List<Doctor> _doctors = [
     const Doctor(
-      id: 'doc_1',
-      name: 'Dr. Ananya Sharma',
-      specialty: 'General Physician',
-      qualification: 'MBBS, MD (Internal Medicine)',
-      hospital: 'Ashwini Central Hospital • OPD Block A',
-      experienceYears: 12,
-      rating: 4.8,
+      id: 'd7b4e3f1-2856-4c91-9e8a-729938b81001',
+      name: 'Dr. Rajesh V. Sharma',
+      specialty: 'Cardiology',
+      qualification: 'MBBS, MD, DM (Cardiology)',
+      hospital: 'Ashwini Central Hospital • Executive Chamber 104, Block A',
+      experienceYears: 16,
+      rating: 4.9,
       consultationFee: 0,
       availableDaysOfWeek: [1, 2, 3, 4, 5, 6], // Mon - Sat
       availableTimeSlots: [
+        '08:00 AM',
+        '08:30 AM',
         '09:00 AM',
         '09:30 AM',
         '10:00 AM',
         '10:30 AM',
+        '11:00 AM',
         '11:30 AM',
+        '12:00 PM',
+        '12:30 PM',
+        '01:00 PM',
+        '01:30 PM',
+      ],
+    ),
+    const Doctor(
+      id: 'd73f9fb2-c526-4134-ade9-370cd844310c',
+      name: 'Dr. Mayank Kumar',
+      specialty: 'Orthopedics',
+      qualification: 'MBBS, MS (Orthopedics)',
+      hospital: 'Ashwini Central Hospital • Chamber 700',
+      experienceYears: 8,
+      rating: 4.9,
+      consultationFee: 0,
+      availableDaysOfWeek: [1, 2, 3, 4, 5, 6],
+      availableTimeSlots: [
+        '08:00 AM',
+        '08:30 AM',
+        '09:00 AM',
+        '09:30 AM',
+        '10:00 AM',
+        '10:30 AM',
+        '11:00 AM',
+        '11:30 AM',
+        '12:00 PM',
+        '12:30 PM',
+        '01:00 PM',
+        '01:30 PM',
         '02:00 PM',
+        '02:30 PM',
+      ],
+    ),
+    const Doctor(
+      id: '27e15e98-c7a1-4314-ae7b-bce893daa826',
+      name: 'Dr. Faaiz Hussain',
+      specialty: 'Cardiology',
+      qualification: 'MBBS, MD',
+      hospital: 'Ashwini Central Hospital • Chamber 108',
+      experienceYears: 8,
+      rating: 4.8,
+      consultationFee: 0,
+      availableDaysOfWeek: [1, 2, 3, 4, 5, 6],
+      availableTimeSlots: [
+        '08:00 AM',
+        '08:30 AM',
+        '09:00 AM',
+        '09:30 AM',
+        '10:00 AM',
+        '10:30 AM',
+        '11:00 AM',
+        '11:30 AM',
+        '12:00 PM',
+        '12:30 PM',
+        '01:00 PM',
+        '01:30 PM',
+      ],
+    ),
+    const Doctor(
+      id: '21072aa5-91a2-489d-a1fd-f6a2910e31cf',
+      name: 'Dr. Aarushi Anand',
+      specialty: 'Cardiology',
+      qualification: 'MBBS, MD (Cardiology)',
+      hospital: 'Ashwini Central Hospital • Chamber 108',
+      experienceYears: 8,
+      rating: 4.9,
+      consultationFee: 0,
+      availableDaysOfWeek: [1, 2, 3, 4, 5, 6],
+      availableTimeSlots: [
+        '08:00 AM',
+        '08:30 AM',
+        '09:00 AM',
+        '09:30 AM',
+        '10:00 AM',
+        '10:30 AM',
+        '11:00 AM',
+        '11:30 AM',
+        '12:00 PM',
+        '12:30 PM',
+        '01:00 PM',
+        '01:30 PM',
+      ],
+    ),
+    const Doctor(
+      id: 'acceab8c-e033-4e7b-b3dc-d1399a912730',
+      name: 'Dr. Meera N. Deshmukh',
+      specialty: 'Pediatrics',
+      qualification: 'MBBS, MD (Pediatrics), DNB',
+      hospital: 'Ashwini Central Hospital • Chamber 205, Child Care Unit',
+      experienceYears: 14,
+      rating: 4.9,
+      consultationFee: 0,
+      availableDaysOfWeek: [1, 2, 3, 4, 5],
+      availableTimeSlots: [
+        '10:00 AM',
+        '10:30 AM',
+        '11:00 AM',
+        '11:30 AM',
+        '12:00 PM',
+        '12:30 PM',
+        '02:00 PM',
+        '02:30 PM',
         '03:00 PM',
+        '03:30 PM',
+        '04:00 PM',
         '04:30 PM',
       ],
     ),
     const Doctor(
-      id: 'doc_2',
-      name: 'Dr. Rajesh Sharma',
-      specialty: 'Cardiologist',
-      qualification: 'MBBS, DM (Cardiology)',
-      hospital: 'Ashwini Central Hospital • Cardiology Wing',
-      experienceYears: 16,
-      rating: 4.9,
-      consultationFee: 0,
-      availableDaysOfWeek: [1, 3, 5], // Mon, Wed, Fri
-      availableTimeSlots: [
-        '10:00 AM',
-        '11:00 AM',
-        '12:00 PM',
-        '03:00 PM',
-        '04:00 PM',
-        '05:00 PM',
-      ],
-    ),
-    const Doctor(
-      id: 'doc_3',
-      name: 'Dr. M. Sundaram',
-      specialty: 'Pediatrician (Child Specialist)',
-      qualification: 'MBBS, DCH, DNB (Pediatrics)',
-      hospital: 'Ashwini Mother & Child Care Wing',
-      experienceYears: 14,
-      rating: 4.9,
-      consultationFee: 0,
-      availableDaysOfWeek: [1, 2, 3, 4, 5], // Mon - Fri
-      availableTimeSlots: [
-        '09:30 AM',
-        '10:30 AM',
-        '11:30 AM',
-        '02:30 PM',
-        '03:30 PM',
-      ],
-    ),
-    const Doctor(
-      id: 'doc_4',
-      name: 'Dr. Farhan Akhtar',
-      specialty: 'Orthopedic Surgeon',
-      qualification: 'MBBS, MS (Orthopedics)',
-      hospital: 'Ashwini Apex Trauma & Joint Center',
-      experienceYears: 15,
+      id: '3d0c6879-9155-4bd6-8576-57a64db702a3',
+      name: 'Dr. Sunil K. Nambiar',
+      specialty: 'Pulmonology',
+      qualification: 'MBBS, MD (Pulmonology)',
+      hospital: 'Ashwini Central Hospital • Chamber 114, Trauma Wing',
+      experienceYears: 12,
       rating: 4.8,
       consultationFee: 0,
-      availableDaysOfWeek: [2, 4, 6], // Tue, Thu, Sat
-      availableTimeSlots: [
-        '10:00 AM',
-        '11:30 AM',
-        '02:00 PM',
-        '03:30 PM',
-        '05:00 PM',
-      ],
-    ),
-    const Doctor(
-      id: 'doc_5',
-      name: 'Dr. Shalini M.',
-      specialty: 'Gynecologist & Obstetrician',
-      qualification: 'MBBS, MS (OBG)',
-      hospital: 'Ashwini Central Hospital • Women Health Clinic',
-      experienceYears: 11,
-      rating: 4.9,
-      consultationFee: 0,
-      availableDaysOfWeek: [1, 2, 3, 5, 6], // Mon, Tue, Wed, Fri, Sat
+      availableDaysOfWeek: [1, 2, 3, 4, 5, 6],
       availableTimeSlots: [
         '09:00 AM',
+        '09:30 AM',
         '10:00 AM',
+        '10:30 AM',
         '11:00 AM',
+        '11:30 AM',
+        '01:00 PM',
         '01:30 PM',
+        '02:00 PM',
         '02:30 PM',
-        '04:00 PM',
+        '03:00 PM',
+        '03:30 PM',
       ],
     ),
     const Doctor(
-      id: 'doc_6',
+      id: 'd7b4e3f1-2856-4c91-9e8a-729938b81002',
       name: 'Dr. Ananya Iyer',
-      specialty: 'Pulmonologist & Critical Care',
-      qualification: 'MBBS, MD (Pulmonology)',
-      hospital: 'Ashwini Central Hospital • Respiratory Center',
+      specialty: 'Neurology',
+      qualification: 'MBBS, DM (Neurology)',
+      hospital: 'Ashwini Central Hospital • Chamber 208, Neuro Wing',
       experienceYears: 10,
       rating: 4.8,
       consultationFee: 0,
-      availableDaysOfWeek: [1, 2, 4, 5], // Mon, Tue, Thu, Fri
+      availableDaysOfWeek: [1, 2, 3, 4, 5, 6],
       availableTimeSlots: [
+        '09:00 AM',
         '09:30 AM',
-        '11:00 AM',
-        '02:00 PM',
-        '03:30 PM',
-      ],
-    ),
-    const Doctor(
-      id: 'doc_7',
-      name: 'Dr. Sunita Devi',
-      specialty: 'Dermatologist',
-      qualification: 'MBBS, MD (Dermatology)',
-      hospital: 'Ashwini OPD Dispensary • Skin & Allergy',
-      experienceYears: 8,
-      rating: 4.7,
-      consultationFee: 0,
-      availableDaysOfWeek: [1, 3, 4, 6], // Mon, Wed, Thu, Sat
-      availableTimeSlots: [
+        '10:00 AM',
         '10:30 AM',
+        '11:00 AM',
         '11:30 AM',
-        '03:00 PM',
-        '04:00 PM',
+        '01:00 PM',
+        '01:30 PM',
+        '02:00 PM',
+        '02:30 PM',
       ],
     ),
   ];
 
-  /// Get all registered doctors
+  /// Get all registered doctors (prefers live Azure database, falls back to local)
   Future<List<Doctor>> getDoctors({String? specialty}) async {
-    // Simulated short network delay
-    await Future.delayed(const Duration(milliseconds: 100));
+    try {
+      if (_cachedLiveDoctors == null || _cachedLiveDoctors!.isEmpty) {
+        final live = await PatientDatabaseService().fetchDoctors();
+        if (live.isNotEmpty) {
+          _cachedLiveDoctors = live;
+        }
+      }
+    } catch (_) {}
+
+    final list = (_cachedLiveDoctors != null && _cachedLiveDoctors!.isNotEmpty)
+        ? _cachedLiveDoctors!
+        : _doctors;
+
     if (specialty == null || specialty.isEmpty || specialty == 'All') {
-      return _doctors;
+      return list;
     }
-    return _doctors
+    return list
         .where((d) => d.specialty.toLowerCase().contains(specialty.toLowerCase()))
         .toList();
   }
 
   /// Get unique specialty categories
   List<String> getSpecialties() {
+    final list = (_cachedLiveDoctors != null && _cachedLiveDoctors!.isNotEmpty)
+        ? _cachedLiveDoctors!
+        : _doctors;
+
     final set = <String>{'All'};
-    for (final doc in _doctors) {
+    for (final doc in list) {
       set.add(doc.specialty.split(' (')[0].split(' •')[0]);
     }
     return set.toList();
@@ -156,8 +220,11 @@ class MockDoctorService {
 
   /// Get a single doctor by ID
   Doctor? getDoctorById(String id) {
+    final list = (_cachedLiveDoctors != null && _cachedLiveDoctors!.isNotEmpty)
+        ? _cachedLiveDoctors!
+        : _doctors;
     try {
-      return _doctors.firstWhere((d) => d.id == id);
+      return list.firstWhere((d) => d.id == id);
     } catch (_) {
       return null;
     }
