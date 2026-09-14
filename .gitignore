@@ -1,11 +1,73 @@
-**/.dart_tool/
-**/build/
-**/android/local.properties
-**/ios/Flutter/ephemeral/
-**/packages/**/pubspec.lock
+# Environment & Secrets
+.env
 *.env
-test_apks/
+!.env.example
+
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# Temporary downloads & archives
+download/
+*.zip
+*.tar.gz
+*.rar
+
+# IntelliJ & VS Code related
+*.iml
+*.ipr
+*.iws
 .idea/
+.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+**/.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+**/build/
+/coverage/
+**/packages/**/pubspec.lock
+
+# Android build artifacts & local properties
+**/android/**/build/
+**/android/.gradle/
+**/android/local.properties
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# iOS related
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.framework
+**/ios/Flutter/ephemeral/
+
+# Symbolication & Obfuscation
+app.*.symbols
+app.*.map.json
+
+# Widget Preview
+.widget_preview/
+
+# Project-specific
+test_apks/
 packages/
 sih_project_doctor_app/
 sih_project_patient_app/
