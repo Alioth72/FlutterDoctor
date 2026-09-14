@@ -12,8 +12,9 @@ class Appointment {
   final String reason;
   final int consultationFee;
   final String status; // Confirmed, Completed, Cancelled
-  final String appointmentType; // Online or Offline
+  final String appointmentType; // Online, Offline, or home_visit
   final DateTime bookedAt;
+  final Map<String, dynamic>? notes;
 
   const Appointment({
     required this.id,
@@ -31,9 +32,16 @@ class Appointment {
     this.status = 'Confirmed',
     this.appointmentType = 'Offline',
     required this.bookedAt,
+    this.notes,
   });
 
-  bool get isOnline => appointmentType.toLowerCase() == 'online';
+  bool get isOnline =>
+      appointmentType.toLowerCase() == 'online' ||
+      appointmentType.toLowerCase() == 'telehealth';
+
+  bool get isAshaVisit =>
+      appointmentType.toLowerCase() == 'home_visit' ||
+      (notes != null && notes!['request_type'] == 'asha_visit');
 
   Map<String, dynamic> toJson() {
     return {
@@ -52,6 +60,7 @@ class Appointment {
       'status': status,
       'appointmentType': appointmentType,
       'bookedAt': bookedAt.toIso8601String(),
+      'notes': notes,
     };
   }
 
@@ -74,6 +83,102 @@ class Appointment {
       bookedAt: json['bookedAt'] != null
           ? DateTime.tryParse(json['bookedAt'] as String) ?? DateTime.now()
           : DateTime.now(),
+      notes: json['notes'] is Map ? Map<String, dynamic>.from(json['notes'] as Map) : null,
+    );
+  }
+
+  /// Factory constructor to parse live Azure Function PostgreSQL appointment schema
+  factory Appointment.fromDatabaseJson(Map<String, dynamic> json) {
+    final notes = json['notes'] is Map ? json['notes'] as Map : {};
+    final tokenNo = notes['appointment_no']?.toString() ??
+        (json['tokenNumber'] as String? ?? 'Token #01');
+
+    final startStr = json['scheduled_start'] as String?;
+    DateTime scheduledDate = DateTime.now();
+    if (startStr != null) {
+      scheduledDate = DateTime.tryParse(startStr)?.toLocal() ?? DateTime.now();
+    }
+
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const monthNames = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final dayOfWeek = dayNames[scheduledDate.weekday - 1];
+    final dayNum = scheduledDate.day.toString().padLeft(2, '0');
+    final monthName = monthNames[scheduledDate.month - 1];
+    final year = scheduledDate.year;
+    final formattedDate = '$dayOfWeek, $dayNum $monthName $year';
+
+    final hour = scheduledDate.hour;
+    final minute = scheduledDate.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final formattedHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+    final formattedTime = '${formattedHour.toString().padLeft(2, '0')}:$minute $period';
+
+    final rawStatus = (json['status'] as String? ?? 'confirmed').toLowerCase();
+    String normalizedStatus;
+    switch (rawStatus) {
+      case 'in_progress':
+        normalizedStatus = 'In Progress';
+        break;
+      case 'completed':
+        normalizedStatus = 'Completed';
+        break;
+      case 'cancelled':
+        normalizedStatus = 'Cancelled';
+        break;
+      case 'queued':
+        normalizedStatus = 'Queued';
+        break;
+      case 'no_show':
+        normalizedStatus = 'No Show';
+        break;
+      case 'confirmed':
+      default:
+        normalizedStatus = 'Confirmed';
+        break;
+    }
+
+    final rawType = (json['appointment_type'] as String? ?? 'clinic').toLowerCase();
+    final normalizedType = (rawType == 'telehealth' || rawType == 'online')
+        ? 'telehealth'
+        : (rawType == 'home_visit' ? 'home_visit' : 'clinic');
+
+    int parsedFee = 0;
+    final rawFee = notes['consultation_fee'] ?? json['consultation_fee'];
+    if (rawFee is num) {
+      parsedFee = rawFee.toInt();
+    } else if (rawFee is String) {
+      parsedFee = int.tryParse(rawFee.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    }
+
+    final finalDate = (notes['appointment_date']?.toString().isNotEmpty ?? false)
+        ? notes['appointment_date'].toString()
+        : formattedDate;
+    final finalSlot = (notes['slot_time']?.toString().isNotEmpty ?? false)
+        ? notes['slot_time'].toString()
+        : formattedTime;
+
+    return Appointment(
+      id: json['appointment_id'] as String? ?? json['id'] as String? ?? '',
+      tokenNumber: tokenNo,
+      doctorId: json['provider_user_id'] as String? ?? json['doctorId'] as String? ?? '',
+      doctorName: json['doctor_name'] as String? ?? json['doctorName'] as String? ?? (normalizedType == 'home_visit' ? 'ASHA Health Worker' : 'Dr. Rajesh V. Sharma'),
+      doctorSpecialty: json['doctor_specialty'] as String? ?? json['doctorSpecialty'] as String? ?? notes['doctor_specialty']?.toString() ?? (normalizedType == 'home_visit' ? 'Community Health Care' : 'General Physician'),
+      hospitalName: json['facility_name'] as String? ?? json['hospitalName'] as String? ?? (normalizedType == 'home_visit' ? 'Village Health Post' : 'Ashwini Central Hospital'),
+      patientName: json['patient_name'] as String? ?? json['patientName'] as String? ?? '',
+      patientPhone: json['patient_phone'] as String? ?? json['patientPhone'] as String? ?? '',
+      appointmentDate: finalDate,
+      timeSlot: finalSlot,
+      reason: json['reason'] as String? ?? json['mr_diagnosis'] as String? ?? 'General Consultation',
+      consultationFee: parsedFee,
+      status: normalizedStatus,
+      appointmentType: normalizedType,
+      bookedAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'] as String)?.toLocal() ?? DateTime.now()
+          : DateTime.now(),
+      notes: notes is Map<String, dynamic> ? notes : Map<String, dynamic>.from(notes),
     );
   }
 

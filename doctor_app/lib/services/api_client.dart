@@ -258,7 +258,66 @@ class ApiClient {
       clinicalData: clinicalData.isNotEmpty ? Map<String, dynamic>.from(clinicalData) : null,
       allergies: allergiesList,
       emergencyContact: emergencyContactMap,
+      notes: notes.isNotEmpty ? Map<String, dynamic>.from(notes) : null,
+      appointmentType: json['appointment_type']?.toString(),
+      reason: json['reason']?.toString(),
     );
+  }
+
+  // ==========================================================
+  // CREATE APPOINTMENT (POST /api/appointments)
+  // ==========================================================
+  static Future<Map<String, dynamic>> createAppointment({
+    required String patientId,
+    required String doctorUserId,
+    String? facilityId,
+    String appointmentType = 'clinic',
+    DateTime? scheduledStart,
+    DateTime? scheduledEnd,
+    String status = 'confirmed',
+    String? reason,
+    Map<String, dynamic>? notes,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/appointments');
+      final headers = await _headers();
+      final bodyMap = <String, dynamic>{
+        'patient_id': patientId,
+        'provider_user_id': doctorUserId,
+        if (facilityId != null && facilityId.isNotEmpty) 'facility_id': facilityId,
+        'appointment_type': appointmentType,
+        if (scheduledStart != null) 'scheduled_start': scheduledStart.toUtc().toIso8601String(),
+        if (scheduledEnd != null) 'scheduled_end': scheduledEnd.toUtc().toIso8601String(),
+        'status': status,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+        if (notes != null) 'notes': notes,
+      };
+
+      final response = await http.post(uri, headers: headers, body: jsonEncode(bodyMap));
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return {
+          'success': true,
+          'statusCode': response.statusCode,
+          'data': data['data'],
+          'message': data['message'] ?? 'Appointment created successfully.',
+        };
+      } else {
+        return {
+          'success': false,
+          'statusCode': response.statusCode,
+          'error': data['error'] ?? 'Failed to create appointment (${response.statusCode})',
+        };
+      }
+    } catch (e) {
+      debugPrint('ApiClient.createAppointment error: $e');
+      return {
+        'success': false,
+        'statusCode': 500,
+        'error': 'Network or client error: $e',
+      };
+    }
   }
 
   // ==========================================================
@@ -775,6 +834,129 @@ class ApiClient {
         'error': 'Network or client error: $e',
       };
     }
+  }
+
+  // ==========================================================
+  // FACILITIES (GET /api/facilities)
+  // ==========================================================
+  static Future<List<Map<String, dynamic>>> getFacilities() async {
+    try {
+      final uri = Uri.parse('$baseUrl/facilities');
+      final headers = await _headers();
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] is List) {
+          return List<Map<String, dynamic>>.from(data['data']);
+        }
+      }
+    } catch (e) {
+      debugPrint('ApiClient.getFacilities error: $e');
+    }
+    return [];
+  }
+
+  // ==========================================================
+  // ASHA REQUESTS (GET /api/appointments?appointment_type=home_visit)
+  // ==========================================================
+  static Future<List<AppointmentItem>> getAshaRequests({String? status}) async {
+    try {
+      final queryParams = <String, String>{
+        'appointment_type': 'home_visit',
+      };
+      if (status != null && status.isNotEmpty) {
+        queryParams['status'] = status;
+      }
+      final uri = Uri.parse('$baseUrl/appointments').replace(queryParameters: queryParams);
+      final headers = await _headers();
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] is List) {
+          final list = data['data'] as List;
+          return list.map<AppointmentItem>((json) => _mapAppointmentItem(json)).toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('ApiClient.getAshaRequests error: $e');
+    }
+    return [];
+  }
+
+  // ==========================================================
+  // CREATE CLINICAL / ASHA ASSESSMENT RECORD (POST /api/patients/{id}/records)
+  // ==========================================================
+  static Future<Map<String, dynamic>> createMedicalRecord({
+    required String patientId,
+    String? appointmentId,
+    String recordType = 'triage',
+    String? diagnosis,
+    List<String>? symptoms,
+    required Map<String, dynamic> clinicalData,
+    double? confidence,
+    bool isPreliminary = true,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/patients/$patientId/records');
+      final headers = await _headers();
+      final bodyMap = <String, dynamic>{
+        if (appointmentId != null && appointmentId.isNotEmpty) 'appointment_id': appointmentId,
+        'record_type': recordType,
+        if (diagnosis != null && diagnosis.isNotEmpty) 'diagnosis': diagnosis,
+        'symptoms': symptoms ?? [],
+        'clinical_data': clinicalData,
+        if (confidence != null) 'confidence': confidence,
+        'is_preliminary': isPreliminary,
+      };
+
+      final response = await http.post(uri, headers: headers, body: jsonEncode(bodyMap));
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return {
+          'success': true,
+          'statusCode': response.statusCode,
+          'data': data['data'],
+          'message': data['message'] ?? 'Assessment recorded successfully.',
+        };
+      } else {
+        return {
+          'success': false,
+          'statusCode': response.statusCode,
+          'error': data['error'] ?? 'Failed to record assessment (${response.statusCode})',
+        };
+      }
+    } catch (e) {
+      debugPrint('ApiClient.createMedicalRecord error: $e');
+      return {
+        'success': false,
+        'statusCode': 500,
+        'error': 'Network or client error: $e',
+      };
+    }
+  }
+
+  // ==========================================================
+  // GET PATIENT MEDICAL RECORDS (GET /api/patients/{id}/records)
+  // ==========================================================
+  static Future<List<Map<String, dynamic>>> getPatientMedicalRecords(String patientId) async {
+    try {
+      final uri = Uri.parse('$baseUrl/patients/$patientId/records');
+      final headers = await _headers();
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] is List) {
+          return List<Map<String, dynamic>>.from(data['data']);
+        }
+      }
+    } catch (e) {
+      debugPrint('ApiClient.getPatientMedicalRecords error: $e');
+    }
+    return [];
   }
 }
 

@@ -5,6 +5,7 @@ import '../models/hospital_admin_repository.dart';
 import '../models/room_machine_models.dart';
 import '../models/appointment_model.dart';
 import 'login_screen.dart';
+import 'appointment_detail_screen.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
 
@@ -1194,8 +1195,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           appt.appointmentNo.toLowerCase().contains(q) ||
           appt.diagnosis.toLowerCase().contains(q);
 
+      final isAsha = appt.appointmentType?.toLowerCase() == 'home_visit' ||
+          appt.notes?['referral_type'] == 'asha_referral' ||
+          appt.notes?['request_type'] == 'asha_visit';
+
       final matchesStatus = _appointmentFilterStatus == 'all' ||
-          appt.status.toLowerCase() == _appointmentFilterStatus;
+          appt.status.toLowerCase() == _appointmentFilterStatus ||
+          (_appointmentFilterStatus == 'asha' && isAsha);
 
       return matchesSearch && matchesStatus;
     }).toList();
@@ -1203,6 +1209,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     final completedCount = _liveAppointments.where((a) => a.status.toLowerCase() == 'completed').length;
     final inProgressCount = _liveAppointments.where((a) => a.status.toLowerCase() == 'in_progress').length;
     final confirmedCount = _liveAppointments.where((a) => a.status.toLowerCase() == 'confirmed').length;
+    final ashaCount = _liveAppointments.where((a) =>
+        a.appointmentType?.toLowerCase() == 'home_visit' ||
+        a.notes?['referral_type'] == 'asha_referral' ||
+        a.notes?['request_type'] == 'asha_visit').length;
 
     return RefreshIndicator(
       onRefresh: _loadLiveAppointments,
@@ -1217,6 +1227,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               child: Row(
                 children: [
                   _buildConsultationFilterChip('all', 'All (${_liveAppointments.length})'),
+                  const SizedBox(width: 8),
+                  _buildConsultationFilterChip(
+                    'asha',
+                    'ASHA Visits ($ashaCount)',
+                  ),
                   const SizedBox(width: 8),
                   _buildConsultationFilterChip(
                     'completed',
@@ -1330,30 +1345,70 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                         ),
                                       ),
                                     ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: isCompleted
-                                          ? const Color(0xFFDCFCE7)
-                                          : const Color(0xFFF1F5F9),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(
-                                        color: isCompleted
-                                            ? const Color(0xFF86EFAC)
-                                            : const Color(0xFFCBD5E1),
-                                        width: 0.8,
+                                  Row(
+                                    children: [
+                                      if (appt.appointmentType?.toLowerCase() == 'home_visit')
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                          margin: const EdgeInsets.only(right: 6),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFEDE9FE),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: const Color(0xFFC4B5FD)),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.volunteer_activism_rounded, size: 12, color: Color(0xFF7C3AED)),
+                                              SizedBox(width: 3),
+                                              Text('ASHA VISIT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
+                                            ],
+                                          ),
+                                        ),
+                                      if (appt.notes?['referral_type'] == 'asha_referral')
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                          margin: const EdgeInsets.only(right: 6),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF3E8FF),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: const Color(0xFFD8B4FE)),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.forward_rounded, size: 12, color: Color(0xFF6B21A8)),
+                                              SizedBox(width: 3),
+                                              Text('ASHA REFERRAL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF6B21A8))),
+                                            ],
+                                          ),
+                                        ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: isCompleted
+                                              ? const Color(0xFFDCFCE7)
+                                              : const Color(0xFFF1F5F9),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: isCompleted
+                                                ? const Color(0xFF86EFAC)
+                                                : const Color(0xFFCBD5E1),
+                                            width: 0.8,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          appt.appointmentNo,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11,
+                                            color: isCompleted
+                                                ? const Color(0xFF15803D)
+                                                : const Color(0xFF475569),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                    child: Text(
-                                      appt.appointmentNo,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 11,
-                                        color: isCompleted
-                                            ? const Color(0xFF15803D)
-                                            : const Color(0xFF475569),
-                                      ),
-                                    ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -1507,6 +1562,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                     spacing: 8,
                                     runSpacing: 6,
                                     children: [
+                                      // View Detailed Consultation / ASHA Referral Screen
+                                      OutlinedButton.icon(
+                                        onPressed: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => AppointmentDetailScreen(appointment: appt),
+                                          ),
+                                        ),
+                                        icon: const Icon(
+                                          Icons.visibility_rounded,
+                                          size: 16,
+                                          color: Color(0xFF0F766E),
+                                        ),
+                                        label: const Text(
+                                          'View Details',
+                                          style: TextStyle(
+                                            color: Color(0xFF0F766E),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11.5,
+                                          ),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          side: const BorderSide(color: Color(0xFF99F6E4)),
+                                          backgroundColor: const Color(0xFFF0FDFA),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        ),
+                                      ),
                                       // View Full Prescription & Medicines Dialog
                                       OutlinedButton.icon(
                                         onPressed: () => _showPrescriptionDialog(appt),

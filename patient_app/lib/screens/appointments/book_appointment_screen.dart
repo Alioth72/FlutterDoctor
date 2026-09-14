@@ -5,6 +5,7 @@ import '../../providers/appointment_provider.dart';
 import '../../providers/health_profile_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../services/mock_doctor_service.dart';
+import '../../services/patient_database_service.dart';
 import '../../widgets/dynamic_translated_text.dart';
 import 'appointment_receipt_screen.dart';
 
@@ -22,6 +23,7 @@ class BookAppointmentScreen extends StatefulWidget {
 
 class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   final _doctorService = MockDoctorService();
+  final _patientDbService = PatientDatabaseService();
   final _reasonController = TextEditingController();
 
   List<Doctor> _doctors = [];
@@ -34,6 +36,9 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   String? _selectedTimeSlot = '09:00 AM';
   bool _isBooking = false;
   String _selectedAppointmentType = 'Online';
+
+  List<DoctorAvailabilitySlot> _availableSlots = [];
+  bool _isLoadingSlots = false;
 
   final List<String> _quickReasons = const [
     'General Checkup',
@@ -54,6 +59,43 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   void dispose() {
     _reasonController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadDoctorSlots() async {
+    if (_selectedDoctor == null) return;
+    setState(() {
+      _isLoadingSlots = true;
+    });
+
+    final dateStr = '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+    final slots = await _patientDbService.fetchDoctorAvailability(_selectedDoctor!.id, dateStr);
+
+    if (!mounted) return;
+
+    final effectiveSlots = slots.isNotEmpty
+        ? slots
+        : _selectedDoctor!.availableTimeSlots.map((time) {
+            return DoctorAvailabilitySlot(
+              slotTime: time,
+              timeLabel: time,
+              capacity: 3,
+              bookedCount: 0,
+              remainingSpots: 3,
+              status: 'available',
+              isBookable: true,
+              isPast: false,
+            );
+          }).toList();
+
+    setState(() {
+      _availableSlots = effectiveSlots;
+      _isLoadingSlots = false;
+      final currentMatch = effectiveSlots.where((s) => s.slotTime == _selectedTimeSlot).firstOrNull;
+      if (currentMatch == null || !currentMatch.isBookable) {
+        final firstBookable = effectiveSlots.where((s) => s.isBookable).firstOrNull;
+        _selectedTimeSlot = firstBookable?.slotTime ?? (effectiveSlots.isNotEmpty ? effectiveSlots.first.slotTime : null);
+      }
+    });
   }
 
   Future<void> _loadDoctors() async {
@@ -83,11 +125,12 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
             }
           }
         }
-        if (_selectedDoctor!.availableTimeSlots.isNotEmpty) {
-          _selectedTimeSlot ??= _selectedDoctor!.availableTimeSlots.first;
-        }
       }
     });
+
+    if (_selectedDoctor != null) {
+      _loadDoctorSlots();
+    }
   }
 
   String _formatDate(DateTime date) {
@@ -147,27 +190,57 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final fullDateString = '${days[_selectedDate.weekday - 1]}, ${_selectedDate.day.toString().padLeft(2, '0')} ${months[_selectedDate.month - 1]} ${_selectedDate.year}';
 
-    final appointment = await appointmentProvider.bookAppointment(
-      doctor: _selectedDoctor!,
-      patient: patient,
-      appointmentDate: fullDateString,
-      timeSlot: _selectedTimeSlot!,
-      reason: _reasonController.text.trim().isEmpty ? 'General Consultation' : _reasonController.text.trim(),
-      appointmentType: _selectedAppointmentType,
-    );
+    try {
+      final appointment = await appointmentProvider.bookAppointment(
+        doctor: _selectedDoctor!,
+        patient: patient,
+        appointmentDate: fullDateString,
+        timeSlot: _selectedTimeSlot!,
+        reason: _reasonController.text.trim().isEmpty ? 'General Consultation' : _reasonController.text.trim(),
+        appointmentType: _selectedAppointmentType,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _isBooking = false;
-    });
+      setState(() {
+        _isBooking = false;
+      });
 
-    // Navigate to digital receipt
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => AppointmentReceiptScreen(appointment: appointment),
-      ),
-    );
+      // Navigate to digital receipt
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => AppointmentReceiptScreen(appointment: appointment),
+        ),
+      );
+    } on SlotFullException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isBooking = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      await _loadDoctorSlots();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isBooking = false;
+      });
+      final cleanMsg = e.toString().replaceAll('Exception: ', '').trim();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(cleanMsg),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   @override
@@ -387,12 +460,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                               onTap: () {
                                 setState(() {
                                   _selectedDoctor = doc;
-                                  if (!doc.availableTimeSlots.contains(_selectedTimeSlot)) {
-                                    _selectedTimeSlot = doc.availableTimeSlots.isNotEmpty
-                                        ? doc.availableTimeSlots.first
-                                        : null;
-                                  }
                                 });
+                                _loadDoctorSlots();
                               },
                               child: Container(
                                 width: 300,
@@ -646,7 +715,9 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              '7 ${lang.tr('slots_free')}',
+                              _isLoadingSlots
+                                  ? lang.tr('checking_slots')
+                                  : '${_availableSlots.where((s) => s.isBookable).length} ${lang.tr('slots_free')}',
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
@@ -1154,6 +1225,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                     setState(() {
                       _selectedDate = date;
                     });
+                    _loadDoctorSlots();
                   }
                 : null,
             child: Container(
@@ -1270,6 +1342,27 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       return const Text('Select a doctor first.');
     }
 
+    if (_isLoadingSlots) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        alignment: Alignment.center,
+        child: const Column(
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF7C3AED)),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Checking live doctor availability...',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (!_selectedDoctor!.isAvailableOn(_selectedDate)) {
       return Container(
         padding: const EdgeInsets.all(14),
@@ -1294,7 +1387,21 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     }
 
     final lang = Provider.of<LanguageProvider>(context);
-    final slots = _selectedDoctor!.availableTimeSlots;
+    List<DoctorAvailabilitySlot> slots = _availableSlots;
+    if (slots.isEmpty && _selectedDoctor != null) {
+      slots = _selectedDoctor!.availableTimeSlots.map((time) {
+        return DoctorAvailabilitySlot(
+          slotTime: time,
+          timeLabel: time,
+          capacity: 3,
+          bookedCount: 0,
+          remainingSpots: 3,
+          status: 'available',
+          isBookable: true,
+          isPast: false,
+        );
+      }).toList();
+    }
 
     return GridView.builder(
       shrinkWrap: true,
@@ -1308,33 +1415,57 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       itemCount: slots.length,
       itemBuilder: (context, index) {
         final slot = slots[index];
-        final isSelected = _selectedTimeSlot == slot;
+        final isSelected = _selectedTimeSlot == slot.slotTime;
+        final isFull = slot.isFull;
 
-        // Subtitle tag like "Available", "Fast filling", "Afternoon"
-        String statusLabel = lang.tr('slot_available');
-        Color statusColor = const Color(0xFF059669);
-
-        if (index == 2) {
-          statusLabel = lang.tr('slot_fast_filling');
+        String statusLabel;
+        Color statusColor;
+        if (isFull) {
+          statusLabel = lang.tr('slot_full');
+          statusColor = const Color(0xFFEF4444);
+        } else if (slot.remainingSpots == 1) {
+          statusLabel = '1 spot left';
           statusColor = const Color(0xFFD97706);
-        } else if (slot.contains('PM')) {
-          statusLabel = lang.tr('slot_afternoon');
+        } else if (slot.remainingSpots == 2) {
+          statusLabel = '2 spots left';
           statusColor = const Color(0xFF0D9488);
+        } else {
+          statusLabel = '3 spots free';
+          statusColor = const Color(0xFF059669);
         }
 
         return InkWell(
-          onTap: () {
-            setState(() {
-              _selectedTimeSlot = slot;
-            });
-          },
+          onTap: isFull
+              ? () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Slot ${slot.slotTime} is fully booked (3/3 patients). Please select another slot.'),
+                      backgroundColor: const Color(0xFFEF4444),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              : () {
+                  setState(() {
+                    _selectedTimeSlot = slot.slotTime;
+                  });
+                },
           borderRadius: BorderRadius.circular(10),
-          child: Container(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
             decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFF7C3AED) : Colors.white,
+              color: isFull
+                  ? const Color(0xFFF1F5F9)
+                  : isSelected
+                      ? const Color(0xFF7C3AED)
+                      : Colors.white,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFFE5E7EB),
+                color: isFull
+                    ? const Color(0xFFE2E8F0)
+                    : isSelected
+                        ? const Color(0xFF7C3AED)
+                        : const Color(0xFFE5E7EB),
                 width: isSelected ? 2.0 : 1.2,
               ),
               boxShadow: isSelected
@@ -1362,20 +1493,28 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      slot,
+                      slot.slotTime,
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 12.0,
                         fontWeight: FontWeight.w900,
-                        color: isSelected ? Colors.white : const Color(0xFF0F172A),
+                        color: isFull
+                            ? const Color(0xFF94A3B8)
+                            : isSelected
+                                ? Colors.white
+                                : const Color(0xFF0F172A),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       isSelected ? lang.tr('slot_selected') : statusLabel,
                       style: TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w700,
-                        color: isSelected ? const Color(0xFFDDD6FE) : statusColor,
+                        fontSize: 9.0,
+                        fontWeight: FontWeight.w800,
+                        color: isSelected
+                            ? const Color(0xFFDDD6FE)
+                            : isFull
+                                ? const Color(0xFFEF4444)
+                                : statusColor,
                       ),
                     ),
                   ],

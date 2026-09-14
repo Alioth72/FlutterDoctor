@@ -1,3 +1,6 @@
+import '../../models/appointment.dart';
+import '../../providers/appointment_provider.dart';
+import '../../services/patient_database_service.dart';
 import '../../widgets/news_flash_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,28 +8,453 @@ import 'package:provider/provider.dart';
 import '../../providers/health_profile_provider.dart';
 import '../../providers/language_provider.dart';
 import '../appointments/book_appointment_screen.dart';
+import '../appointments/appointment_receipt_screen.dart';
+import '../appointments/video_consultation_screen.dart';
+import '../medical_history_screen.dart';
+import '../prescriptions_screen.dart';
 import 'appointments_tab.dart';
 import '../../widgets/patient_action_sheets.dart';
 import '../rppg_screen.dart';
+import '../request_asha_visit_screen.dart';
 import '../../widgets/dynamic_translated_text.dart';
 import '../../services/localization/healthcare_catalog.dart';
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    final profileProvider = Provider.of<HealthProfileProvider>(context);
-    final langProvider = Provider.of<LanguageProvider>(context);
-    final currentLang = langProvider.currentLanguage;
-    final patientName = profileProvider.profile?.name ?? 'Sarah Jenkins';
+  Future<void> _joinTelehealth(BuildContext context, Appointment appointment) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: Color(0xFF7C3AED)),
+                SizedBox(height: 16),
+                Text('Verifying consultation room access...', style: TextStyle(fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(18.0, 16.0, 18.0, 24.0),
+    try {
+      await PatientDatabaseService().requestTelehealthAccess(appointment.id);
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => VideoConsultationScreen(appointment: appointment),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        final msg = e.toString().replaceAll('Exception: ', '');
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            icon: const Icon(Icons.lock_clock_rounded, color: Color(0xFF7C3AED), size: 40),
+            title: const Text('Consultation Room Locked', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: Text(
+              msg.contains('join window')
+                  ? 'The secure video consultation room opens 15 minutes before your scheduled appointment time (${appointment.timeSlot}). Please return closer to your slot.'
+                  : msg,
+              style: const TextStyle(fontSize: 14, height: 1.4),
+            ),
+            actions: [
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Understood'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildRequestAshaBanner(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const RequestAshaVisitScreen()),
+      ),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0F766E), Color(0xFF14B8A6)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0D9488).withValues(alpha: 0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'COMMUNITY HEALTHCARE',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFFCCFBF1),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Request ASHA Worker Visit',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Vitals check, BP & pulse, home medical assessment',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFFE6FFFA),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Request',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F766E)),
+                  ),
+                  SizedBox(width: 4),
+                  Icon(Icons.arrow_forward_rounded, size: 14, color: Color(0xFF0F766E)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAshaRequestTrackerCard(BuildContext context, Appointment ashaReq) {
+    final notes = ashaReq.notes ?? {};
+    final urgency = notes['urgency']?.toString().toLowerCase() ?? 'routine';
+    final resolution = notes['resolution']?.toString();
+    final status = ashaReq.status.toLowerCase();
+
+    int stage = 1;
+    if (status == 'queued') {
+      stage = 1;
+    } else if (status == 'confirmed' || status == 'in progress' || status == 'in_progress') {
+      stage = 2;
+    } else if (status == 'completed') {
+      stage = 4;
+    }
+
+    Color urgencyColor = const Color(0xFF16A34A);
+    Color urgencyBg = const Color(0xFFDCFCE7);
+    if (urgency == 'priority') {
+      urgencyColor = const Color(0xFFD97706);
+      urgencyBg = const Color(0xFFFEF3C7);
+    } else if (urgency == 'emergency') {
+      urgencyColor = const Color(0xFFDC2626);
+      urgencyBg = const Color(0xFFFEE2E2);
+    }
+
+    final isReferred = resolution == 'referred_to_doctor';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isReferred
+              ? const Color(0xFFDDD6FE)
+              : (stage >= 2 ? const Color(0xFF99F6E4) : const Color(0xFFE2E8F0)),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isReferred ? const Color(0xFF7C3AED) : const Color(0xFF0D9488)).withValues(alpha: 0.07),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: isReferred ? const Color(0xFFEDE9FE) : const Color(0xFFCCFBF1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      isReferred ? Icons.medical_services_rounded : Icons.volunteer_activism_rounded,
+                      size: 16,
+                      color: isReferred ? const Color(0xFF7C3AED) : const Color(0xFF0D9488),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'ASHA HOME VISIT TRACKER',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      color: isReferred ? const Color(0xFF6D28D9) : const Color(0xFF0F766E),
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: urgencyBg,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: urgencyColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      urgency.toUpperCase(),
+                      style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: urgencyColor),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    ashaReq.tokenNumber,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              _buildStepNode(1, 'Sent', stage >= 1, isCurrent: stage == 1),
+              _buildStepLine(stage >= 2),
+              _buildStepNode(2, 'Accepted', stage >= 2, isCurrent: stage == 2),
+              _buildStepLine(stage >= 3),
+              _buildStepNode(3, 'Vitals Check', stage >= 3, isCurrent: stage == 3),
+              _buildStepLine(stage >= 4),
+              _buildStepNode(
+                4,
+                isReferred ? 'Referred' : 'Resolved',
+                stage >= 4,
+                isCurrent: stage == 4,
+                activeColor: isReferred ? const Color(0xFF7C3AED) : const Color(0xFF059669),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Reason: ',
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                    ),
+                    Expanded(
+                      child: Text(
+                        ashaReq.reason,
+                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF1E293B), fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+                if (isReferred) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F3FF),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFDDD6FE)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF7C3AED)),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Worker completed assessment and scheduled Doctor Referral. Check Appointments tab.',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF6D28D9)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (stage == 4) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF16A34A)),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Case Managed in Field by ASHA Worker. Home care advice recorded.',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF15803D)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (stage == 2) ...[
+                  const SizedBox(height: 4),
+                  const Text(
+                    'ASHA worker accepted your request and is preparing for the visit.',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF0F766E), fontWeight: FontWeight.w500),
+                  ),
+                ] else ...[
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Awaiting worker pickup. Local healthcare post alerted.',
+                    style: TextStyle(fontSize: 11, color: Color(0xFFD97706), fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepNode(int step, String label, bool isReached, {bool isCurrent = false, Color? activeColor}) {
+    final color = activeColor ?? const Color(0xFF0D9488);
+    return Expanded(
+      child: Column(
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: isReached ? color : const Color(0xFFE2E8F0),
+              shape: BoxShape.circle,
+              border: isCurrent ? Border.all(color: Colors.white, width: 2) : null,
+              boxShadow: isCurrent
+                  ? [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 6, spreadRadius: 1)]
+                  : null,
+            ),
+            child: Center(
+              child: isReached
+                  ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
+                  : Text('$step', style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: isReached ? FontWeight.bold : FontWeight.w500,
+              color: isReached ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepLine(bool isReached) {
+    return Container(
+      width: 16,
+      height: 2,
+      margin: const EdgeInsets.only(bottom: 14),
+      color: isReached ? const Color(0xFF0D9488) : const Color(0xFFE2E8F0),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profileProvider = Provider.of<HealthProfileProvider>(context);
+    final appointmentProvider = Provider.of<AppointmentProvider>(context);
+    final langProvider = Provider.of<LanguageProvider>(context);
+    final currentLang = langProvider.currentLanguage;
+    final patientName = profileProvider.profile?.name ?? 'Ashwini Patient';
+    final nextAppt = appointmentProvider.nextUpcomingAppointment;
+
+    return RefreshIndicator(
+      color: const Color(0xFF7C3AED),
+      onRefresh: () async {
+        await appointmentProvider.refreshAppointmentsFromBackend();
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        padding: const EdgeInsets.fromLTRB(18.0, 16.0, 18.0, 24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // 1. WELCOME BACK & PATIENT NAME
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -74,7 +502,7 @@ class HomeTab extends StatelessWidget {
                     const Icon(Icons.badge_outlined, size: 14, color: Color(0xFF7C3AED)),
                     const SizedBox(width: 5),
                     Text(
-                      profileProvider.profile?.patientId ?? 'ID: ASH-PT-1234',
+                      profileProvider.profile?.patientId ?? 'ASH-PT-8832',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -195,18 +623,48 @@ class HomeTab extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // 2. FULL-WIDTH NEWS FLASH BANNER (Flashes dynamic banners like flash cards)
+          // 3. FULL-WIDTH NEWS FLASH BANNER
           const NewsFlashBannerWidget(),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
-          // 3. FULL-WIDTH REMINDER CARD (Positioned below the News Flash bar)
+          // 4. LIVE UPCOMING CONSULTATION CARD (Or Empty State)
+          _buildUpcomingConsultationCard(context, nextAppt),
+          const SizedBox(height: 14),
+
+          // LIVE ASHA REQUEST STATUS TRACKER CARD
+          if (appointmentProvider.latestAshaRequest != null) ...[
+            _buildAshaRequestTrackerCard(context, appointmentProvider.latestAshaRequest!),
+            const SizedBox(height: 14),
+          ],
+
+          // 5. MEDICINE REMINDER CARD
           const MedicineReminderCard(),
           const SizedBox(height: 18),
 
-          // 3. 2x2 MAIN ACTION CARDS
+          // 5b. CONTACT ASHA WORKER BANNER
+          _buildRequestAshaBanner(context),
+          const SizedBox(height: 18),
+
+          // 6. QUICK ACTIONS HEADER
+          const Row(
+            children: [
+              Text(
+                'QUICK ACTIONS',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.0,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // 7. 3x2 ACTION CARDS
           Column(
             children: [
-              // Row 1: Book Appointment + Buy Medicines
+              // Row 1: Book Consultation + My Appointments
               Row(
                 children: [
                   Expanded(
@@ -246,7 +704,45 @@ class HomeTab extends StatelessWidget {
               ),
               const SizedBox(height: 14),
 
-              // Row 2: AI Assistant + Emergency
+              // Row 2: Medical History + Prescriptions (LIVE DATA)
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMainServiceCard(
+                      context,
+                      category: 'RECORDS',
+                      title: 'Medical\nHistory',
+                      icon: Icons.history_edu_rounded,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const MedicalHistoryScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: _buildMainServiceCard(
+                      context,
+                      category: 'PHARMACY',
+                      title: 'My\nPrescriptions',
+                      icon: Icons.receipt_long_rounded,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const PrescriptionsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // Row 3: AI Assistant + Emergency
               Row(
                 children: [
                   Expanded(
@@ -508,6 +1004,213 @@ class HomeTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+        ],
+      ),
+    ),
+  );
+}
+
+  /// Live Upcoming Consultation Card with instant Telehealth join or Empty State
+  Widget _buildUpcomingConsultationCard(BuildContext context, Appointment? nextAppt) {
+    if (nextAppt == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              offset: const Offset(0, 4),
+              blurRadius: 10,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F3FF),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.calendar_month_rounded, color: Color(0xFF7C3AED), size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'No Upcoming Consultations',
+                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Book video consultations or hospital visits',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const BookAppointmentScreen()),
+                );
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF7C3AED),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Book', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final isTelehealth = nextAppt.isOnline;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2E1065), Color(0xFF4C1D95), Color(0xFF6D28D9)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF7C3AED).withValues(alpha: 0.35),
+            offset: const Offset(0, 6),
+            blurRadius: 12,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      isTelehealth ? Icons.videocam_rounded : Icons.local_hospital_rounded,
+                      size: 13,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      isTelehealth ? 'NEXT TELECONSULTATION' : 'NEXT CLINIC CONSULTATION',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  nextAppt.tokenNumber,
+                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            nextAppt.doctorName,
+            style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${nextAppt.doctorSpecialty} • ${nextAppt.hospitalName}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.access_time_filled_rounded, size: 14, color: Color(0xFFDDD6FE)),
+                const SizedBox(width: 6),
+                Text(
+                  '${nextAppt.appointmentDate} at ${nextAppt.timeSlot}',
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              if (isTelehealth) ...[
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _joinTelehealth(context, nextAppt),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF5B21B6),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.videocam_rounded, size: 18),
+                    label: const Text('Join Room', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => AppointmentReceiptScreen(appointment: nextAppt),
+                      ),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                  label: const Text('Receipt', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

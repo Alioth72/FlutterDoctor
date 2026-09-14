@@ -30,6 +30,32 @@ class AppointmentProvider with ChangeNotifier {
     return List.unmodifiable(list);
   }
 
+  /// Returns upcoming/active appointments (confirmed, queued, in_progress)
+  List<Appointment> get upcomingAppointments {
+    final list = _appointments.where((a) {
+      final s = a.status.toLowerCase();
+      return s == 'confirmed' || s == 'queued' || s == 'in progress' || s == 'in_progress';
+    }).toList();
+    list.sort((a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime));
+    return List.unmodifiable(list);
+  }
+
+  /// Returns past appointments (completed, cancelled)
+  List<Appointment> get pastAppointments {
+    final list = _appointments.where((a) {
+      final s = a.status.toLowerCase();
+      return s == 'completed' || s == 'cancelled';
+    }).toList();
+    list.sort((a, b) => b.scheduledDateTime.compareTo(a.scheduledDateTime));
+    return List.unmodifiable(list);
+  }
+
+  /// Next nearest upcoming appointment for dashboard card
+  Appointment? get nextUpcomingAppointment {
+    final up = upcomingAppointments;
+    return up.isNotEmpty ? up.first : null;
+  }
+
   bool get isLoading => _isLoading;
   bool get isInitialized => _isInitialized;
 
@@ -57,6 +83,25 @@ class AppointmentProvider with ChangeNotifier {
     _isInitialized = true;
     _isLoading = false;
     notifyListeners();
+
+    // Asynchronously refresh live appointments from Azure backend
+    refreshAppointmentsFromBackend();
+  }
+
+  /// Read-only database sync: fetch authenticated patient's live appointments
+  /// from Azure Functions (GET /me/appointments) and merge with local cache.
+  Future<void> refreshAppointmentsFromBackend() async {
+    try {
+      final liveList = await PatientDatabaseService().fetchMyAppointments();
+      if (liveList != null) {
+        _appointments = liveList;
+        _appointments.sort(_sortAppointments);
+        await _persist();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[AppointmentProvider] Live appointments sync: $e');
+    }
   }
 
   /// Clear all stored appointments data completely from disk and memory
@@ -124,20 +169,26 @@ class AppointmentProvider with ChangeNotifier {
       bookedAt: DateTime.now(),
     );
 
-    // Insert at top and persist
-    _appointments.insert(0, newAppointment);
-    _appointments.sort(_sortAppointments);
-    await _persist();
-
     // Open database integration endpoint dispatch
     try {
-      await PatientDatabaseService().bookAppointment(newAppointment);
-    } catch (_) {}
-
-    _isLoading = false;
-    notifyListeners();
-
-    return newAppointment;
+      final live = await PatientDatabaseService().bookAppointment(newAppointment);
+      _appointments.removeWhere((a) => a.id == live.id || a.id == newAppointment.id);
+      _appointments.insert(0, live);
+      _appointments.sort(_sortAppointments);
+      await _persist();
+      _isLoading = false;
+      notifyListeners();
+      return live;
+    } on SlotFullException {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      debugPrint('[AppointmentProvider] Live booking failed: $e');
+      rethrow;
+    }
   }
 
   /// Cancel an appointment
@@ -163,6 +214,50 @@ class AppointmentProvider with ChangeNotifier {
       );
       await _persist();
       notifyListeners();
+    }
+  }
+
+  /// Returns all ASHA visit requests
+  List<Appointment> get ashaVisitRequests {
+    return _appointments.where((a) => a.isAshaVisit).toList();
+  }
+
+  /// Returns the latest active ASHA visit request
+  Appointment? get latestAshaRequest {
+    final list = ashaVisitRequests;
+    if (list.isEmpty) return null;
+    return list.first;
+  }
+
+  /// Request an ASHA Worker Home Visit via backend and update state
+  Future<Appointment> requestAshaVisit({
+    required String reason,
+    required String urgency,
+    String? address,
+    Map<String, dynamic>? symptomsData,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final appt = await PatientDatabaseService().requestAshaVisit(
+        reason: reason,
+        urgency: urgency,
+        address: address,
+        symptomsData: symptomsData,
+      );
+
+      _appointments.removeWhere((a) => a.id == appt.id);
+      _appointments.add(appt);
+      _appointments.sort(_sortAppointments);
+      await _persist();
+      _isLoading = false;
+      notifyListeners();
+      return appt;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
     }
   }
 }

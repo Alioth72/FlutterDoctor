@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../models/health_profile.dart';
+import '../../providers/appointment_provider.dart';
 import '../../providers/health_profile_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../widgets/location_selection_sheet.dart';
@@ -67,6 +68,11 @@ class _ProfileTabState extends State<ProfileTab> {
       final nav = Navigator.of(context, rootNavigator: true);
       final provider = Provider.of<HealthProfileProvider>(context, listen: false);
       await provider.clearProfile();
+
+      try {
+        final apptProvider = Provider.of<AppointmentProvider>(context, listen: false);
+        await apptProvider.clearAllAppointments();
+      } catch (_) {}
 
       nav.pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const SignupScreen()),
@@ -268,11 +274,12 @@ class _ProfileTabState extends State<ProfileTab> {
     final profileProvider = Provider.of<HealthProfileProvider>(context);
     final profile = profileProvider.profile;
 
-    final name = profile?.name ?? 'Vikram Malhotra';
+    final name = profile?.name ?? 'Patient';
     final age = profile?.age ?? 28;
-    final gender = profile?.gender ?? 'Male';
-    final phone = profile?.phoneNumber ?? '9876501234';
-    final patientId = profile?.patientId ?? 'ASH-PT-1234';
+    final gender = profile?.gender ?? 'Other';
+    final phone = profile?.phoneNumber ?? '';
+    final mrn = profile?.tier2Data?['medical_record_number'] as String? ?? profile?.patientId ?? 'ASH-PT-1001';
+    final patientId = mrn;
     final residence = profile?.residenceType ?? 'Rural';
 
     return SingleChildScrollView(

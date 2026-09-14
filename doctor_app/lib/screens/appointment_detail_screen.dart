@@ -516,6 +516,268 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     }
   }
 
+  bool _isAshaReferral(AppointmentItem appt) {
+    final notes = appt.notes;
+    if (notes == null) return false;
+    return notes['referral_type'] == 'asha_referral' ||
+        notes['vitals'] != null ||
+        notes['asha_assessment_id'] != null;
+  }
+
+  Widget _buildAshaReferralCard(AppointmentItem appt) {
+    final notes = appt.notes ?? {};
+    final vitals = notes['vitals'] is Map
+        ? Map<String, dynamic>.from(notes['vitals'] as Map)
+        : <String, dynamic>{};
+    final symptoms = notes['symptoms']?.toString() ?? '';
+    final fieldCare = notes['field_care_advice']?.toString() ?? '';
+    final referralReason = appt.reason ?? notes['reason']?.toString() ?? 'Field Referral';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF5FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFD8B4FE), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF7C3AED).withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C3AED),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.volunteer_activism_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'ASHA FIELD REFERRAL',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.8,
+                      color: Color(0xFF5B21B6),
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDE9FE),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFC4B5FD)),
+                ),
+                child: const Text(
+                  'Pre-Assessed',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF6D28D9),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Referral Reason: ',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4C1D95),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  referralReason,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          if (vitals.isNotEmpty) ...[
+            const Text(
+              'MEASURED FIELD VITALS (No Re-entry Needed):',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF6B21A8),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                if (vitals['heart_rate_bpm'] != null)
+                  _buildReferralVitalChip(
+                    Icons.favorite_rounded,
+                    '${vitals['heart_rate_bpm']} BPM (Camera rPPG)',
+                    Colors.red.shade600,
+                  ),
+                if (vitals['blood_pressure'] != null)
+                  _buildReferralVitalChip(
+                    Icons.speed_rounded,
+                    'BP: ${vitals['blood_pressure']} mmHg',
+                    Colors.indigo.shade600,
+                  ),
+                if (vitals['spo2_percent'] != null)
+                  _buildReferralVitalChip(
+                    Icons.air_rounded,
+                    'SpO2: ${vitals['spo2_percent']}%',
+                    Colors.teal.shade700,
+                  ),
+                if (vitals['temperature_c'] != null)
+                  _buildReferralVitalChip(
+                    Icons.thermostat_rounded,
+                    '${vitals['temperature_c']}°C',
+                    Colors.amber.shade800,
+                  ),
+                if (vitals['blood_glucose_mg_dl'] != null)
+                  _buildReferralVitalChip(
+                    Icons.water_drop_rounded,
+                    'Glu: ${vitals['blood_glucose_mg_dl']} mg/dL',
+                    Colors.purple.shade700,
+                  ),
+                if (vitals['weight_kg'] != null)
+                  _buildReferralVitalChip(
+                    Icons.monitor_weight_rounded,
+                    '${vitals['weight_kg']} kg',
+                    Colors.blueGrey.shade700,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+          ],
+
+          if (symptoms.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE9D5FF)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Field Observations & Symptoms:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6B21A8),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    symptoms,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF374151),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          if (fieldCare.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'ASHA Immediate Care Given in Field:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF166534),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    fieldCare,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF166534),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReferralVitalChip(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appt = widget.appointment;
@@ -762,6 +1024,11 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                   ),
 
                   const SizedBox(height: 16),
+
+                  if (_isAshaReferral(appt)) ...[
+                    _buildAshaReferralCard(appt),
+                    const SizedBox(height: 16),
+                  ],
 
                   // Patient History Section with Detailed History Button
                   Row(

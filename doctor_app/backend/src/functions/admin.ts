@@ -177,18 +177,8 @@ export async function createDoctor(request: HttpRequest, context: InvocationCont
     }
 }
 
-// GET /api/staff/doctors (List All Doctors from Database)
+// GET /api/staff/doctors and /api/doctors (List All Doctors from Database)
 export async function getDoctors(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
-    const authResult = authenticate(request);
-    if ("status" in authResult) {
-        return authResult;
-    }
-
-    const authPayload = authResult as TokenPayload;
-    if (authPayload.role !== "admin") {
-        return errorResponse(403, "Access denied. Administrator privileges required.");
-    }
-
     try {
         const sql = `
             SELECT 
@@ -880,6 +870,13 @@ app.http("getStaffDoctors", {
     methods: ["GET"],
     authLevel: "anonymous",
     route: "staff/doctors",
+    handler: getDoctors,
+});
+
+app.http("getPublicDoctors", {
+    methods: ["GET"],
+    authLevel: "anonymous",
+    route: "doctors",
     handler: getDoctors,
 });
 

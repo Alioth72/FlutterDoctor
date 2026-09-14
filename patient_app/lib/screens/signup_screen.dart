@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/health_profile.dart';
 import '../providers/health_profile_provider.dart';
+import '../providers/appointment_provider.dart';
 import '../services/patient_database_service.dart';
 import '../theme/app_colors.dart';
 import 'home_screen.dart';
@@ -113,6 +114,14 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     if (success) {
+      try {
+        final apptProvider = Provider.of<AppointmentProvider>(context, listen: false);
+        await apptProvider.clearAllAppointments();
+        await apptProvider.refreshAppointmentsFromBackend();
+      } catch (_) {}
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Welcome back, ${_loginNameController.text.trim()}!'),
@@ -123,6 +132,21 @@ class _SignupScreenState extends State<SignupScreen> {
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    } else {
+      final errorMsg = provider.errorMessage ?? 'Login failed. Please check your phone or password.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(errorMsg)),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.danger,
+        ),
       );
     }
   }
@@ -157,6 +181,13 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     if (success) {
+      try {
+        final apptProvider = Provider.of<AppointmentProvider>(context, listen: false);
+        await apptProvider.clearAllAppointments();
+      } catch (_) {}
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Welcome, ${profile.name}! Profile registered.'),
@@ -167,6 +198,21 @@ class _SignupScreenState extends State<SignupScreen> {
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    } else {
+      final errorMsg = provider.errorMessage ?? 'Registration failed. Please try again.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(errorMsg)),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.danger,
+        ),
       );
     }
   }
@@ -605,14 +651,28 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
           const SizedBox(height: 18),
 
-          // Demo Quick Fill Chip
+          // Live Database Demo Quick Fill Chips
           Center(
-            child: ActionChip(
-              avatar: const Icon(Icons.person_pin_circle_outlined, size: 14, color: AppColors.primary),
-              label: const Text('Demo: Vikram Malhotra', style: TextStyle(fontSize: 11)),
-              onPressed: () => _fillTestPatient('Vikram Malhotra', '9876501234', 'mypass123'),
-              backgroundColor: AppColors.surface,
-              side: const BorderSide(color: AppColors.border),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                ActionChip(
+                  avatar: const Icon(Icons.local_hospital_outlined, size: 14, color: AppColors.primary),
+                  label: const Text('Demo: Rajesh Sharma (Clinic)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                  onPressed: () => _fillTestPatient('Rajesh Sharma', '9988776655', 'Patient@12345'),
+                  backgroundColor: AppColors.surface,
+                  side: const BorderSide(color: AppColors.border),
+                ),
+                ActionChip(
+                  avatar: const Icon(Icons.videocam_outlined, size: 14, color: Color(0xFF7C3AED)),
+                  label: const Text('Demo: Priya Verma (Telehealth)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                  onPressed: () => _fillTestPatient('Priya Verma', '9977665544', 'Patient@12345'),
+                  backgroundColor: AppColors.surface,
+                  side: const BorderSide(color: Color(0xFFDDD6FE)),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 18),

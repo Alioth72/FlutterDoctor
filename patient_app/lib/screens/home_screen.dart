@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/appointment_provider.dart';
 import '../providers/language_provider.dart';
 import 'tabs/home_tab.dart';
 import 'tabs/pharmacy_tab.dart';
@@ -18,6 +19,16 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<AppointmentProvider>(context, listen: false).refreshAppointmentsFromBackend();
+      }
+    });
+  }
 
   final List<Widget> _screens = const [
     HomeTab(),

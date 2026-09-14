@@ -12,6 +12,7 @@ class HealthProfileProvider with ChangeNotifier {
   List<FamilyMember> _familyMembers = [];
   bool _isInitialized = false;
   bool _isLoading = false;
+  String? _errorMessage;
 
   HealthProfileProvider({
     StorageService? storageService,
@@ -24,6 +25,7 @@ class HealthProfileProvider with ChangeNotifier {
   bool get isOnboarded => _profile != null;
   bool get isInitialized => _isInitialized;
   bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
   /// Current user location (fallback to New Delhi, Delhi if none set)
   String get currentLocation =>
@@ -40,6 +42,21 @@ class HealthProfileProvider with ChangeNotifier {
     _isInitialized = true;
     _isLoading = false;
     notifyListeners();
+
+    // Asynchronously refresh live profile from Azure backend if authenticated
+    try {
+      final token = await _storageService.getAuthToken();
+      if (token != null && token.isNotEmpty) {
+        final liveProfile = await _dbService.fetchMyProfile();
+        if (liveProfile != null) {
+          _profile = liveProfile;
+          await _storageService.saveProfile(liveProfile);
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('[HealthProfileProvider] Silent live profile refresh: $e');
+    }
   }
 
   /// Open Database Integration: Login
@@ -50,6 +67,7 @@ class HealthProfileProvider with ChangeNotifier {
     required String password,
   }) async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
@@ -66,6 +84,7 @@ class HealthProfileProvider with ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint('[HealthProfileProvider] Login error: $e');
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
       _isLoading = false;
       notifyListeners();
       return false;
@@ -76,6 +95,7 @@ class HealthProfileProvider with ChangeNotifier {
   /// Registers patient in database endpoint and saves profile
   Future<bool> signup(HealthProfile profile) async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
@@ -87,6 +107,7 @@ class HealthProfileProvider with ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint('[HealthProfileProvider] Signup error: $e');
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
       _isLoading = false;
       notifyListeners();
       return false;
@@ -173,6 +194,7 @@ class HealthProfileProvider with ChangeNotifier {
     notifyListeners();
 
     final success = await _storageService.clearProfile();
+    await _storageService.clearAuthToken();
     if (success) {
       _profile = null;
       _familyMembers = [];

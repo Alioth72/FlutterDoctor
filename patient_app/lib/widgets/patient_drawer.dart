@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/health_profile.dart';
+import '../providers/appointment_provider.dart';
 import '../providers/health_profile_provider.dart';
 import '../providers/language_provider.dart';
 import '../screens/family/family_data_screen.dart';
+import '../screens/medical_history_screen.dart';
+import '../screens/prescriptions_screen.dart';
 import '../screens/signup_screen.dart';
+import '../screens/tabs/appointments_tab.dart';
 import '../theme/app_colors.dart';
 import 'location_selection_sheet.dart';
 import 'patient_action_sheets.dart';
@@ -54,6 +58,11 @@ class PatientDrawer extends StatelessWidget {
       final nav = Navigator.of(context, rootNavigator: true);
       final provider = Provider.of<HealthProfileProvider>(context, listen: false);
       await provider.clearProfile();
+
+      try {
+        final apptProvider = Provider.of<AppointmentProvider>(context, listen: false);
+        await apptProvider.clearAllAppointments();
+      } catch (_) {}
 
       nav.pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const SignupScreen()),
@@ -158,7 +167,7 @@ class PatientDrawer extends StatelessWidget {
 
                 // Patient Name
                 DynamicTranslatedText(
-                  text: profile?.name ?? 'Vikram Malhotra',
+                  text: profile?.name ?? 'Patient',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -323,7 +332,36 @@ class PatientDrawer extends StatelessWidget {
             endIndent: 16,
           ),
 
-          // 4. Drawer Navigation Items (Redundant items removed)
+          // 4. Drawer Navigation Items
+          ListTile(
+            leading: const Icon(Icons.event_note_rounded, color: Color(0xFF7C3AED)),
+            title: Text(langProvider.tr('my_appointments'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+            subtitle: const Text('View and manage upcoming & past consultations', style: TextStyle(fontSize: 11, color: AppColors.muted)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AppointmentsTab()));
+            },
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.history_edu_rounded, color: Color(0xFF7C3AED)),
+            title: Text(langProvider.tr('medical_history'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+            subtitle: const Text('Hospital electronic health records & lab tests', style: TextStyle(fontSize: 11, color: AppColors.muted)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const MedicalHistoryScreen()));
+            },
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.receipt_long_rounded, color: Color(0xFF7C3AED)),
+            title: Text(langProvider.tr('prescriptions'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+            subtitle: const Text('Active and past doctor prescribed medications', style: TextStyle(fontSize: 11, color: AppColors.muted)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const PrescriptionsScreen()));
+            },
+          ),
           ListTile(
             leading: const Icon(Icons.family_restroom, color: AppColors.primary),
             title: Text(langProvider.tr('drawer_family_data'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),

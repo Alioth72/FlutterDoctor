@@ -32,11 +32,69 @@ class StorageService {
     }
   }
 
+  static const String _authTokenKey = 'patient_auth_token_v1';
+  static const String _patientIdKey = 'patient_id_v1';
+
+  /// Save JWT auth token to SharedPreferences
+  Future<bool> saveAuthToken(String token) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return await prefs.setString(_authTokenKey, token);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Retrieve saved JWT auth token
+  Future<String?> getAuthToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_authTokenKey);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Clear stored auth token
+  Future<bool> clearAuthToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_authTokenKey);
+      await prefs.remove(_patientIdKey);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Save patient ID to SharedPreferences
+  Future<bool> savePatientId(String id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return await prefs.setString(_patientIdKey, id);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Retrieve saved patient ID
+  Future<String?> getPatientId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_patientIdKey);
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Remove stored HealthProfile (e.g. on logout/reset)
   Future<bool> clearProfile() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return await prefs.remove(_profileKey);
+      await prefs.remove(_profileKey);
+      await prefs.remove(_authTokenKey);
+      await prefs.remove(_patientIdKey);
+      return true;
     } catch (e) {
       return false;
     }
