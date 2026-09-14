@@ -50,6 +50,9 @@ dependencies:
   path_provider: ^2.1.5
   teleconsult_vitals:
     path: ./packages/teleconsult_vitals
+  hrx_protocol:
+    path: ./packages/hrx_protocol
+  image_picker: ^1.2.3
 dev_dependencies:
   flutter_test:
     sdk: flutter

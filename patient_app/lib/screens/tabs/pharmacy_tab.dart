@@ -1,8 +1,12 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/language_provider.dart';
 import '../../services/localization/healthcare_catalog.dart';
 import '../../widgets/dynamic_translated_text.dart';
+import '../../services/ocr/pp_ocr_v6_service.dart';
+import '../../widgets/prescription_attachment_sheet.dart';
+import '../../widgets/prescription_detected_sheet.dart';
 
 class PharmacyTab extends StatefulWidget {
   const PharmacyTab({super.key});
@@ -180,6 +184,84 @@ class _PharmacyTabState extends State<PharmacyTab> {
     }
   }
 
+  Future<void> _openPrescriptionWorkflow() async {
+    PrescriptionAttachmentSheet.show(
+      context,
+      onSelected: (result) async {
+        final assetPath = result['assetPath'] as String?;
+        final imageBytes = result['imageBytes'] as Uint8List?;
+        final title = result['title'] as String? ?? 'Prescription';
+
+        // 1. Show OCR Progress Modal with scanning laser
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => _PrescriptionScanningDialog(prescriptionTitle: title),
+        );
+
+        // 2. Perform prescription OCR
+        final detected = await PpOcrV6Service.instance.processPrescription(
+          imageBytes: imageBytes,
+          assetPath: assetPath,
+        );
+
+        // 3. Dismiss progress dialog
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+
+        // 4. Show Detected Medicines Sheet with schedule, timing & meal instructions
+        if (mounted) {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (ctx) => PrescriptionDetectedSheet(
+              medicines: detected,
+              assetPath: assetPath,
+              imageBytes: imageBytes,
+              onAddToCart: (selectedMedicines) {
+                _addPrescriptionMedicinesToCart(selectedMedicines);
+              },
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  void _addPrescriptionMedicinesToCart(List<DetectedMedicine> medicines) {
+    setState(() {
+      for (final med in medicines) {
+        final id = med.matchedCatalogId;
+        _cart[id] = (_cart[id] ?? 0) + 1;
+      }
+    });
+
+    final totalSaved = medicines.fold(0.0, (sum, m) => sum + (m.mrp - m.price));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Added ${medicines.length} prescribed medicines! Total Jan Aushadhi Savings: ₹${totalSaved.toStringAsFixed(0)}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF16A34A),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -244,84 +326,84 @@ class _PharmacyTabState extends State<PharmacyTab> {
                   const SizedBox(height: 14),
 
                   // Upload Prescription Card
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _openPrescriptionWorkflow,
                       borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                          child: const Icon(
-                            Icons.receipt_long_rounded,
-                            color: Colors.white,
-                            size: 26,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                langProvider.tr('order_with_prescription'),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                langProvider.tr('upload_prescription_sub'),
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(langProvider.tr('prescription_opened_msg')),
-                                backgroundColor: const Color(0xFF7C3AED),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFF7C3AED),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
-                          ),
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(langProvider.tr('upload_btn'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                          ),
+                          ],
                         ),
-                      ],
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.receipt_long_rounded,
+                                color: Colors.white,
+                                size: 26,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    langProvider.tr('order_with_prescription'),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    langProvider.tr('upload_prescription_sub'),
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: _openPrescriptionWorkflow,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFF7C3AED),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(langProvider.tr('upload_btn'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -717,6 +799,109 @@ class _PharmacyTabState extends State<PharmacyTab> {
               ),
             )
           : null,
+    );
+  }
+}
+
+class _PrescriptionScanningDialog extends StatefulWidget {
+  final String prescriptionTitle;
+  const _PrescriptionScanningDialog({required this.prescriptionTitle});
+
+  @override
+  State<_PrescriptionScanningDialog> createState() => _PrescriptionScanningDialogState();
+}
+
+class _PrescriptionScanningDialogState extends State<_PrescriptionScanningDialog>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 76,
+                  height: 76,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDE9FE),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF7C3AED).withValues(alpha: 0.2),
+                        blurRadius: 16,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.document_scanner_rounded,
+                    size: 38,
+                    color: Color(0xFF7C3AED),
+                  ),
+                ),
+                SizedBox(
+                  width: 86,
+                  height: 86,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
+                    backgroundColor: Colors.purple.shade50,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Analyzing Prescription',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E1B4B),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              widget.prescriptionTitle,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF7C3AED),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Detecting medicines, dosage & schedule...',
+              style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

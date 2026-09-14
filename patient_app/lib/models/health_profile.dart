@@ -60,6 +60,24 @@ class HealthProfile {
     );
   }
 
+  /// Blood group, usually stored in tier2Data. Defaults to 'B+' if unspecified.
+  String get bloodGroup =>
+      tier2Data?['blood_group']?.toString() ??
+      tier2Data?['bloodGroup']?.toString() ??
+      'B+';
+
+  /// Date of birth formatted as YYYY-MM-DD.
+  /// Computed from age or extracted from tier2Data.
+  String get dateOfBirth {
+    final dob = tier2Data?['date_of_birth']?.toString() ??
+        tier2Data?['dateOfBirth']?.toString();
+    if (dob != null && dob.trim().isNotEmpty) {
+      return dob.trim();
+    }
+    final birthYear = DateTime.now().year - age;
+    return '$birthYear-01-01';
+  }
+
   /// Convert model to JSON map for persistence and database payloads
   Map<String, dynamic> toJson() {
     return {

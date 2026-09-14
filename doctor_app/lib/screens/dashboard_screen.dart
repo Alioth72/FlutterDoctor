@@ -316,10 +316,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               floating: true,
               pinned: false,
               snap: false,
-              backgroundColor: AppColors.surface,
+              backgroundColor: _currentPrimaryDark,
               surfaceTintColor: Colors.transparent,
-              elevation: 2,
-              shadowColor: _currentPrimaryColor.withValues(alpha: 0.15),
+              elevation: 4,
+              shadowColor: _currentPrimaryDark.withValues(alpha: 0.3),
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
               ),
@@ -327,14 +327,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    gradient: _currentPrimaryGradient,
                     borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
                     border: _availabilityMode == DoctorAvailabilityMode.emergency
                         ? Border.all(color: const Color(0xFFDC2626).withValues(alpha: 0.5), width: 1.5)
                         : null,
                     boxShadow: [
                       BoxShadow(
-                        color: _currentPrimaryColor.withValues(alpha: 0.1),
+                        color: _currentPrimaryDark.withValues(alpha: 0.25),
                         blurRadius: 15,
                         offset: const Offset(0, 6),
                       ),
@@ -348,7 +348,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           // Integrated Menu Button
                           IconButton(
-                            icon: const Icon(Icons.menu, size: 28, color: AppColors.headingText),
+                            icon: const Icon(Icons.menu, size: 28, color: Colors.white),
                             onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                             tooltip: 'Open Menu',
                           ),
@@ -365,7 +365,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: AppColors.headingText,
+                                    color: Colors.white,
                                     letterSpacing: 0.5,
                                   ),
                                   maxLines: 1,
@@ -377,9 +377,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     Flexible(
                                       child: Text(
                                         widget.userProfile?.qualification ?? 'Senior Consultant Physician',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 11,
-                                          color: AppColors.muted,
+                                          color: Colors.white.withValues(alpha: 0.85),
                                           fontWeight: FontWeight.w500,
                                         ),
                                         maxLines: 1,
@@ -391,11 +391,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                       decoration: BoxDecoration(
                                         color: _availabilityMode == DoctorAvailabilityMode.emergency
-                                            ? const Color(0xFFDC2626)
-                                            : (_availabilityMode == DoctorAvailabilityMode.notAvailable
-                                                ? const Color(0xFF6B7280)
-                                                : AppColors.primary),
+                                            ? Colors.white
+                                            : Colors.white.withValues(alpha: 0.2),
                                         borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: Colors.white.withValues(alpha: 0.35),
+                                          width: 1,
+                                        ),
                                       ),
                                       child: Text(
                                         _availabilityMode == DoctorAvailabilityMode.emergency
@@ -403,8 +405,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             : (_availabilityMode == DoctorAvailabilityMode.notAvailable
                                                 ? 'OFF DUTY'
                                                 : 'AVAILABLE'),
-                                        style: const TextStyle(
-                                          color: Colors.white,
+                                        style: TextStyle(
+                                          color: _availabilityMode == DoctorAvailabilityMode.emergency
+                                              ? const Color(0xFFDC2626)
+                                              : Colors.white,
                                           fontSize: 9,
                                           fontWeight: FontWeight.bold,
                                           letterSpacing: 0.5,
@@ -423,9 +427,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             height: 44,
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: _currentPrimaryLight,
+                              color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.border),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
@@ -873,9 +883,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  /// Visually Attractive Tactile Swipeable Card with Drag Handle & Swipe Indicators
+  /// Visually Attractive Compact Card with Unified Theme & Streamlined Info
   Widget _buildAppointmentCard(AppointmentItem appt, int index) {
     final patientInitial = appt.patientName.isNotEmpty ? appt.patientName[0].toUpperCase() : 'P';
+    final isCompleted = appt.isCompleted;
+
+    Color statusBg;
+    Color statusText;
+    Color statusBorder;
+    IconData statusIcon;
+    String statusLabel;
+
+    if (isCompleted) {
+      statusBg = const Color(0xFFECFDF5);
+      statusText = const Color(0xFF059669);
+      statusBorder = const Color(0xFFA7F3D0);
+      statusIcon = Icons.check_circle_rounded;
+      statusLabel = 'COMPLETED';
+    } else if (appt.status.toLowerCase() == 'in_progress') {
+      statusBg = const Color(0xFFFFFBEB);
+      statusText = const Color(0xFFD97706);
+      statusBorder = const Color(0xFFFDE68A);
+      statusIcon = Icons.timelapse_rounded;
+      statusLabel = 'IN PROGRESS';
+    } else {
+      statusBg = const Color(0xFFF8FAFC);
+      statusText = const Color(0xFF475569);
+      statusBorder = const Color(0xFFE2E8F0);
+      statusIcon = Icons.schedule_rounded;
+      statusLabel = appt.status.toUpperCase();
+    }
 
     return Dismissible(
       key: Key(appt.id),
@@ -907,14 +944,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
       background: Container(
         alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 24),
-        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.only(left: 20),
+        margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: appt.isCompleted ? const Color(0xFFDCFCE7) : AppColors.primaryLight,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: (appt.isCompleted ? AppColors.success : AppColors.primary).withValues(alpha: 0.4),
-            width: 1.5,
+            color: (appt.isCompleted ? AppColors.success : AppColors.primary).withValues(alpha: 0.3),
+            width: 1.2,
           ),
         ),
         child: Row(
@@ -922,17 +959,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Icon(
               appt.isCompleted ? Icons.check_circle_rounded : Icons.touch_app_rounded,
               color: appt.isCompleted ? AppColors.success : AppColors.primary,
-              size: 26,
+              size: 24,
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Text(
               appt.isCompleted
-                  ? 'Swipe Right: Remove from Screen (Completed)'
-                  : 'Swipe Right: Open Details & Prescription',
+                  ? 'Remove Completed'
+                  : 'Open Rx & Details',
               style: TextStyle(
                 color: appt.isCompleted ? const Color(0xFF15803D) : AppColors.primaryDark,
                 fontWeight: FontWeight.bold,
-                fontSize: 13.5,
+                fontSize: 13,
               ),
             ),
           ],
@@ -940,265 +977,214 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       secondaryBackground: Container(
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 24),
-        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.only(right: 20),
+        margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: AppColors.infoBg,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.info.withValues(alpha: 0.4), width: 1.5),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.info.withValues(alpha: 0.3), width: 1.2),
         ),
-        child: Row(
+        child: const Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             Text(
-              'Swipe Left: Transfer Appointment',
-              style: TextStyle(color: AppColors.info, fontWeight: FontWeight.bold, fontSize: 13.5),
+              'Transfer Appointment',
+              style: TextStyle(color: AppColors.info, fontWeight: FontWeight.bold, fontSize: 13),
             ),
-            SizedBox(width: 10),
-            Icon(Icons.swap_horizontal_circle_rounded, color: AppColors.info, size: 26),
+            SizedBox(width: 8),
+            Icon(Icons.swap_horizontal_circle_rounded, color: AppColors.info, size: 24),
           ],
         ),
       ),
       child: GestureDetector(
         onTap: () => _openAppointmentDetail(appt),
         child: Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(16),
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: appt.isCompleted ? AppColors.successBg : AppColors.surface,
-            borderRadius: BorderRadius.circular(22),
+            color: AppColors.surface, // Clean, uniform background for ALL cards
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: appt.isCompleted
-                  ? AppColors.success
-                  : AppColors.primary.withValues(alpha: 0.16),
-              width: appt.isCompleted ? 1.5 : 1.2,
+              color: isCompleted
+                  ? const Color(0xFF10B981).withValues(alpha: 0.35)
+                  : AppColors.primary.withValues(alpha: 0.14),
+              width: 1.2,
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.08),
-                blurRadius: 18,
-                spreadRadius: 1,
-                offset: const Offset(0, 8),
+                color: (isCompleted ? const Color(0xFF10B981) : AppColors.primary).withValues(alpha: 0.06),
+                blurRadius: 12,
+                spreadRadius: 0,
+                offset: const Offset(0, 4),
               ),
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
               ),
             ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top-Center Drag Handle Pill to convey swipeable card affordance
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.muted.withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-
-              // Header Row: Avatar, Patient Info, Appt No & Reddish Delete Button
+              // Row 1: Avatar, Patient Info, Appt No & Delete Button
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Row(
-                    children: [
-                      // Patient Avatar Badge with Gradient Ring
-                      Container(
-                        padding: const EdgeInsets.all(2.5),
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: AppColors.gradientPrimaryToAccent,
-                        ),
-                        child: CircleAvatar(
-                          radius: 21,
-                          backgroundColor: AppColors.surface,
-                          child: CircleAvatar(
-                            radius: 19,
-                            backgroundColor: AppColors.primaryLight,
-                            child: Text(
-                              patientInitial,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primaryDark,
-                                fontSize: 16,
-                              ),
-                            ),
+                  // Compact Avatar (34x34)
+                  Container(
+                    padding: const EdgeInsets.all(2.0),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: isCompleted
+                          ? const LinearGradient(colors: [Color(0xFF34D399), Color(0xFF059669)])
+                          : AppColors.gradientPrimaryToAccent,
+                    ),
+                    child: CircleAvatar(
+                      radius: 17,
+                      backgroundColor: AppColors.surface,
+                      child: CircleAvatar(
+                        radius: 15,
+                        backgroundColor: isCompleted ? const Color(0xFFECFDF5) : AppColors.primaryLight,
+                        child: Text(
+                          patientInitial,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isCompleted ? const Color(0xFF059669) : AppColors.primaryDark,
+                            fontSize: 14,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
 
-                      // Patient Name & Appointment No
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                'Appointment ${index + 1}',
+                  // Patient Name, Meta, and Status
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                appt.patientName,
                                 style: const TextStyle(
-                                  fontSize: 15,
+                                  fontSize: 14.5,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.headingText,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primaryLight,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  appt.appointmentNo,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryDark,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: appt.status == 'completed'
-                                      ? AppColors.successBg
-                                      : (appt.status == 'in_progress' ? const Color(0xFFFEF3C7) : const Color(0xFFF3F4F6)),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: appt.status == 'completed'
-                                        ? AppColors.success.withValues(alpha: 0.4)
-                                        : (appt.status == 'in_progress' ? const Color(0xFFF59E0B) : const Color(0xFFE5E7EB)),
-                                    width: 0.8,
-                                  ),
-                                ),
-                                child: Text(
-                                  appt.status.toUpperCase(),
-                                  style: TextStyle(
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.bold,
-                                    color: appt.status == 'completed'
-                                        ? AppColors.successText
-                                        : (appt.status == 'in_progress' ? const Color(0xFFB45309) : const Color(0xFF4B5563)),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${appt.patientName} (${appt.age} yrs, ${appt.gender})',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.bodyText,
                             ),
-                          ),
-                          if (appt.isCompleted) ...[
-                            const SizedBox(height: 4),
+                            const SizedBox(width: 6),
+                            // Status Badge
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFDCFCE7),
+                                color: statusBg,
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFF86EFAC), width: 0.8),
+                                border: Border.all(color: statusBorder, width: 0.8),
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.swipe_right_alt_rounded, size: 13, color: Color(0xFF15803D)),
-                                  SizedBox(width: 4),
+                                  Icon(statusIcon, size: 10.5, color: statusText),
+                                  const SizedBox(width: 3),
                                   Text(
-                                    'Completed • Swipe right to remove from screen',
+                                    statusLabel,
                                     style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF15803D),
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: statusText,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                           ],
-                          if (appt.medicalRecordNumber != null || appt.bloodGroup != null) ...[
-                            const SizedBox(height: 3),
-                            Row(
-                              children: [
-                                if (appt.medicalRecordNumber != null)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                    margin: const EdgeInsets.only(right: 6),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFEFF6FF),
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: const Color(0xFFBFDBFE)),
-                                    ),
-                                    child: Text(
-                                      'MRN: ${appt.medicalRecordNumber}',
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF1E40AF),
-                                        fontFamily: 'monospace',
-                                      ),
-                                    ),
-                                  ),
-                                if (appt.bloodGroup != null)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFEF2F2),
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: const Color(0xFFFECACA)),
-                                    ),
-                                    child: Text(
-                                      appt.bloodGroup!,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFFB91C1C),
-                                      ),
-                                    ),
-                                  ),
-                              ],
+                        ),
+                        const SizedBox(height: 2),
+                        // Subtitle line: Age, Gender, Blood group, Appt No, MRN
+                        Row(
+                          children: [
+                            Text(
+                              '${appt.age} yrs, ${appt.gender}',
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.bodyText,
+                              ),
                             ),
+                            if (appt.bloodGroup != null) ...[
+                              const SizedBox(width: 5),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF2F2),
+                                  borderRadius: BorderRadius.circular(3),
+                                  border: Border.all(color: const Color(0xFFFECACA), width: 0.6),
+                                ),
+                                child: Text(
+                                  appt.bloodGroup!,
+                                  style: const TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFB91C1C),
+                                  ),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(width: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0.5),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryLight,
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Text(
+                                appt.appointmentNo,
+                                style: const TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryDark,
+                                ),
+                              ),
+                            ),
+                            if (appt.medicalRecordNumber != null) ...[
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: Text(
+                                  'MRN: ${appt.medicalRecordNumber}',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: AppColors.muted,
+                                    fontFamily: 'monospace',
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ],
-                          const SizedBox(height: 2),
-                          Text(
-                            appt.diagnosis,
-                            style: const TextStyle(
-                              fontSize: 11.5,
-                              color: Color(0xFF7C3AED),
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 6),
 
-                  // Reddish Delete Button
+                  // Compact Delete Button (28x28)
                   Container(
-                    width: 36,
-                    height: 36,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
                       color: AppColors.dangerBg,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+                      border: Border.all(color: AppColors.danger.withValues(alpha: 0.25)),
                     ),
                     child: IconButton(
                       padding: EdgeInsets.zero,
-                      icon: const Icon(Icons.delete_outline, color: AppColors.danger, size: 19),
+                      icon: const Icon(Icons.delete_outline, color: AppColors.danger, size: 15),
                       onPressed: () => _deleteAppointment(index),
                       tooltip: 'Delete Appointment',
                     ),
@@ -1206,21 +1192,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 7),
 
-              // Badges Row: Payment Status & Appointment Mode
+              // Row 2: Diagnosis Line (Compact, 1 line)
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Icon(Icons.health_and_safety_outlined, size: 13, color: Color(0xFF7C3AED)),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      appt.diagnosis,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF7C3AED),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // Row 3: Badges Wrap: Payment Status, Mode & Admission (All combined in 1 row)
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   // Payment Status Badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                     decoration: BoxDecoration(
                       color: appt.isPaid ? AppColors.successBg : AppColors.warningBg,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: appt.isPaid ? AppColors.success : AppColors.warning,
-                        width: 1.0,
+                        color: appt.isPaid
+                            ? AppColors.success.withValues(alpha: 0.5)
+                            : AppColors.warning.withValues(alpha: 0.5),
+                        width: 0.8,
                       ),
                     ),
                     child: Row(
@@ -1228,14 +1240,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         Icon(
                           appt.isPaid ? Icons.check_circle_rounded : Icons.pending_rounded,
-                          size: 14,
+                          size: 11.5,
                           color: appt.isPaid ? AppColors.success : AppColors.warningText,
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: 4),
                         Text(
                           appt.paymentStatus,
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 10.5,
                             fontWeight: FontWeight.bold,
                             color: appt.isPaid ? AppColors.successText : AppColors.warningText,
                           ),
@@ -1246,38 +1258,78 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   // Appointment Mode Badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                     decoration: BoxDecoration(
                       color: appt.mode == AppointmentMode.teleconsultation
                           ? AppColors.infoBg
                           : AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(6),
                       border: Border.all(
                         color: appt.mode == AppointmentMode.teleconsultation
                             ? AppColors.info.withValues(alpha: 0.3)
                             : AppColors.primary.withValues(alpha: 0.3),
+                        width: 0.8,
                       ),
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           appt.mode == AppointmentMode.teleconsultation
                               ? Icons.videocam_rounded
                               : Icons.qr_code_scanner_rounded,
-                          size: 14,
+                          size: 11.5,
                           color: appt.mode == AppointmentMode.teleconsultation
                               ? AppColors.info
                               : AppColors.primary,
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: 4),
                         Text(
                           appt.mode == AppointmentMode.teleconsultation ? 'Teleconsult' : 'In-Person',
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 10.5,
                             fontWeight: FontWeight.bold,
                             color: appt.mode == AppointmentMode.teleconsultation
                                 ? AppColors.info
                                 : AppColors.primaryDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Admission Status Pill (Integrated cleanly into the same row)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: appt.isAdmitted
+                          ? AppColors.primaryLight.withValues(alpha: 0.6)
+                          : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: appt.isAdmitted
+                            ? AppColors.primary.withValues(alpha: 0.3)
+                            : const Color(0xFFE2E8F0),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          appt.isAdmitted ? Icons.single_bed_rounded : Icons.medical_services_outlined,
+                          size: 11.5,
+                          color: appt.isAdmitted ? AppColors.primary : AppColors.muted,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          appt.isAdmitted
+                              ? (appt.roomNo != null ? 'Admitted (${appt.roomNo})' : 'Admitted')
+                              : 'Outpatient (OPD)',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: appt.isAdmitted ? AppColors.primaryDark : AppColors.muted,
                           ),
                         ),
                       ],
@@ -1288,120 +1340,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               const SizedBox(height: 10),
 
-              // Hospital Admission Status Section
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: appt.isAdmitted
-                      ? AppColors.primaryLight.withValues(alpha: 0.6)
-                      : AppColors.background,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: appt.isAdmitted
-                        ? AppColors.primary.withValues(alpha: 0.3)
-                        : AppColors.border.withValues(alpha: 0.6),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      appt.isAdmitted ? Icons.single_bed_rounded : Icons.medical_services_outlined,
-                      size: 18,
-                      color: appt.isAdmitted ? AppColors.primary : AppColors.muted,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Admission Status: ',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: appt.isAdmitted ? AppColors.primaryDark : AppColors.muted,
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        appt.isAdmitted
-                            ? 'Admitted (${appt.roomNo ?? 'Room N/A'})'
-                            : 'Outpatient (OPD - Not Admitted)',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.bold,
-                          color: appt.isAdmitted ? AppColors.primaryDark : AppColors.muted,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // Interactive Swipe Affordance Pill
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.swipe_right_rounded, size: 14, color: AppColors.primary),
-                    SizedBox(width: 4),
-                    Text(
-                      'Swipe right for details  •  Swipe left to transfer',
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                    SizedBox(width: 4),
-                    Icon(Icons.swipe_left_rounded, size: 14, color: AppColors.primary),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // Prescription Rx Second Opinion & Fill Buttons
+              // Row 4: Action Buttons (Height 36px, fits gracefully with no truncation)
               Row(
                 children: [
                   // Auto-Fetch Rx Second Opinion Verification Button
                   Expanded(
-                    flex: 1,
+                    flex: 2,
                     child: Container(
-                      height: 44,
+                      height: 36,
                       decoration: BoxDecoration(
-                        color: AppColors.primaryLight.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                        color: AppColors.primaryLight.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
                       ),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(10),
                           onTap: () => openAutoPrescriptionReviewModal(context: context, appt: appt),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.verified_outlined, size: 16, color: AppColors.primaryDark),
-                                SizedBox(width: 5),
-                                Flexible(
-                                  child: Text(
-                                    'Prescription Second Opinion',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primaryDark,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
+                                Icon(Icons.auto_awesome_rounded, size: 14, color: AppColors.primaryDark),
+                                SizedBox(width: 4),
+                                Text(
+                                  '2nd Opinion',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryDark,
                                   ),
                                 ),
                               ],
@@ -1413,48 +1382,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(width: 8),
 
-                  // Gradient Pop-Out Button: "FILL PRESCRIPTION"
+                  // Action Button: "FILL PRESCRIPTION" or "VIEW PRESCRIPTION"
                   Expanded(
-                    flex: 2,
+                    flex: 3,
                     child: Container(
-                      height: 44,
+                      height: 36,
                       decoration: BoxDecoration(
-                        gradient: AppColors.gradientPrimaryToDeep,
-                        borderRadius: BorderRadius.circular(14),
+                        gradient: isCompleted
+                            ? const LinearGradient(colors: [Color(0xFF059669), Color(0xFF047857)])
+                            : AppColors.gradientPrimaryToDeep,
+                        borderRadius: BorderRadius.circular(10),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.25),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+                            color: (isCompleted ? const Color(0xFF059669) : AppColors.primary).withValues(alpha: 0.22),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(10),
                           onTap: () => _openAppointmentDetail(appt),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Row(
-                                  children: [
-                                    Icon(Icons.edit_note_rounded, size: 18, color: Colors.white),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      'FILL PRESCRIPTION',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
+                                Icon(
+                                  isCompleted ? Icons.task_alt_rounded : Icons.edit_note_rounded,
+                                  size: 15,
+                                  color: Colors.white,
                                 ),
-                                Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+                                const SizedBox(width: 5),
+                                Text(
+                                  isCompleted ? 'VIEW PRESCRIPTION' : 'FILL PRESCRIPTION',
+                                  style: const TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.3,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_forward_rounded, size: 13, color: Colors.white),
                               ],
                             ),
                           ),
@@ -1463,6 +1435,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                 ],
+              ),
+
+              const SizedBox(height: 6),
+
+              // Row 5: Subtle Swipe Hint (Single sleek 9.5px line, no 35px bulky container)
+              Center(
+                child: Text(
+                  isCompleted
+                      ? 'Swipe right to remove  •  Swipe left to transfer'
+                      : 'Swipe right for details  •  Swipe left to transfer',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.muted.withValues(alpha: 0.8),
+                  ),
+                ),
               ),
             ],
           ),

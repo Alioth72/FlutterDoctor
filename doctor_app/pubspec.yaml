@@ -43,6 +43,8 @@ dependencies:
   fl_chart: ^1.2.0
   teleconsult_vitals:
     path: packages/teleconsult_vitals
+  hrx_protocol:
+    path: packages/hrx_protocol
 
 dev_dependencies:
   flutter_test:
