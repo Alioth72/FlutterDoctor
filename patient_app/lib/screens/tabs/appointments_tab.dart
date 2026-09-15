@@ -44,7 +44,10 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
     );
 
     try {
-      await _dbService.requestTelehealthAccess(appointment.id);
+      final res = await _dbService.requestTelehealthAccess(appointment.id);
+      if (res['success'] != true && res['statusCode'] != null) {
+        throw Exception(res['error'] ?? 'Consultation join window is not open.');
+      }
       if (context.mounted) {
         Navigator.of(context).pop(); // dismiss loading dialog
         Navigator.of(context).push(

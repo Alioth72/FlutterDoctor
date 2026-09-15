@@ -153,20 +153,54 @@ class Appointment {
       parsedFee = int.tryParse(rawFee.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
     }
 
-    final finalDate = (notes['appointment_date']?.toString().isNotEmpty ?? false)
-        ? notes['appointment_date'].toString()
-        : formattedDate;
-    final finalSlot = (notes['slot_time']?.toString().isNotEmpty ?? false)
-        ? notes['slot_time'].toString()
+    String finalDate = formattedDate;
+    final rawApptDate = notes['appointment_date']?.toString().trim();
+    if (rawApptDate != null && rawApptDate.isNotEmpty) {
+      if (rawApptDate.contains(',')) {
+        finalDate = rawApptDate;
+      } else {
+        final parsed = DateTime.tryParse(rawApptDate);
+        if (parsed != null) {
+          final dName = dayNames[parsed.weekday - 1];
+          final dNum = parsed.day.toString().padLeft(2, '0');
+          final mName = monthNames[parsed.month - 1];
+          finalDate = '$dName, $dNum $mName ${parsed.year}';
+        } else {
+          finalDate = rawApptDate;
+        }
+      }
+    }
+
+    final rawSlot = notes['slot_time']?.toString().trim();
+    final finalSlot = (rawSlot != null && rawSlot.isNotEmpty)
+        ? rawSlot
         : formattedTime;
+
+    final rawDocName = (json['doctor_name'] as String?)?.trim() ?? (json['doctorName'] as String?)?.trim();
+    final docName = (rawDocName != null && rawDocName.isNotEmpty)
+        ? rawDocName
+        : (normalizedType == 'home_visit' ? 'ASHA Health Worker' : 'Dr. Rajesh V. Sharma');
+
+    final rawSpecialty = (json['doctor_specialty'] as String?)?.trim() ??
+        (json['doctorSpecialty'] as String?)?.trim() ??
+        notes['doctor_specialty']?.toString().trim();
+    final docSpecialty = (rawSpecialty != null && rawSpecialty.isNotEmpty)
+        ? rawSpecialty
+        : (normalizedType == 'home_visit' ? 'Community Health Care' : 'General Physician');
+
+    final rawHospital = (json['facility_name'] as String?)?.trim() ??
+        (json['hospitalName'] as String?)?.trim();
+    final hospital = (rawHospital != null && rawHospital.isNotEmpty)
+        ? rawHospital
+        : (normalizedType == 'home_visit' ? 'Village Health Post' : 'Ashwini Central Hospital');
 
     return Appointment(
       id: json['appointment_id'] as String? ?? json['id'] as String? ?? '',
       tokenNumber: tokenNo,
       doctorId: json['provider_user_id'] as String? ?? json['doctorId'] as String? ?? '',
-      doctorName: json['doctor_name'] as String? ?? json['doctorName'] as String? ?? (normalizedType == 'home_visit' ? 'ASHA Health Worker' : 'Dr. Rajesh V. Sharma'),
-      doctorSpecialty: json['doctor_specialty'] as String? ?? json['doctorSpecialty'] as String? ?? notes['doctor_specialty']?.toString() ?? (normalizedType == 'home_visit' ? 'Community Health Care' : 'General Physician'),
-      hospitalName: json['facility_name'] as String? ?? json['hospitalName'] as String? ?? (normalizedType == 'home_visit' ? 'Village Health Post' : 'Ashwini Central Hospital'),
+      doctorName: docName,
+      doctorSpecialty: docSpecialty,
+      hospitalName: hospital,
       patientName: json['patient_name'] as String? ?? json['patientName'] as String? ?? '',
       patientPhone: json['patient_phone'] as String? ?? json['patientPhone'] as String? ?? '',
       appointmentDate: finalDate,
@@ -184,9 +218,28 @@ class Appointment {
 
   DateTime get scheduledDateTime {
     try {
+      // 1. Check if appointmentDate is directly parseable as an ISO date (e.g. 2026-09-13)
+      final isoDate = DateTime.tryParse(appointmentDate);
+      if (isoDate != null) {
+        int hour = 9;
+        int minute = 0;
+        if (timeSlot.isNotEmpty) {
+          final tParts = timeSlot.split(' ');
+          final hm = tParts[0].split(':');
+          hour = int.tryParse(hm[0]) ?? 9;
+          minute = int.tryParse(hm[1]) ?? 0;
+          if (tParts.length > 1 && tParts[1].toUpperCase() == 'PM' && hour < 12) {
+            hour += 12;
+          } else if (tParts.length > 1 && tParts[1].toUpperCase() == 'AM' && hour == 12) {
+            hour = 0;
+          }
+        }
+        return DateTime(isoDate.year, isoDate.month, isoDate.day, hour, minute);
+      }
+
+      // 2. Format: "Wed, 02 Sep 2026" -> clean: "Wed 02 Sep 2026"
       final clean = appointmentDate.replaceAll(',', '').trim();
       final parts = clean.split(' ');
-      // Format: "Wed 02 Sep 2026" -> parts: ["Wed", "02", "Sep", "2026"]
       if (parts.length >= 4) {
         final day = int.tryParse(parts[1]) ?? 1;
         const months = {

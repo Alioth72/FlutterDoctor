@@ -81,18 +81,18 @@ class SarvamTranslationService {
       }
     }
 
+    // Check AppStrings Dictionary first
+    final dictionaryMatch = AppStrings.get(text, langInfo.code);
+    if (dictionaryMatch != text && _isPureIndic(dictionaryMatch, text, langInfo.code)) {
+      _memoryCache[key] = dictionaryMatch;
+      return dictionaryMatch;
+    }
+
     // Check Healthcare Catalog
     final catalogMatch = HealthcareCatalog.lookup(text, langInfo.code);
     if (catalogMatch != null && _isPureIndic(catalogMatch, text, langInfo.code)) {
       _memoryCache[key] = catalogMatch;
       return catalogMatch;
-    }
-
-    // Check AppStrings Dictionary
-    final dictionaryMatch = AppStrings.get(text, langInfo.code);
-    if (dictionaryMatch != text && _isPureIndic(dictionaryMatch, text, langInfo.code)) {
-      _memoryCache[key] = dictionaryMatch;
-      return dictionaryMatch;
     }
 
     // Do not return premature transliterated strings here.
@@ -127,18 +127,18 @@ class SarvamTranslationService {
       }
     }
 
-    // 3. Direct Healthcare Catalog lookup
-    final catalogMatch = HealthcareCatalog.lookup(text, langInfo.code);
-    if (catalogMatch != null && _isPureIndic(catalogMatch, text, langInfo.code)) {
-      _memoryCache[key] = catalogMatch;
-      return catalogMatch;
-    }
-
-    // 4. Fallback dictionary match
+    // 3. Fallback dictionary match
     final dictionaryMatch = AppStrings.get(text, langInfo.code);
     if (dictionaryMatch != text && _isPureIndic(dictionaryMatch, text, langInfo.code)) {
       _memoryCache[key] = dictionaryMatch;
       return dictionaryMatch;
+    }
+
+    // 4. Direct Healthcare Catalog lookup
+    final catalogMatch = HealthcareCatalog.lookup(text, langInfo.code);
+    if (catalogMatch != null && _isPureIndic(catalogMatch, text, langInfo.code)) {
+      _memoryCache[key] = catalogMatch;
+      return catalogMatch;
     }
 
     // 5. Call Sarvam AI Translation API if available

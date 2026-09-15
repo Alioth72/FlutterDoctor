@@ -329,8 +329,8 @@ class PatientDatabaseService {
   Future<List<Appointment>?> fetchMyAppointments() async {
     final token = await _storageService.getAuthToken();
     if (token == null || token.isEmpty) {
-      debugPrint('[PatientDatabaseService] fetchMyAppointments: No auth token');
-      return [];
+      debugPrint('[PatientDatabaseService] fetchMyAppointments: No auth token (keeping local appointments)');
+      return null;
     }
 
     try {

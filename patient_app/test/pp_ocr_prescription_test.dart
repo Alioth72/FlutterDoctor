@@ -85,8 +85,10 @@ void main() {
       expect(ator.isSelected, isTrue);
     });
 
-    test('3. Dynamic camera capture fallback: All medicines auto-selected with full schedule details', () async {
-      final detected = await ocrService.processPrescription();
+    test('3. Dynamic image OCR: Recognizes medicines from prescription image bytes', () async {
+      final detected = await ocrService.processPrescription(
+        assetPath: 'assets/images/sample_rx_acute.jpg',
+      );
 
       expect(detected.isNotEmpty, isTrue);
       for (final med in detected) {
@@ -99,5 +101,90 @@ void main() {
         expect(med.mrp, greaterThan(med.price));
       }
     });
+
+    test('4. Gemini 18-Key Rotation Pool Integrity', () {
+      expect(PpOcrV6Service.apiKeysCount, 18, reason: 'Must contain all 18 verified active Gemini API keys');
+    });
+
+    test('5. Gemini Multimodal Clinical JSON Parser & Jan Aushadhi Savings Matching', () {
+      const mockGeminiJson = '''
+      [
+        {
+          "name": "Tab Paracetamol",
+          "strength": "650mg",
+          "dosage_form": "Tablet",
+          "frequency": "1-0-1",
+          "morning": true,
+          "afternoon": false,
+          "night": true,
+          "timing_label": "Morning & Night (Twice daily)",
+          "meal_instruction": "After Food",
+          "how_to_take": "Take with 1 glass of water after food.",
+          "duration": "5 Days",
+          "raw_text": "Tab Paracetamol 650mg 1-0-1 x 5d"
+        },
+        {
+          "name": "Cap Amoxyclav",
+          "strength": "625mg",
+          "dosage_form": "Capsule",
+          "frequency": "1-0-1",
+          "morning": true,
+          "afternoon": false,
+          "night": true,
+          "timing_label": "Morning & Night",
+          "meal_instruction": "After Food",
+          "how_to_take": "Take with water at start of meal.",
+          "duration": "5 Days",
+          "raw_text": "Cap Amoxyclav 625mg 1-0-1 x 5d"
+        },
+        {
+          "name": "Tab Cetirizine",
+          "strength": "10mg",
+          "dosage_form": "Tablet",
+          "frequency": "0-0-1",
+          "morning": false,
+          "afternoon": false,
+          "night": true,
+          "timing_label": "Night (Once daily)",
+          "meal_instruction": "At Bedtime",
+          "how_to_take": "Take 1 tablet before sleeping.",
+          "duration": "5 Days",
+          "raw_text": "Tab Cetirizine 10mg 0-0-1 x 5d"
+        }
+      ]
+      ''';
+
+      final results = ocrService.parseGeminiJsonResponse(mockGeminiJson);
+      expect(results.length, 3);
+
+      final pcm = results.firstWhere((m) => m.matchedCatalogId == 'med_1');
+      expect(pcm.name, contains('Paracetamol'));
+      expect(pcm.strength, '650mg');
+      expect(pcm.frequency, '1-0-1');
+      expect(pcm.morning, isTrue);
+      expect(pcm.afternoon, isFalse);
+      expect(pcm.night, isTrue);
+      expect(pcm.mealInstruction, 'After Food');
+      expect(pcm.savingsPercent, greaterThan(65.0));
+      expect(pcm.price, 12.0);
+      expect(pcm.mrp, 42.0);
+
+      final amox = results.firstWhere((m) => m.matchedCatalogId == 'med_2');
+      expect(amox.name, contains('Amoxicillin'));
+      expect(amox.strength, '625mg');
+      expect(amox.frequency, '1-0-1');
+      expect(amox.price, 48.0);
+      expect(amox.mrp, 160.0);
+      expect(amox.savingsPercent, greaterThan(65.0));
+
+      final cet = results.firstWhere((m) => m.matchedCatalogId == 'med_8');
+      expect(cet.name, contains('Cetirizine'));
+      expect(cet.strength, '10mg');
+      expect(cet.frequency, '0-0-1');
+      expect(cet.price, 10.0);
+      expect(cet.mrp, 38.0);
+      expect(cet.savingsPercent, greaterThan(70.0));
+    });
   });
 }
+

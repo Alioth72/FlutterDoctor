@@ -171,6 +171,8 @@ class UserProfile {
       'department': department,
       'qualification': qualification,
       'designation': designation,
+      'hospital_id': hospitalId,
+      'hospital_name': hospitalName,
     };
   }
 

@@ -71,6 +71,7 @@ class _RequestAshaVisitScreenState extends State<RequestAshaVisitScreen> {
   }
 
   Future<void> _submitRequest() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
 
     final reason = _reasonController.text.trim();

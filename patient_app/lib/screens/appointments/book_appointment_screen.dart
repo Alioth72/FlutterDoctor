@@ -143,6 +143,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   }
 
   Future<void> _handleConfirmBooking() async {
+    if (_isBooking) return;
     FocusScope.of(context).unfocus();
 
     if (_selectedDoctor == null) {

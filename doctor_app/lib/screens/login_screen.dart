@@ -67,6 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _performLogin() async {
+    if (_isLoading) return;
     if (!(_loginFormKey.currentState?.validate() ?? false)) return;
 
     setState(() => _isLoading = true);

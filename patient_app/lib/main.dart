@@ -37,7 +37,7 @@ class PatientApp extends StatelessWidget {
           create: (_) => AppointmentProvider(),
         ),
         ChangeNotifierProvider(
-          create: (_) => SchemesProvider()..loadSavedProfile(),
+          create: (_) => SchemesProvider(),
         ),
         ChangeNotifierProvider(
           create: (_) => LanguageProvider()..init(),
@@ -70,9 +70,10 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<HealthProfileProvider>(context);
+    final isInitialized = context.select<HealthProfileProvider, bool>((p) => p.isInitialized);
+    final isOnboarded = context.select<HealthProfileProvider, bool>((p) => p.isOnboarded);
 
-    if (!provider.isInitialized) {
+    if (!isInitialized) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
@@ -80,7 +81,7 @@ class AuthGate extends StatelessWidget {
       );
     }
 
-    if (provider.isOnboarded) {
+    if (isOnboarded) {
       return const HomeScreen();
     }
 

@@ -96,19 +96,21 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
     // Fetch gender and area of residence directly from registered patient profile
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        final healthProfile = Provider.of<HealthProfileProvider>(context, listen: false).profile;
-        if (healthProfile != null) {
-          setState(() {
-            if (healthProfile.gender.isNotEmpty) {
-              _gender = healthProfile.gender;
-            }
-            _residenceArea = healthProfile.residenceType;
-            if (widget.initialProfile == null && healthProfile.age > 0) {
-              _age = healthProfile.age;
-              _ageController.text = healthProfile.age.toString();
-            }
-          });
-        }
+        try {
+          final healthProfile = Provider.of<HealthProfileProvider>(context, listen: false).profile;
+          if (healthProfile != null) {
+            setState(() {
+              if (healthProfile.gender.isNotEmpty) {
+                _gender = healthProfile.gender;
+              }
+              _residenceArea = healthProfile.residenceType;
+              if (widget.initialProfile == null && healthProfile.age > 0) {
+                _age = healthProfile.age;
+                _ageController.text = healthProfile.age.toString();
+              }
+            });
+          }
+        } catch (_) {}
       }
     });
   }

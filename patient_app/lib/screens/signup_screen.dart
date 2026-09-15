@@ -90,6 +90,7 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _handleLogin() async {
+    if (_isSubmitting) return;
     FocusScope.of(context).unfocus();
 
     if (!_loginFormKey.currentState!.validate()) {
@@ -130,8 +131,9 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
       );
 
-      Navigator.of(context).pushReplacement(
+      Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
       );
     } else {
       final errorMsg = provider.errorMessage ?? 'Login failed. Please check your phone or password.';
@@ -152,6 +154,7 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _handleSignup() async {
+    if (_isSubmitting) return;
     FocusScope.of(context).unfocus();
 
     if (!_signupFormKey.currentState!.validate()) {
@@ -196,8 +199,9 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
       );
 
-      Navigator.of(context).pushReplacement(
+      Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
       );
     } else {
       final errorMsg = provider.errorMessage ?? 'Registration failed. Please try again.';

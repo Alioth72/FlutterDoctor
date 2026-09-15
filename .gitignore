@@ -2,6 +2,9 @@
 .env
 *.env
 !.env.example
+API KEYS.csv
+*KEYS*.csv
+*keys*.csv
 
 # Miscellaneous
 *.class

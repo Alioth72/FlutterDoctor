@@ -88,9 +88,13 @@ class AppointmentProvider with ChangeNotifier {
     refreshAppointmentsFromBackend();
   }
 
+  bool _isSyncing = false;
+
   /// Read-only database sync: fetch authenticated patient's live appointments
   /// from Azure Functions (GET /me/appointments) and merge with local cache.
   Future<void> refreshAppointmentsFromBackend() async {
+    if (_isSyncing) return;
+    _isSyncing = true;
     try {
       final liveList = await PatientDatabaseService().fetchMyAppointments();
       if (liveList != null) {
@@ -101,6 +105,8 @@ class AppointmentProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint('[AppointmentProvider] Live appointments sync: $e');
+    } finally {
+      _isSyncing = false;
     }
   }
 
@@ -210,7 +216,9 @@ class AppointmentProvider with ChangeNotifier {
         reason: old.reason,
         consultationFee: old.consultationFee,
         status: 'Cancelled',
+        appointmentType: old.appointmentType,
         bookedAt: old.bookedAt,
+        notes: old.notes,
       );
       await _persist();
       notifyListeners();

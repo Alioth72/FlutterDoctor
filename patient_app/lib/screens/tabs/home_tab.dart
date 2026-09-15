@@ -44,7 +44,10 @@ class HomeTab extends StatelessWidget {
     );
 
     try {
-      await PatientDatabaseService().requestTelehealthAccess(appointment.id);
+      final res = await PatientDatabaseService().requestTelehealthAccess(appointment.id);
+      if (res['success'] != true && res['statusCode'] != null) {
+        throw Exception(res['error'] ?? 'Consultation join window is not open.');
+      }
       if (context.mounted) {
         Navigator.of(context).pop();
         Navigator.of(context).push(
