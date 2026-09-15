@@ -68,6 +68,5 @@ app.*.map.json
 
 # Project-specific
 test_apks/
-packages/
 sih_project_doctor_app/
 sih_project_patient_app/
