@@ -116,15 +116,8 @@ class CallService {
     onStatus('Requesting camera and microphone…');
     _localStream = await navigator.mediaDevices.getUserMedia(<String, dynamic>{
       'audio': true,
-      // flutter_webrtc otherwise defaults to 1280x720. A 320x240 patient
-      // stream retains ample facial detail for the 36x36 ME-rPPG input when
-      // the face is kept close, while making doctor-side JPEG capture cheap
-      // enough for the required sampling cadence.
       'video': <String, dynamic>{
         'facingMode': 'user',
-        'width': 320,
-        'height': 240,
-        'frameRate': 20,
       },
     });
 

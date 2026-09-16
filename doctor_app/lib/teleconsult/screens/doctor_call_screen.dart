@@ -1,8 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:teleconsult_vitals/teleconsult_vitals.dart';
 
 import '../data/appointment_repository.dart';
 import '../models/teleconsult_models.dart';
@@ -27,19 +25,13 @@ class DoctorCallScreen extends StatefulWidget {
 class _DoctorCallScreenState extends State<DoctorCallScreen> {
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
-  final List<BpmSample> _bpmSamples = <BpmSample>[];
   late final CallLog _callLog;
   CallService? _callService;
-  BpmCaptureDiagnostics _captureDiagnostics =
-      const BpmCaptureDiagnostics.waiting();
-  MerppgDiagnostics _merppgDiagnostics = const MerppgDiagnostics.loading();
-  BpmEstimate? _bpmEstimate;
   String _status = 'Preparing call…';
   String? _error;
   bool _muted = false;
   bool _cameraOff = false;
   bool _ending = false;
-  bool _vitalsExpanded = false;
 
   @override
   void initState() {
@@ -49,53 +41,7 @@ class _DoctorCallScreenState extends State<DoctorCallScreen> {
   }
 
   void _handleTelemetry(Map<String, dynamic> message) {
-    if (!mounted) return;
-    final telemetry = VitalsTelemetryMessage.tryParse(message);
-    switch (telemetry) {
-      case CaptureDiagnosticsTelemetry(:final diagnostics):
-        setState(() => _captureDiagnostics = diagnostics);
-        return;
-      case VitalsSampleTelemetry():
-        final receivedAt = DateTime.now();
-        setState(() {
-          _merppgDiagnostics = MerppgDiagnostics(
-            status: 'On-device BVP active',
-            ready: true,
-            processedSamples: telemetry.processedSamples,
-            droppedFrames: telemetry.droppedFrames,
-            lastInferenceTime: telemetry.inferenceTime,
-            latestBvp: telemetry.bvp,
-          );
-          if (telemetry.estimate case final incoming?) {
-            final estimate = BpmEstimate(
-              timestamp: receivedAt,
-              status: incoming.status,
-              confidence: incoming.confidence,
-              effectiveSampleRate: incoming.effectiveSampleRate,
-              sampleCount: incoming.sampleCount,
-              maximumResolvableBpm: incoming.maximumResolvableBpm,
-              bpm: incoming.bpm,
-            );
-            _bpmEstimate = estimate;
-            if (estimate.bpm != null) {
-              _bpmSamples.add(
-                BpmSample(
-                  timestamp: receivedAt,
-                  bpm: estimate.bpm!,
-                  confidence: estimate.confidence,
-                ),
-              );
-              final cutoff = receivedAt.subtract(const Duration(seconds: 60));
-              _bpmSamples.removeWhere(
-                (sample) => sample.timestamp.isBefore(cutoff),
-              );
-            }
-          }
-        });
-        return;
-      case null:
-        return;
-    }
+    // Video-only mode: vitals decoupled from call
   }
 
   Future<void> _start() async {
@@ -168,7 +114,7 @@ class _DoctorCallScreenState extends State<DoctorCallScreen> {
           appointment: widget.appointment,
           repository: widget.repository,
           callLog: _callLog,
-          bpmSamples: _bpmSamples,
+          bpmSamples: const <BpmSample>[],
         ),
       ),
     );
@@ -202,34 +148,7 @@ class _DoctorCallScreenState extends State<DoctorCallScreen> {
             else
               _PatientPlaceholder(name: widget.appointment.patientName),
             Positioned(top: 16, left: 16, child: _Pill(text: _status)),
-            if (_vitalsExpanded)
-              Positioned(
-                top: 160,
-                right: 16,
-                child: _VitalsDiagnostics(
-                  diagnostics: _captureDiagnostics,
-                  merppgDiagnostics: _merppgDiagnostics,
-                  bpmEstimate: _bpmEstimate,
-                  onClose: () => setState(() => _vitalsExpanded = false),
-                ),
-              )
-            else
-              Positioned(
-                top: 160,
-                right: 16,
-                child: _VitalsLauncher(
-                  bpmEstimate: _bpmEstimate,
-                  onPressed: () => setState(() => _vitalsExpanded = true),
-                ),
-              ),
-            if (_vitalsExpanded)
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 118,
-                height: 138,
-                child: _BpmChart(samples: _bpmSamples),
-              ),
+
             Positioned(
               top: 16,
               right: 16,
@@ -342,338 +261,6 @@ class _Pill extends StatelessWidget {
   );
 }
 
-class _VitalsLauncher extends StatelessWidget {
-  const _VitalsLauncher({required this.bpmEstimate, required this.onPressed});
-
-  final BpmEstimate? bpmEstimate;
-  final VoidCallback onPressed;
-
-  bool get _hasFreshReliableBpm =>
-      bpmEstimate?.reliable == true &&
-      DateTime.now().difference(bpmEstimate!.timestamp) <
-          const Duration(seconds: 5);
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    label: 'Open AI-assisted vitals',
-    child: Material(
-      color: Colors.black54,
-      borderRadius: BorderRadius.circular(24),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onPressed,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                Icons.favorite,
-                size: 18,
-                color: _hasFreshReliableBpm
-                    ? Colors.lightGreenAccent
-                    : Colors.white70,
-              ),
-              const SizedBox(width: 7),
-              Text(
-                _hasFreshReliableBpm
-                    ? '${bpmEstimate!.bpm!.round()} BPM'
-                    : 'Vitals',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: 3),
-              const Icon(Icons.expand_more, size: 18, color: Colors.white70),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-class _VitalsDiagnostics extends StatelessWidget {
-  const _VitalsDiagnostics({
-    required this.diagnostics,
-    required this.merppgDiagnostics,
-    required this.bpmEstimate,
-    required this.onClose,
-  });
-
-  final BpmCaptureDiagnostics diagnostics;
-  final MerppgDiagnostics merppgDiagnostics;
-  final BpmEstimate? bpmEstimate;
-  final VoidCallback onClose;
-
-  bool get _hasFreshReliableBpm =>
-      bpmEstimate?.reliable == true &&
-      DateTime.now().difference(bpmEstimate!.timestamp) <
-          const Duration(seconds: 5);
-
-  bool get _bpmIsStale =>
-      bpmEstimate != null &&
-      DateTime.now().difference(bpmEstimate!.timestamp) >=
-          const Duration(seconds: 5);
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 230,
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.black54,
-      borderRadius: BorderRadius.circular(14),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            const Expanded(
-              child: Text(
-                'AI-assisted vitals',
-                style: TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-            ),
-            IconButton(
-              onPressed: onClose,
-              tooltip: 'Close vitals',
-              visualDensity: VisualDensity.compact,
-              constraints: const BoxConstraints.tightFor(width: 30, height: 30),
-              padding: EdgeInsets.zero,
-              icon: const Icon(Icons.close, color: Colors.white70, size: 18),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: <Widget>[
-            Container(
-              width: 42,
-              height: 42,
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: Colors.white12,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.phone_android, color: Colors.white70),
-            ),
-            const SizedBox(width: 9),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    diagnostics.capturedFrames == 0
-                        ? 'Waiting for patient vitals'
-                        : diagnostics.preparedFaceRate == 0
-                        ? 'Finding face…'
-                        : 'Face input ready',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    '${diagnostics.preparedFaceRate.toStringAsFixed(1)} face fps  •  '
-                    '${(diagnostics.faceHitRate * 100).toStringAsFixed(0)}% hit',
-                    style: const TextStyle(color: Colors.white70, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 5),
-        Text(
-          '${diagnostics.capturedFrames} captured at '
-          '${diagnostics.captureRate.toStringAsFixed(1)} fps • '
-          '${diagnostics.lastProcessingTime.inMilliseconds} ms/frame',
-          style: const TextStyle(color: Colors.white60, fontSize: 10),
-        ),
-        Text(
-          'capture ${diagnostics.lastCaptureTime.inMilliseconds} ms • '
-          'detect ${diagnostics.lastDetectionTime.inMilliseconds} ms • '
-          'prepare ${diagnostics.lastPreparationTime.inMilliseconds} ms',
-          style: const TextStyle(color: Colors.white60, fontSize: 10),
-        ),
-        if (diagnostics.frameWidth > 0)
-          Text(
-            'local frame ${diagnostics.frameWidth}×${diagnostics.frameHeight}',
-            style: const TextStyle(color: Colors.white60, fontSize: 10),
-          ),
-        if (diagnostics.lastError != null)
-          Text(
-            diagnostics.lastError!,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.orangeAccent, fontSize: 10),
-          ),
-        const Divider(color: Colors.white24, height: 12),
-        Text(
-          merppgDiagnostics.status,
-          style: TextStyle(
-            color: merppgDiagnostics.error == null
-                ? Colors.lightGreenAccent
-                : Colors.orangeAccent,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        if (merppgDiagnostics.latestBvp != null)
-          Text(
-            'BVP ${merppgDiagnostics.latestBvp!.toStringAsFixed(4)} • '
-            '${merppgDiagnostics.lastInferenceTime.inMilliseconds} ms infer',
-            style: const TextStyle(color: Colors.white70, fontSize: 10),
-          ),
-        Text(
-          '${merppgDiagnostics.processedSamples} BVP samples • '
-          '${merppgDiagnostics.droppedFrames} dropped',
-          style: const TextStyle(color: Colors.white60, fontSize: 10),
-        ),
-        if (merppgDiagnostics.error != null)
-          Text(
-            merppgDiagnostics.error!,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.orangeAccent, fontSize: 10),
-          ),
-        const Divider(color: Colors.white24, height: 12),
-        Text(
-          _hasFreshReliableBpm
-              ? '${bpmEstimate!.bpm!.round()} BPM'
-              : 'Measuring BPM…',
-          style: TextStyle(
-            color: _hasFreshReliableBpm
-                ? Colors.lightGreenAccent
-                : Colors.white70,
-            fontSize: _hasFreshReliableBpm ? 20 : 13,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        Text(
-          _bpmIsStale
-              ? 'Signal interrupted'
-              : bpmEstimate?.status ?? 'Collecting pulse signal…',
-          style: const TextStyle(color: Colors.white60, fontSize: 10),
-        ),
-        if (bpmEstimate != null && !_bpmIsStale)
-          Text(
-            'confidence ${(bpmEstimate!.confidence * 100).round()}% • '
-            '${bpmEstimate!.effectiveSampleRate.toStringAsFixed(1)} BVP fps • '
-            'range ≤${bpmEstimate!.maximumResolvableBpm.round()} BPM',
-            style: const TextStyle(color: Colors.white60, fontSize: 9),
-          ),
-        const SizedBox(height: 3),
-        const Text(
-          'Screening estimate only • not a diagnosis',
-          style: TextStyle(color: Colors.white54, fontSize: 9),
-        ),
-      ],
-    ),
-  );
-}
-
-class _BpmChart extends StatelessWidget {
-  const _BpmChart({required this.samples});
-
-  final List<BpmSample> samples;
-
-  @override
-  Widget build(BuildContext context) {
-    final reliable = samples
-        .where((sample) => sample.confidence >= 0.5)
-        .toList(growable: false);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.black54,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 8, 12, 6),
-        child: reliable.isEmpty
-            ? const Center(
-                child: Text(
-                  'Reliable BPM trend will appear after ~20 seconds',
-                  style: TextStyle(color: Colors.white60, fontSize: 11),
-                ),
-              )
-            : LineChart(_chartData(reliable)),
-      ),
-    );
-  }
-
-  LineChartData _chartData(List<BpmSample> reliable) {
-    final now = DateTime.now();
-    final spots = reliable
-        .map(
-          (sample) => FlSpot(
-            sample.timestamp.difference(now).inMilliseconds / 1000,
-            sample.bpm,
-          ),
-        )
-        .toList(growable: false);
-    return LineChartData(
-      minX: -60,
-      maxX: 0,
-      minY: 40,
-      maxY: 180,
-      clipData: const FlClipData.all(),
-      gridData: FlGridData(
-        drawVerticalLine: false,
-        horizontalInterval: 40,
-        getDrawingHorizontalLine: (_) =>
-            const FlLine(color: Colors.white12, strokeWidth: 1),
-      ),
-      borderData: FlBorderData(show: false),
-      titlesData: FlTitlesData(
-        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
-        ),
-        bottomTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            interval: 20,
-            reservedSize: 18,
-            getTitlesWidget: (value, meta) => Text(
-              '${value.round()}s',
-              style: const TextStyle(color: Colors.white54, fontSize: 9),
-            ),
-          ),
-        ),
-        leftTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            interval: 40,
-            reservedSize: 30,
-            getTitlesWidget: (value, meta) => Text(
-              value.round().toString(),
-              style: const TextStyle(color: Colors.white54, fontSize: 9),
-            ),
-          ),
-        ),
-      ),
-      lineTouchData: const LineTouchData(enabled: false),
-      lineBarsData: <LineChartBarData>[
-        LineChartBarData(
-          spots: spots,
-          color: Colors.lightGreenAccent,
-          barWidth: 2,
-          isCurved: true,
-          dotData: const FlDotData(show: false),
-          belowBarData: BarAreaData(
-            show: true,
-            color: Colors.lightGreenAccent.withValues(alpha: 0.08),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _CallButton extends StatelessWidget {
   const _CallButton({
     required this.icon,
@@ -704,3 +291,4 @@ class _CallButton extends StatelessWidget {
     ],
   );
 }
+

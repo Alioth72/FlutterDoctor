@@ -90,7 +90,7 @@ class _DoctorConsentScreenState extends State<DoctorConsentScreen> {
             value: _consented,
             onChanged: (value) => setState(() => _consented = value ?? false),
             title: const Text(
-              "I confirm I am the assigned practitioner and consent to conducting and logging this teleconsultation, including AI-based heart rate estimation from the patient's video.",
+              "I confirm I am the assigned practitioner and consent to conducting and logging this teleconsultation.",
             ),
           ),
         ),

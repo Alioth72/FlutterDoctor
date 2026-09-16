@@ -3,18 +3,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:teleconsult_vitals/teleconsult_vitals.dart';
 
 import '../../firebase_options.dart';
 import '../../models/appointment.dart';
 import '../../models/teleconsult_models.dart';
-import '../../services/teleconsult/bpm_frame_capture_service.dart';
 import '../../services/teleconsult/call_service.dart';
-import '../../services/teleconsult/merppg_inference_service.dart';
 import '../../services/teleconsult/teleconsult_sync_service.dart';
 
-/// Interactive Teleconsultation Video Consultation Screen with
-/// In-Build ME-rPPG Camera Heart-Rate Tracking.
+/// Teleconsultation Video Call Screen (Video Call Only).
+///
+/// Runs ONLY the WebRTC camera pipeline for doctor <-> patient video consultation.
+/// All vital measurement (rPPG / heart rate) has been decoupled from the in-call flow.
 class VideoConsultationScreen extends StatefulWidget {
   final Appointment appointment;
 
@@ -27,24 +26,14 @@ class VideoConsultationScreen extends StatefulWidget {
   State<VideoConsultationScreen> createState() => _VideoConsultationScreenState();
 }
 
-class _VideoConsultationScreenState extends State<VideoConsultationScreen>
-    with SingleTickerProviderStateMixin {
+class _VideoConsultationScreenState extends State<VideoConsultationScreen> {
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
-  final TimingAwareBpmEstimator _bpmEstimator = TimingAwareBpmEstimator();
   final TeleconsultSyncService _syncService = TeleconsultSyncService();
 
   late final CallLog _callLog;
-  late final BpmFrameCaptureService _frameCaptureService;
-  late final MerppgInferenceService _merppgInferenceService;
-
   CallService? _callService;
   FirebaseFirestore? _firestore;
-
-  BpmCaptureDiagnostics _captureDiagnostics = const BpmCaptureDiagnostics.waiting();
-  MerppgDiagnostics _merppgDiagnostics = const MerppgDiagnostics.loading();
-  BpmEstimate? _bpmEstimate;
-  final List<double> _bpmSamples = [];
 
   String _status = 'Preparing consultation…';
   String? _error;
@@ -54,39 +43,10 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen>
   bool _hasConsented = false;
   bool _checkingConsent = true;
 
-  // Heartbeat pulse animation
-  late final AnimationController _pulseController;
-  late final Animation<double> _pulseAnimation;
-
   @override
   void initState() {
     super.initState();
     _callLog = CallLog(appointmentId: widget.appointment.id);
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    )..repeat(reverse: true);
-    _pulseAnimation = Tween<double>(begin: 0.9, end: 1.25).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
-    _merppgInferenceService = MerppgInferenceService(
-      onResult: _handleBvpResult,
-      onDiagnostics: (diagnostics) {
-        if (!mounted) return;
-        setState(() => _merppgDiagnostics = diagnostics);
-      },
-    );
-
-    _frameCaptureService = BpmFrameCaptureService(
-      onFaceFrame: (frame) {
-        if (!mounted) return;
-        unawaited(_merppgInferenceService.process(frame));
-      },
-      onDiagnostics: _handleCaptureDiagnostics,
-    );
-
     _checkConsentAndInit();
   }
 
@@ -105,8 +65,6 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen>
   }
 
   Future<void> _initTeleconsultation() async {
-    unawaited(_merppgInferenceService.initialize());
-
     try {
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp(
@@ -132,112 +90,62 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen>
     _initTeleconsultation();
   }
 
-  void _handleBvpResult(MerppgResult result) {
-    if (!mounted) return;
-    final estimate = _bpmEstimator.addSample(result.timestamp, result.bvp);
-    if (estimate != null) {
-      setState(() {
-        _bpmEstimate = estimate;
-        final bpm = estimate.bpm;
-        if (bpm != null && bpm >= 40 && bpm <= 200) {
-          _bpmSamples.add(bpm);
-        }
-      });
-    }
-
-    unawaited(
-      _callService?.sendTelemetry(
-        VitalsSampleTelemetry(
-          timestamp: result.timestamp,
-          bvp: result.bvp,
-          inferenceTime: result.inferenceTime,
-          processedSamples: _merppgDiagnostics.processedSamples + 1,
-          droppedFrames: _merppgDiagnostics.droppedFrames,
-          estimate: estimate,
-        ).toJson(),
-      ),
-    );
-  }
-
-  void _handleCaptureDiagnostics(BpmCaptureDiagnostics diagnostics) {
-    if (!mounted) return;
-    setState(() => _captureDiagnostics = diagnostics);
-  }
-
   Future<void> _startCall() async {
-    await Future.wait([
-      _localRenderer.initialize(),
-      _remoteRenderer.initialize(),
-    ]);
+    setState(() {
+      _status = 'Connecting to video consultation…';
+      _error = null;
+    });
 
-    if (!mounted) return;
-
-    if (_firestore == null) {
-      setState(() {
-        _status = 'Local camera & vitals active';
-      });
-    }
-
-    final service = CallService(
-      firestore: _firestore ?? FirebaseFirestore.instance,
-      appointmentId: widget.appointment.id,
-      isCaller: true,
-      onStatus: (status) {
-        if (!mounted) return;
-        if (status == 'Remote ended the call') {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _endCall());
-        }
-        if (status == 'Connected' && _callLog.startedAt == null) {
-          _callLog.startedAt = DateTime.now();
-        }
-        setState(() => _status = status);
-      },
-      onRemoteStream: (stream) {
-        if (mounted) setState(() => _remoteRenderer.srcObject = stream);
-      },
-      onError: (error) {
-        if (!mounted) return;
-        setState(() {
-          _status = 'Local preview mode';
-          _error = error.toString();
-        });
-      },
-    );
-
-    _callService = service;
     try {
+      await Future.wait([
+        _localRenderer.initialize(),
+        _remoteRenderer.initialize(),
+      ]);
+
+      if (!mounted) return;
+
+      final service = CallService(
+        firestore: _firestore ?? FirebaseFirestore.instance,
+        appointmentId: widget.appointment.id,
+        isCaller: true,
+        onStatus: (status) {
+          if (!mounted) return;
+          if (status == 'Remote ended the call') {
+            WidgetsBinding.instance.addPostFrameCallback((_) => _endCall());
+          }
+          if (status == 'Connected' && _callLog.startedAt == null) {
+            _callLog.startedAt = DateTime.now();
+          }
+          setState(() => _status = status);
+        },
+        onRemoteStream: (stream) {
+          if (mounted) setState(() => _remoteRenderer.srcObject = stream);
+        },
+        onError: (error) {
+          if (!mounted) return;
+          setState(() {
+            _status = 'Connection issue';
+            _error = error.toString();
+          });
+        },
+      );
+
+      _callService = service;
       await service.start();
+
       if (mounted) {
-        setState(() => _localRenderer.srcObject = service.localStream);
+        setState(() {
+          _localRenderer.srcObject = service.localStream;
+          _status = 'Connected • Waiting for doctor to join';
+        });
       }
-      await _startLocalVitals();
     } catch (error) {
+      debugPrint('[VideoConsultationScreen] _startCall error: $error');
       if (!mounted) return;
       setState(() {
-        _status = 'Local vitals tracking active';
-        _error = error.toString();
+        _status = 'Camera / Video initialization failed';
+        _error = 'Unable to access camera or microphone. Please ensure permissions are granted in your device settings.\n\n($error)';
       });
-      // Fallback: try capturing local stream directly
-      try {
-        final stream = await navigator.mediaDevices.getUserMedia({
-          'audio': true,
-          'video': {'facingMode': 'user', 'width': 320, 'height': 240, 'frameRate': 20},
-        });
-        if (mounted) {
-          setState(() => _localRenderer.srcObject = stream);
-          final videoTracks = stream.getVideoTracks();
-          if (videoTracks.isNotEmpty) {
-            await _frameCaptureService.start(videoTracks.first);
-          }
-        }
-      } catch (_) {}
-    }
-  }
-
-  Future<void> _startLocalVitals() async {
-    final tracks = _callService?.localStream?.getVideoTracks();
-    if (tracks != null && tracks.isNotEmpty && !_cameraOff) {
-      await _frameCaptureService.start(tracks.first);
     }
   }
 
@@ -253,26 +161,14 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen>
       _cameraOff = !_cameraOff;
       _callService?.setCameraEnabled(!_cameraOff);
     });
-    if (_cameraOff) {
-      _frameCaptureService.stop();
-    } else {
-      unawaited(_startLocalVitals());
-    }
   }
 
   Future<void> _endCall() async {
     if (_ending) return;
     setState(() => _ending = true);
-    _frameCaptureService.stop();
-    _merppgInferenceService.dispose();
     await _callService?.hangUp();
 
     _callLog.endedAt = DateTime.now();
-    if (_bpmSamples.isNotEmpty) {
-      _callLog.avgBpm =
-          _bpmSamples.reduce((a, b) => a + b) / _bpmSamples.length;
-      _callLog.bpmSampleCount = _bpmSamples.length;
-    }
     await _syncService.saveCallLog(_callLog);
 
     if (!mounted) return;
@@ -283,7 +179,6 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen>
     final duration = _callLog.duration ?? Duration.zero;
     final minutes = (duration.inSeconds ~/ 60).toString().padLeft(2, '0');
     final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
-    final avgBpmStr = _callLog.avgBpm != null ? '${_callLog.avgBpm!.toStringAsFixed(0)} BPM' : 'N/A';
 
     showModalBottomSheet(
       context: context,
@@ -336,17 +231,9 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen>
                   Container(width: 1, height: 36, color: Colors.grey.shade300),
                   Column(
                     children: [
-                      const Text('Avg Heart Rate', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const Text('Call Status', style: TextStyle(fontSize: 12, color: Colors.grey)),
                       const SizedBox(height: 4),
-                      Text(avgBpmStr, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFE11D48))),
-                    ],
-                  ),
-                  Container(width: 1, height: 36, color: Colors.grey.shade300),
-                  Column(
-                    children: [
-                      const Text('Vitals Status', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      const SizedBox(height: 4),
-                      const Text('Synced', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF10B981))),
+                      const Text('Ended Normally', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF10B981))),
                     ],
                   ),
                 ],
@@ -376,10 +263,9 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen>
 
   @override
   void dispose() {
-    _pulseController.dispose();
-    _frameCaptureService.stop();
-    _merppgInferenceService.dispose();
     _callService?.hangUp();
+    _localRenderer.srcObject = null;
+    _remoteRenderer.srcObject = null;
     _localRenderer.dispose();
     _remoteRenderer.dispose();
     super.dispose();
@@ -445,7 +331,9 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen>
                   child: ColoredBox(
                     color: const Color(0xFF1F2937),
                     child: _localRenderer.srcObject == null || _cameraOff
-                        ? const Icon(Icons.videocam_off, color: Colors.white)
+                        ? const Center(
+                            child: Icon(Icons.videocam_off, color: Colors.white70, size: 32),
+                          )
                         : RTCVideoView(
                             _localRenderer,
                             mirror: true,
@@ -455,37 +343,42 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen>
                 ),
               ),
 
-              // 4. Patient live vitals pill (Right, below PIP)
-              Positioned(
-                top: 174,
-                right: 16,
-                child: _PatientVitalsPill(
-                  estimate: _bpmEstimate,
-                  captureDiagnostics: _captureDiagnostics,
-                  inferenceDiagnostics: _merppgDiagnostics,
-                  pulseAnimation: _pulseAnimation,
-                ),
-              ),
-
-              // 5. Error banner (if any)
+              // 4. Error banner (if any)
               if (_error != null)
                 Center(
                   child: Container(
                     margin: const EdgeInsets.all(24),
-                    padding: const EdgeInsets.all(18),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: Colors.black87,
                       borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.redAccent.withValues(alpha: 0.5), width: 1.5),
                     ),
-                    child: Text(
-                      _error!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 40),
+                        const SizedBox(height: 12),
+                        Text(
+                          _error!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.4),
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF7C3AED),
+                          ),
+                          onPressed: _startCall,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('Retry Call'),
+                        ),
+                      ],
                     ),
                   ),
                 ),
 
-              // 6. Call action buttons (Bottom Row)
+              // 5. Call action buttons (Bottom Row)
               Positioned(
                 left: 24,
                 right: 24,
@@ -613,7 +506,7 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen>
             ),
             const SizedBox(height: 28),
             const Text(
-              'Patient Consent & AI Vitals Telemetry',
+              'Patient Teleconsultation Consent',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
             ),
             const SizedBox(height: 10),
@@ -633,27 +526,13 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen>
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Encrypted Video Call: Audio and video streams are transmitted directly and securely.',
+                          'Encrypted Video & Audio: Media streams are transmitted securely over WebRTC peer connection.',
                           style: TextStyle(fontSize: 12.5, color: Colors.black87),
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.favorite_outline_rounded, color: Color(0xFF7C3AED), size: 20),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'On-Device Heart Rate Estimation: Your front camera detects facial micro-pulsations (ME-rPPG) to estimate your heart rate (BPM) for your doctor in real time.',
-                          style: TextStyle(fontSize: 12.5, color: Colors.black87),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12),
+                  SizedBox(height: 14),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -661,7 +540,7 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen>
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Privacy First: No video is recorded or stored. All vital processing is performed locally on your device.',
+                          'Privacy First: Calls are not recorded or stored. Your consultation is private between you and your doctor.',
                           style: TextStyle(fontSize: 12.5, color: Colors.black87),
                         ),
                       ),
@@ -745,65 +624,6 @@ class _StatusPill extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _PatientVitalsPill extends StatelessWidget {
-  const _PatientVitalsPill({
-    required this.estimate,
-    required this.captureDiagnostics,
-    required this.inferenceDiagnostics,
-    required this.pulseAnimation,
-  });
-
-  final BpmEstimate? estimate;
-  final BpmCaptureDiagnostics captureDiagnostics;
-  final MerppgDiagnostics inferenceDiagnostics;
-  final Animation<double> pulseAnimation;
-
-  bool get _hasFreshReliableBpm =>
-      estimate?.reliable == true &&
-      DateTime.now().difference(estimate!.timestamp) < const Duration(seconds: 5);
-
-  @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: Colors.black87,
-      borderRadius: BorderRadius.circular(22),
-      border: Border.all(
-        color: _hasFreshReliableBpm ? const Color(0xFF10B981) : Colors.white24,
-        width: 1,
-      ),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          ScaleTransition(
-            scale: pulseAnimation,
-            child: Icon(
-              Icons.favorite,
-              size: 17,
-              color: _hasFreshReliableBpm
-                  ? Colors.lightGreenAccent
-                  : (captureDiagnostics.preparedFaceRate > 0 ? const Color(0xFFF43F5E) : Colors.white70),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            _hasFreshReliableBpm
-                ? '${estimate!.bpm!.round()} BPM'
-                : captureDiagnostics.preparedFaceRate > 0
-                ? 'Measuring vitals…'
-                : inferenceDiagnostics.error != null
-                ? 'Vitals unavailable'
-                : 'Finding face…',
-            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ],
       ),
