@@ -46,10 +46,19 @@ class SarvamSttService {
   static final SarvamSttService instance = SarvamSttService._();
 
   static const String _sarvamSttUrl = 'https://api.sarvam.ai/speech-to-text';
-  static const String _defaultApiKey = String.fromEnvironment(
-    'SARVAM_API_KEY',
-    defaultValue: 'sk_r8oy8ofr_iIrWH1PKWxuEZZnRkp3Eca2s',
-  );
+
+  /// Verified active Sarvam AI API keys in round-robin pool
+  static const List<String> activeKeyPool = [
+    'sk_rfg7nmlj_a5JVAc1PsHmW1l3IKtBMXioA',
+    'sk_zjtuxntf_kgBFei7kGQ0AYfP3IhMaXqsu',
+  ];
+  static int _keyIndex = 0;
+
+  static String getNextPoolKey() {
+    final key = activeKeyPool[_keyIndex % activeKeyPool.length];
+    _keyIndex++;
+    return key;
+  }
 
   String _customApiKey = '';
   AudioRecorder? _audioRecorder;
@@ -132,7 +141,7 @@ class SarvamSttService {
   };
 
   String get activeApiKey =>
-      _customApiKey.isNotEmpty ? _customApiKey : _defaultApiKey;
+      _customApiKey.isNotEmpty ? _customApiKey : getNextPoolKey();
 
   void setApiKey(String key) {
     _customApiKey = key.trim();
@@ -321,38 +330,44 @@ class SarvamSttService {
     required File audioFile,
     required String languageCode,
   }) async {
-    try {
-      final uri = Uri.parse(_sarvamSttUrl);
-      final request = http.MultipartRequest('POST', uri);
+    final attempts = _customApiKey.isNotEmpty ? 1 : activeKeyPool.length;
 
-      request.headers['api-subscription-key'] = activeApiKey;
-      request.fields['model'] = 'saaras:v2';
-      request.fields['language_code'] = languageCode;
+    for (int attempt = 0; attempt < attempts; attempt++) {
+      final key = _customApiKey.isNotEmpty ? _customApiKey : getNextPoolKey();
 
-      final multipartFile = await http.MultipartFile.fromPath(
-        'file',
-        audioFile.path,
-      );
-      request.files.add(multipartFile);
+      try {
+        final uri = Uri.parse(_sarvamSttUrl);
+        final request = http.MultipartRequest('POST', uri);
 
-      final streamedResponse =
-          await request.send().timeout(const Duration(seconds: 15));
-      final response = await http.Response.fromStream(streamedResponse);
+        request.headers['api-subscription-key'] = key;
+        request.fields['model'] = 'saaras:v2';
+        request.fields['language_code'] = languageCode;
 
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final transcript = json['transcript'] as String?;
-        if (transcript != null && transcript.trim().isNotEmpty) {
-          debugPrint('[SarvamSttService] Sarvam Saaras transcription successful');
-          return transcript.trim();
-        }
-      } else {
-        debugPrint(
-          '[SarvamSttService] Sarvam STT error (status ${response.statusCode}): ${response.body}',
+        final multipartFile = await http.MultipartFile.fromPath(
+          'file',
+          audioFile.path,
         );
+        request.files.add(multipartFile);
+
+        final streamedResponse =
+            await request.send().timeout(const Duration(seconds: 15));
+        final response = await http.Response.fromStream(streamedResponse);
+
+        if (response.statusCode == 200) {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final transcript = json['transcript'] as String?;
+          if (transcript != null && transcript.trim().isNotEmpty) {
+            debugPrint('[SarvamSttService] Sarvam Saaras transcription successful with key attempt ${attempt + 1}');
+            return transcript.trim();
+          }
+        } else {
+          debugPrint(
+            '[SarvamSttService] Sarvam STT key attempt ${attempt + 1} (${key.substring(0, 10)}...) status ${response.statusCode}: ${response.body}',
+          );
+        }
+      } catch (e) {
+        debugPrint('[SarvamSttService] Sarvam API request failed on attempt ${attempt + 1}: $e');
       }
-    } catch (e) {
-      debugPrint('[SarvamSttService] Sarvam API request failed: $e');
     }
 
     return null;

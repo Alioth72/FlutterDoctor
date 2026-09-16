@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
 void main() {
-  const apiKey = 'sk_r8oy8ofr_iIrWH1PKWxuEZZnRkp3Eca2s';
+  const apiKey = 'sk_rfg7nmlj_a5JVAc1PsHmW1l3IKtBMXioA';
 
   group('Rigorous Sarvam API Model & Language Matrix Backtest', () {
     test('Verify API key validity against Sarvam Translation Endpoint', () async {

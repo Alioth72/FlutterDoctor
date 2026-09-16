@@ -41,10 +41,19 @@ class SarvamTtsService {
   static final SarvamTtsService instance = SarvamTtsService._();
 
   static const String _sarvamApiUrl = 'https://api.sarvam.ai/text-to-speech';
-  static const String _defaultApiKey = String.fromEnvironment(
-    'SARVAM_API_KEY',
-    defaultValue: 'sk_r8oy8ofr_iIrWH1PKWxuEZZnRkp3Eca2s',
-  );
+  
+  /// Verified active Sarvam AI API keys in round-robin pool
+  static const List<String> activeKeyPool = [
+    'sk_rfg7nmlj_a5JVAc1PsHmW1l3IKtBMXioA',
+    'sk_zjtuxntf_kgBFei7kGQ0AYfP3IhMaXqsu',
+  ];
+  static int _keyIndex = 0;
+
+  static String getNextPoolKey() {
+    final key = activeKeyPool[_keyIndex % activeKeyPool.length];
+    _keyIndex++;
+    return key;
+  }
 
   String _customApiKey = '';
   AudioPlayer? _audioPlayer;
@@ -128,7 +137,7 @@ class SarvamTtsService {
   };
 
   String get activeApiKey =>
-      _customApiKey.isNotEmpty ? _customApiKey : _defaultApiKey;
+      _customApiKey.isNotEmpty ? _customApiKey : getNextPoolKey();
 
   void setApiKey(String key) {
     _customApiKey = key.trim();
@@ -243,11 +252,6 @@ class SarvamTtsService {
     // Truncate text to 500 characters if too long for single request to avoid gateway timeout
     final inputChunk = text.length > 500 ? '${text.substring(0, 497)}...' : text;
 
-    final headers = {
-      'api-subscription-key': activeApiKey,
-      'Content-Type': 'application/json',
-    };
-
     final body = jsonEncode({
       'inputs': [inputChunk],
       'target_language_code': languageCode,
@@ -260,36 +264,49 @@ class SarvamTtsService {
       'model': 'bulbul:v1',
     });
 
-    final response = await http
-        .post(
-          Uri.parse(_sarvamApiUrl),
-          headers: headers,
-          body: body,
-        )
-        .timeout(const Duration(seconds: 12));
+    final attempts = _customApiKey.isNotEmpty ? 1 : activeKeyPool.length;
 
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      final audios = json['audios'] as List<dynamic>?;
-      if (audios != null && audios.isNotEmpty) {
-        final base64Audio = audios.first.toString();
-        if (base64Audio.isNotEmpty) {
-          final audioBytes = base64Decode(base64Audio);
+    for (int attempt = 0; attempt < attempts; attempt++) {
+      final key = _customApiKey.isNotEmpty ? _customApiKey : getNextPoolKey();
 
-          statusNotifier.value = TtsPlaybackStatus(
-            state: TtsState.playing,
-            activeMessageId: messageId,
-            usedOnDeviceFallback: false,
+      try {
+        final response = await http
+            .post(
+              Uri.parse(_sarvamApiUrl),
+              headers: {
+                'api-subscription-key': key,
+                'Content-Type': 'application/json',
+              },
+              body: body,
+            )
+            .timeout(const Duration(seconds: 12));
+
+        if (response.statusCode == 200) {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final audios = json['audios'] as List<dynamic>?;
+          if (audios != null && audios.isNotEmpty) {
+            final base64Audio = audios.first.toString();
+            if (base64Audio.isNotEmpty) {
+              final audioBytes = base64Decode(base64Audio);
+
+              statusNotifier.value = TtsPlaybackStatus(
+                state: TtsState.playing,
+                activeMessageId: messageId,
+                usedOnDeviceFallback: false,
+              );
+
+              await audioPlayer.play(BytesSource(audioBytes));
+              return true;
+            }
+          }
+        } else {
+          debugPrint(
+            '[SarvamTtsService] Sarvam key attempt ${attempt + 1} (${key.substring(0, 10)}...) returned status ${response.statusCode}: ${response.body}',
           );
-
-          await audioPlayer.play(BytesSource(audioBytes));
-          return true;
         }
+      } catch (e) {
+        debugPrint('[SarvamTtsService] Key attempt ${attempt + 1} failed: $e');
       }
-    } else {
-      debugPrint(
-        '[SarvamTtsService] Sarvam API returned status ${response.statusCode}: ${response.body}',
-      );
     }
 
     return false;

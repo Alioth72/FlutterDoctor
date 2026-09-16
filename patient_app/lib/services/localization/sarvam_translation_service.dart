@@ -11,10 +11,19 @@ import 'offline_phrase_engine.dart';
 /// Automatically falls back to offline HealthcareCatalog, AppStrings, and local persistent cache.
 class SarvamTranslationService {
   static const String _baseUrl = 'https://api.sarvam.ai/translate';
-  static const String _defaultApiKey = String.fromEnvironment(
-    'SARVAM_API_KEY',
-    defaultValue: 'sk_r8oy8ofr_iIrWH1PKWxuEZZnRkp3Eca2s',
-  );
+
+  /// Verified active Sarvam AI API keys in round-robin pool
+  static const List<String> activeKeyPool = [
+    'sk_rfg7nmlj_a5JVAc1PsHmW1l3IKtBMXioA',
+    'sk_zjtuxntf_kgBFei7kGQ0AYfP3IhMaXqsu',
+  ];
+  static int _keyIndex = 0;
+
+  static String getNextPoolKey() {
+    final key = activeKeyPool[_keyIndex % activeKeyPool.length];
+    _keyIndex++;
+    return key;
+  }
 
   static final Map<String, String> _memoryCache = {};
   static SharedPreferences? _prefs;
@@ -141,12 +150,14 @@ class SarvamTranslationService {
       return catalogMatch;
     }
 
-    // 5. Call Sarvam AI Translation API if available
-    final effectiveApiKey = (apiKey != null && apiKey.isNotEmpty)
-        ? apiKey
-        : _defaultApiKey;
+    // 5. Call Sarvam AI Translation API if available (with 2-key round robin and failover)
+    final attempts = (apiKey != null && apiKey.isNotEmpty) ? 1 : activeKeyPool.length;
 
-    if (effectiveApiKey.isNotEmpty) {
+    for (int attempt = 0; attempt < attempts; attempt++) {
+      final effectiveApiKey = (apiKey != null && apiKey.isNotEmpty)
+          ? apiKey
+          : getNextPoolKey();
+
       try {
         final response = await http
             .post(
@@ -180,9 +191,13 @@ class SarvamTranslationService {
               return cleanResult;
             }
           }
+        } else {
+          debugPrint(
+            '[SarvamTranslationService] Key attempt ${attempt + 1} (${effectiveApiKey.substring(0, 10)}...) status ${response.statusCode}: ${response.body}',
+          );
         }
       } catch (e) {
-        debugPrint('[SarvamTranslationService] Sarvam API note: $e');
+        debugPrint('[SarvamTranslationService] Sarvam API attempt ${attempt + 1} note: $e');
       }
     }
 

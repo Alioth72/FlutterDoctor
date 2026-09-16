@@ -48,6 +48,16 @@ void main() {
       expect(stt.activeApiKey, equals('test_sarvam_stt_key'));
       stt.setApiKey('');
     });
+
+    test('SarvamSttService 2-key pool rotates sequentially and has both active keys', () {
+      expect(SarvamSttService.activeKeyPool.length, equals(2));
+      expect(SarvamSttService.activeKeyPool, contains('sk_rfg7nmlj_a5JVAc1PsHmW1l3IKtBMXioA'));
+      expect(SarvamSttService.activeKeyPool, contains('sk_zjtuxntf_kgBFei7kGQ0AYfP3IhMaXqsu'));
+
+      final k1 = SarvamSttService.getNextPoolKey();
+      final k2 = SarvamSttService.getNextPoolKey();
+      expect(k1, isNot(equals(k2)));
+    });
   });
 
   group('Gemini 18-Key Round-Robin & Failover Tests', () {

@@ -96,5 +96,15 @@ For more info visit https://example.com/health.
       const playingStatus = TtsPlaybackStatus(state: TtsState.playing, activeMessageId: 'msg_1');
       expect(playingStatus.isPlaying, isTrue);
     });
+
+    test('SarvamTtsService 2-key pool rotates sequentially and has both active keys', () {
+      expect(SarvamTtsService.activeKeyPool.length, equals(2));
+      expect(SarvamTtsService.activeKeyPool, contains('sk_rfg7nmlj_a5JVAc1PsHmW1l3IKtBMXioA'));
+      expect(SarvamTtsService.activeKeyPool, contains('sk_zjtuxntf_kgBFei7kGQ0AYfP3IhMaXqsu'));
+
+      final k1 = SarvamTtsService.getNextPoolKey();
+      final k2 = SarvamTtsService.getNextPoolKey();
+      expect(k1, isNot(equals(k2)));
+    });
   });
 }
