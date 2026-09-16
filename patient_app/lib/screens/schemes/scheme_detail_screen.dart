@@ -4,6 +4,7 @@ import '../../models/government_scheme.dart';
 import '../../providers/schemes_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../widgets/dynamic_translated_text.dart';
+import '../../widgets/speakable.dart';
 
 class SchemeDetailScreen extends StatefulWidget {
   final String schemeId;
@@ -88,38 +89,41 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
           ],
         ),
         child: SafeArea(
-          child: FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-            onPressed: () {
-              final url = scheme?.officialUrl ?? 'https://www.myscheme.gov.in';
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: Text(langProvider.tr('official_portal_title')),
-                  content: Text('${langProvider.tr('official_portal_title')}:\n$url\n\n${langProvider.tr('eligibility_engine_note')}.'),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(langProvider.tr('close_btn'))),
-                    FilledButton(
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('${langProvider.tr('open_portal_btn')}: $url')),
-                        );
-                      },
-                      child: Text(langProvider.tr('open_portal_btn')),
-                    ),
-                  ],
-                ),
-              );
-            },
-            icon: const Icon(Icons.open_in_new_rounded, size: 20),
-            label: Text(
-              langProvider.tr('apply_website_btn'),
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          child: Speakable(
+            text: langProvider.tr('apply_website_btn'),
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: () {
+                final url = scheme?.officialUrl ?? 'https://www.myscheme.gov.in';
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(langProvider.tr('official_portal_title')),
+                    content: Text('${langProvider.tr('official_portal_title')}:\n$url\n\n${langProvider.tr('eligibility_engine_note')}.'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(langProvider.tr('close_btn'))),
+                      FilledButton(
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('${langProvider.tr('open_portal_btn')}: $url')),
+                          );
+                        },
+                        child: Text(langProvider.tr('open_portal_btn')),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              icon: const Icon(Icons.open_in_new_rounded, size: 20),
+              label: Text(
+                langProvider.tr('apply_website_btn'),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ),
@@ -468,12 +472,15 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
           ),
           const SizedBox(height: 12),
           if (_aiExplanation == null) ...[
-            FilledButton.tonalIcon(
-              onPressed: _isAiLoading ? null : _requestAiExplanation,
-              icon: _isAiLoading
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.psychology_rounded),
-              label: Text(_isAiLoading ? langProvider.tr('analyzing_scheme_msg') : langProvider.tr('explain_simple_btn')),
+            Speakable(
+              text: langProvider.tr('explain_simple_btn'),
+              child: FilledButton.tonalIcon(
+                onPressed: _isAiLoading ? null : _requestAiExplanation,
+                icon: _isAiLoading
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.psychology_rounded),
+                label: Text(_isAiLoading ? langProvider.tr('analyzing_scheme_msg') : langProvider.tr('explain_simple_btn')),
+              ),
             ),
           ] else ...[
             Container(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/localization/sarvam_translation_service.dart';
+import 'speakable.dart';
 
 /// Renders dynamically translated text using Sarvam AI and local healthcare catalog.
 /// Immediately renders synchronous cache if available to guarantee zero flicker.
@@ -13,6 +14,7 @@ class DynamicTranslatedText extends StatefulWidget {
   final TextAlign? textAlign;
   final bool fitScaleDown;
   final String? prefix;
+  final bool enableHoldToSpeak;
 
   const DynamicTranslatedText({
     super.key,
@@ -23,6 +25,7 @@ class DynamicTranslatedText extends StatefulWidget {
     this.textAlign,
     this.fitScaleDown = false,
     this.prefix,
+    this.enableHoldToSpeak = true,
   });
 
   @override
@@ -113,16 +116,27 @@ class _DynamicTranslatedTextState extends State<DynamicTranslatedText> {
       textAlign: widget.textAlign,
     );
 
+    final Widget resultWidget;
     if (widget.fitScaleDown) {
-      return FittedBox(
+      resultWidget = FittedBox(
         fit: BoxFit.scaleDown,
         alignment: widget.textAlign == TextAlign.center
             ? Alignment.center
             : Alignment.centerLeft,
         child: textWidget,
       );
+    } else {
+      resultWidget = textWidget;
     }
 
-    return textWidget;
+    if (widget.enableHoldToSpeak && displayText.trim().isNotEmpty) {
+      return Speakable(
+        text: displayText,
+        languageCode: currentLang,
+        child: resultWidget,
+      );
+    }
+
+    return resultWidget;
   }
 }

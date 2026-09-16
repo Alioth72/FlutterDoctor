@@ -136,6 +136,104 @@ class PatientActionSheets {
 
                         const SizedBox(height: 8),
 
+                        // Voice Supported Quick-Select Bar (Top 11 Languages)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.mic_none_rounded, size: 14, color: Color(0xFF7C3AED)),
+                              const SizedBox(width: 5),
+                              Text(
+                                '${langProvider.tr("app_language")} • 11 Voice Languages',
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF6D28D9),
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        SizedBox(
+                          height: 38,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemCount: AppLanguages.voiceSupported11Languages.length,
+                            separatorBuilder: (context, i) => const SizedBox(width: 8),
+                            itemBuilder: (context, i) {
+                              final vLang = AppLanguages.voiceSupported11Languages[i];
+                              final isSelected = vLang.code == currentCode;
+                              return InkWell(
+                                onTap: () {
+                                  langProvider.setLanguage(vLang.code);
+                                  Navigator.of(ctx).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Row(
+                                        children: [
+                                          const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                                          const SizedBox(width: 8),
+                                          Text('${vLang.name} (${vLang.nativeName}) ${langProvider.tr("activated_msg")}'),
+                                        ],
+                                      ),
+                                      backgroundColor: const Color(0xFF7C3AED),
+                                      behavior: SnackBarBehavior.floating,
+                                      duration: const Duration(seconds: 2),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(20),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFFF3E8FF),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFFDDD6FE),
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        vLang.nativeName,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: isSelected ? Colors.white : const Color(0xFF5B21B6),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? Colors.white.withValues(alpha: 0.25) : Colors.white,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          vLang.badge,
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w900,
+                                            color: isSelected ? Colors.white : const Color(0xFF7C3AED),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
                         // Language Grid / List
                         Expanded(
                           child: ListView.separated(
@@ -215,13 +313,42 @@ class PatientActionSheets {
                                                 color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFF1E293B),
                                               ),
                                             ),
-                                            const SizedBox(height: 1),
-                                            Text(
-                                              lang.name,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Color(0xFF64748B),
-                                              ),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  lang.name,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF64748B),
+                                                  ),
+                                                ),
+                                                if (AppLanguages.voiceSupported11Languages.any((v) => v.code == lang.code)) ...[
+                                                  const SizedBox(width: 8),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(0xFFF3E8FF),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                      border: Border.all(color: const Color(0xFFDDD6FE), width: 0.8),
+                                                    ),
+                                                    child: const Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Icon(Icons.volume_up_rounded, size: 10, color: Color(0xFF7C3AED)),
+                                                        SizedBox(width: 2),
+                                                        Text(
+                                                          'Voice Ready',
+                                                          style: TextStyle(
+                                                            fontSize: 9,
+                                                            fontWeight: FontWeight.w700,
+                                                            color: Color(0xFF6D28D9),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
                                             ),
                                           ],
                                         ),

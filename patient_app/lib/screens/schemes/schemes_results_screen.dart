@@ -4,6 +4,7 @@ import '../../models/government_scheme.dart';
 import '../../providers/schemes_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../widgets/dynamic_translated_text.dart';
+import '../../widgets/speakable.dart';
 import 'eligibility_form_screen.dart';
 import 'scheme_detail_screen.dart';
 
@@ -292,12 +293,16 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
       badgeText = const Color(0xFFC62828);
     }
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: Colors.grey.shade300, width: 1.2),
-      ),
+    final cardSummary = '${scheme.schemeName}. ${scheme.shortDescription}. ${scheme.benefitsSummary.join(". ")}';
+
+    return Speakable(
+      text: cardSummary,
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: Colors.grey.shade300, width: 1.2),
+        ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -410,6 +415,7 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
