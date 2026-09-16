@@ -170,33 +170,33 @@ class ApiClient {
     if (json['prescriptions'] is List && (json['prescriptions'] as List).isNotEmpty) {
       for (final rx in json['prescriptions']) {
         if (rx is Map) {
+          final freq = rx['frequency']?.toString();
+          final inst = rx['instructions'] is Map ? rx['instructions']['timing']?.toString() : rx['instructions']?.toString();
           medicines.add(MedicineItem(
             name: rx['medication_name']?.toString() ?? rx['name']?.toString() ?? 'Medication',
-            dosage: rx['dosage']?.toString() ?? rx['frequency']?.toString() ?? '1-0-1',
+            dosage: rx['dosage']?.toString() ?? freq ?? '1-0-0',
             duration: rx['duration_days'] != null ? '${rx['duration_days']} Days' : (rx['duration']?.toString() ?? '5 Days'),
             closestClinic: rx['closest_clinic']?.toString() ?? rx['closestClinic']?.toString() ?? json['facility_name']?.toString() ?? 'Ashwini Central Pharmacy (In-Stock)',
+            frequency: freq,
+            instructions: inst,
           ));
         }
       }
     } else if (notes['medicines'] is List && (notes['medicines'] as List).isNotEmpty) {
       for (final rx in notes['medicines']) {
         if (rx is Map) {
+          final freq = rx['frequency']?.toString();
+          final inst = rx['instructions'] is Map ? rx['instructions']['timing']?.toString() : rx['instructions']?.toString();
           medicines.add(MedicineItem(
             name: rx['name']?.toString() ?? rx['medication_name']?.toString() ?? 'Medication',
-            dosage: rx['dosage']?.toString() ?? rx['frequency']?.toString() ?? '1-0-1',
+            dosage: rx['dosage']?.toString() ?? freq ?? '1-0-0',
             duration: rx['duration']?.toString() ?? (rx['duration_days'] != null ? '${rx['duration_days']} Days' : '5 Days'),
             closestClinic: rx['closestClinic']?.toString() ?? rx['closest_clinic']?.toString() ?? json['facility_name']?.toString() ?? 'Ashwini Central Pharmacy (In-Stock)',
+            frequency: freq,
+            instructions: inst,
           ));
         }
       }
-    }
-    if (medicines.isEmpty && (json['status']?.toString().toLowerCase() != 'completed')) {
-      medicines.add(MedicineItem(
-        name: 'Paracetamol 650mg (SOS)',
-        dosage: '1-0-1 as needed',
-        duration: '3 Days',
-        closestClinic: json['facility_name']?.toString() ?? 'Ashwini Central Pharmacy (In-Stock)',
-      ));
     }
 
     // Inpatient details from notes
@@ -255,6 +255,7 @@ class ApiClient {
       bloodGroup: json['blood_group']?.toString(),
       patientPhone: json['patient_phone']?.toString(),
       doctorName: json['doctor_name']?.toString(),
+      providerUserId: json['provider_user_id']?.toString(),
       clinicalData: clinicalData.isNotEmpty ? Map<String, dynamic>.from(clinicalData) : null,
       allergies: allergiesList,
       emergencyContact: emergencyContactMap,
@@ -645,6 +646,68 @@ class ApiClient {
       }
     } catch (e) {
       debugPrint('ApiClient.createDoctor error: $e');
+      return {
+        'success': false,
+        'statusCode': 500,
+        'error': 'Network or client error: $e',
+      };
+    }
+  }
+
+  // ==========================================================
+  // ADMIN: WORKERS (HEALTHCARE FIELD WORKERS)
+  // ==========================================================
+  static Future<Map<String, dynamic>> createWorker({
+    required String fullName,
+    required String phone,
+    required String password,
+    String? qualification,
+    String? designation,
+    String? ward,
+    String? shift,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/auth/signup');
+      final body = jsonEncode({
+        'full_name': fullName.startsWith('Worker') ? fullName : 'Worker $fullName',
+        'phone': phone,
+        'password': password,
+        'role': 'nurse',
+        'specialties': [
+          if (ward != null && ward.isNotEmpty) ward,
+          'Community Field Health',
+        ],
+        'availability': {
+          if (qualification != null && qualification.isNotEmpty) 'qualification': qualification,
+          if (designation != null && designation.isNotEmpty) 'designation': designation,
+          if (ward != null && ward.isNotEmpty) 'ward': ward,
+          if (shift != null && shift.isNotEmpty) 'shift': shift,
+        },
+      });
+
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201) {
+        return {
+          'success': true,
+          'statusCode': 201,
+          'data': data['data'],
+          'message': data['message'] ?? 'Healthcare worker registered successfully.',
+        };
+      } else {
+        return {
+          'success': false,
+          'statusCode': response.statusCode,
+          'error': data['error'] ?? 'Failed to register worker (${response.statusCode})',
+        };
+      }
+    } catch (e) {
+      debugPrint('ApiClient.createWorker error: $e');
       return {
         'success': false,
         'statusCode': 500,

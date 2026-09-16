@@ -26,12 +26,58 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   bool _isOnFieldDuty = true;
   String _searchQuery = '';
   String _activeFilter = 'NewRequests'; // 'NewRequests', 'ActiveCases', 'Today', 'Referrals', 'Recent', 'All'
+  String _scopeFilter = 'MyCases'; // 'MyCases' (individual worker) vs 'AllCases' (entire unit)
 
   List<AppointmentItem> _liveAppointments = [];
   List<AppointmentItem> _liveAshaRequests = [];
   bool _isLoadingAppointments = false;
   bool _isLoadingPatients = false;
   bool _isLoadingAsha = false;
+
+  bool _isMyCase(AppointmentItem item) {
+    final myId = widget.userProfile?.userId;
+    final myName = widget.userProfile?.name.trim().toLowerCase() ?? '';
+
+    final notes = item.notes;
+    if (notes != null) {
+      final acceptedById = notes['accepted_by_user_id']?.toString();
+      if (myId != null && acceptedById != null && acceptedById == myId) {
+        return true;
+      }
+      final createdById = notes['created_by_user_id']?.toString();
+      if (myId != null && createdById != null && createdById == myId) {
+        return true;
+      }
+      final referredById = notes['referred_by_worker_id']?.toString() ?? notes['forwarded_by_user_id']?.toString();
+      if (myId != null && referredById != null && referredById == myId) {
+        return true;
+      }
+      final managedById = notes['managed_by_user_id']?.toString();
+      if (myId != null && managedById != null && managedById == myId) {
+        return true;
+      }
+
+      final acceptedByName = (notes['accepted_by_name']?.toString() ?? '').trim().toLowerCase();
+      if (myName.isNotEmpty && acceptedByName.isNotEmpty) {
+        if (acceptedByName == myName || acceptedByName.contains(myName) || myName.contains(acceptedByName)) {
+          return true;
+        }
+      }
+
+      final forwardedByName = (notes['forwarded_by']?.toString() ?? notes['referred_by_worker_name']?.toString() ?? '').trim().toLowerCase();
+      if (myName.isNotEmpty && forwardedByName.isNotEmpty) {
+        if (forwardedByName == myName || forwardedByName.contains(myName) || myName.contains(forwardedByName)) {
+          return true;
+        }
+      }
+    }
+
+    if (myId != null && item.providerUserId != null && item.providerUserId == myId) {
+      return true;
+    }
+
+    return false;
+  }
 
   @override
   void initState() {
@@ -181,19 +227,35 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
 
   Future<void> _acceptAshaRequest(AppointmentItem req) async {
     try {
+      final updatedNotes = req.notes != null ? Map<String, dynamic>.from(req.notes!) : <String, dynamic>{};
+      final workerId = widget.userProfile?.userId;
+      final workerName = widget.userProfile?.name ?? 'Healthcare Worker';
+
+      updatedNotes['accepted_by_user_id'] = workerId;
+      updatedNotes['accepted_by_name'] = workerName;
+      updatedNotes['accepted_at'] = DateTime.now().toIso8601String();
+
       final res = await ApiClient.updateAppointment(
         appointmentId: req.id,
         status: 'confirmed',
+        notes: updatedNotes,
       );
       if (res['success'] == true) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Request for ${req.patientName} accepted! Case is now active.'),
+            content: Text('Request for ${req.patientName} accepted! Case is now active in My Cases.'),
             backgroundColor: const Color(0xFF0F766E),
           ),
         );
-        await _loadLiveAshaRequests();
+        setState(() {
+          _activeFilter = 'ActiveCases';
+        });
+        await Future.wait([
+          _loadLiveAshaRequests(),
+          _loadLiveAppointments(),
+          _loadLivePatients(),
+        ]);
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -276,14 +338,30 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       return true;
     }).toList();
 
-    final newRequests = _liveAshaRequests.where((r) => r.status.toLowerCase() == 'queued').toList();
-    final activeCases = _liveAshaRequests.where((r) => r.status.toLowerCase() == 'confirmed' || r.status.toLowerCase() == 'in_progress').toList();
-    final todayAppts = _liveAppointments.where((a) {
+    final allNewRequests = _liveAshaRequests.where((r) => r.status.toLowerCase() == 'queued').toList();
+    final allActiveCases = _liveAshaRequests.where((r) => r.status.toLowerCase() == 'confirmed' || r.status.toLowerCase() == 'in_progress').toList();
+    final allTodayAppts = _liveAppointments.where((a) {
       final t = a.timing.toLowerCase();
       return t.contains('today') || t.contains('now');
     }).toList();
-    final referrals = _liveAppointments.where((a) => (a.notes != null && a.notes!['referral_type'] == 'asha_referral') || a.diagnosis.toLowerCase().contains('referral') || a.diagnosis.toLowerCase().contains('referred')).toList();
-    final recentCases = _liveAshaRequests.where((r) => r.status.toLowerCase() == 'completed').toList();
+    final allReferrals = _liveAppointments.where((a) => (a.notes != null && a.notes!['referral_type'] == 'asha_referral') || a.diagnosis.toLowerCase().contains('referral') || a.diagnosis.toLowerCase().contains('referred')).toList();
+    final allRecentCases = _liveAshaRequests.where((r) => r.status.toLowerCase() == 'completed').toList();
+
+    // Individual worker filtering
+    final myActiveCases = allActiveCases.where(_isMyCase).toList();
+    final myTodayAppts = allTodayAppts.where(_isMyCase).toList();
+    final myReferrals = allReferrals.where(_isMyCase).toList();
+    final myRecentCases = allRecentCases.where(_isMyCase).toList();
+
+    final myTotalCount = myActiveCases.length + myReferrals.length + myRecentCases.length;
+    final unitTotalCount = allActiveCases.length + allReferrals.length + allRecentCases.length;
+
+    final isMyCases = _scopeFilter == 'MyCases';
+    final activeCases = isMyCases ? myActiveCases : allActiveCases;
+    final todayAppts = isMyCases ? myTodayAppts : allTodayAppts;
+    final referrals = isMyCases ? myReferrals : allReferrals;
+    final recentCases = isMyCases ? myRecentCases : allRecentCases;
+    final newRequests = allNewRequests; // Collective inbox for all field workers
 
     return Scaffold(
       key: _scaffoldKey,
@@ -461,7 +539,15 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
         },
         body: Column(
           children: [
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+
+            // Scope Selector: "My Cases" vs "All Unit Cases"
+            _buildScopeSelector(
+              myTotalCount: myTotalCount,
+              unitTotalCount: unitTotalCount,
+            ),
+
+            const SizedBox(height: 8),
 
             // Search Bar
             Padding(
@@ -469,7 +555,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               child: TextField(
                 onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
                 decoration: InputDecoration(
-                  hintText: 'Search patients by name, symptoms, phone...',
+                  hintText: isMyCases
+                      ? 'Search my patients by name, symptoms, phone...'
+                      : 'Search all unit patients by name, symptoms, phone...',
                   prefixIcon: const Icon(Icons.search, color: Color(0xFF0F766E), size: 20),
                   filled: true,
                   fillColor: Colors.white,
@@ -502,22 +590,22 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                     ),
                     const SizedBox(width: 8),
                     _buildFilterChip(
-                      label: 'Active Cases (${activeCases.length})',
+                      label: isMyCases ? 'My Active (${activeCases.length})' : 'Active Cases (${activeCases.length})',
                       filterKey: 'ActiveCases',
                     ),
                     const SizedBox(width: 8),
                     _buildFilterChip(
-                      label: 'Today (${todayAppts.length})',
+                      label: isMyCases ? 'My Today (${todayAppts.length})' : 'Today (${todayAppts.length})',
                       filterKey: 'Today',
                     ),
                     const SizedBox(width: 8),
                     _buildFilterChip(
-                      label: 'Referrals (${referrals.length})',
+                      label: isMyCases ? 'My Referrals (${referrals.length})' : 'Referrals (${referrals.length})',
                       filterKey: 'Referrals',
                     ),
                     const SizedBox(width: 8),
                     _buildFilterChip(
-                      label: 'Recent (${recentCases.length})',
+                      label: isMyCases ? 'My Completed (${recentCases.length})' : 'Recent (${recentCases.length})',
                       filterKey: 'Recent',
                     ),
                     const SizedBox(width: 8),
@@ -541,6 +629,109 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 referrals: referrals,
                 recentCases: recentCases,
                 filteredPatients: filteredPatients,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScopeSelector({required int myTotalCount, required int unitTotalCount}) {
+    final isMyCases = _scopeFilter == 'MyCases';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                onTap: () => setState(() => _scopeFilter = 'MyCases'),
+                borderRadius: BorderRadius.circular(10),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isMyCases ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: isMyCases
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.07),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.person_pin_rounded,
+                        size: 16,
+                        color: isMyCases ? const Color(0xFF0F766E) : const Color(0xFF64748B),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'My Cases ($myTotalCount)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isMyCases ? const Color(0xFF0F766E) : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: InkWell(
+                onTap: () => setState(() => _scopeFilter = 'AllCases'),
+                borderRadius: BorderRadius.circular(10),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: !isMyCases ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: !isMyCases
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.07),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.groups_rounded,
+                        size: 16,
+                        color: !isMyCases ? const Color(0xFF0F766E) : const Color(0xFF64748B),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'All Unit Cases ($unitTotalCount)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: !isMyCases ? const Color(0xFF0F766E) : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -594,17 +785,40 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     required List<AppointmentItem> recentCases,
     required List<HospitalAdminPatient> filteredPatients,
   }) {
+    final isMyCases = _scopeFilter == 'MyCases';
     switch (_activeFilter) {
       case 'NewRequests':
-        return _buildAshaRequestsList(newRequests, isNew: true, emptyMessage: 'No incoming ASHA visit requests.');
+        return _buildAshaRequestsList(newRequests, isNew: true, emptyMessage: 'No incoming ASHA visit requests in unit inbox.');
       case 'ActiveCases':
-        return _buildAshaRequestsList(activeCases, isNew: false, emptyMessage: 'No active assessment cases in progress.');
+        return _buildAshaRequestsList(
+          activeCases,
+          isNew: false,
+          emptyMessage: isMyCases
+              ? 'You have no active cases assigned to you.\nCheck "New Requests" to accept cases or switch to "All Unit Cases".'
+              : 'No active assessment cases in progress across the unit.',
+        );
       case 'Today':
-        return _buildAppointmentsList(todayAppts, emptyMessage: 'No visits or consultations scheduled for today.');
+        return _buildAppointmentsList(
+          todayAppts,
+          emptyMessage: isMyCases
+              ? 'No visits or consultations scheduled for you today.'
+              : 'No visits or consultations scheduled across the unit today.',
+        );
       case 'Referrals':
-        return _buildAppointmentsList(referrals, emptyMessage: 'No patients referred to doctors yet.');
+        return _buildAppointmentsList(
+          referrals,
+          emptyMessage: isMyCases
+              ? 'No patients referred to doctors by you yet.'
+              : 'No patients referred to doctors across the unit yet.',
+        );
       case 'Recent':
-        return _buildAshaRequestsList(recentCases, isNew: false, emptyMessage: 'No completed field cases yet.');
+        return _buildAshaRequestsList(
+          recentCases,
+          isNew: false,
+          emptyMessage: isMyCases
+              ? 'You have no completed field cases yet.'
+              : 'No completed field cases yet across the unit.',
+        );
       case 'All':
       default:
         return _buildPatientsRosterTab(filteredPatients);
@@ -690,6 +904,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     final isConfirmed = req.status.toLowerCase() == 'confirmed';
     final isInProgress = req.status.toLowerCase() == 'in_progress';
     final isCompleted = req.status.toLowerCase() == 'completed';
+    final isAssignedToMe = _isMyCase(req);
+    final acceptedByName = req.notes?['accepted_by_name']?.toString() ??
+        req.notes?['managed_by_name']?.toString() ??
+        req.notes?['referred_by_worker_name']?.toString() ??
+        req.notes?['forwarded_by']?.toString();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -697,8 +916,10 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: isQueued ? const Color(0xFFF59E0B) : const Color(0xFFE2E8F0),
-          width: isQueued ? 1.5 : 1.0,
+          color: isQueued
+              ? const Color(0xFFF59E0B)
+              : (isAssignedToMe ? const Color(0xFF0F766E).withValues(alpha: 0.3) : const Color(0xFFE2E8F0)),
+          width: (isQueued || isAssignedToMe) ? 1.5 : 1.0,
         ),
       ),
       child: Padding(
@@ -715,8 +936,12 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                     children: [
                       CircleAvatar(
                         radius: 18,
-                        backgroundColor: const Color(0xFFCCFBF1),
-                        child: const Icon(Icons.person, color: Color(0xFF0F766E), size: 20),
+                        backgroundColor: isAssignedToMe ? const Color(0xFFCCFBF1) : const Color(0xFFF1F5F9),
+                        child: Icon(
+                          isAssignedToMe ? Icons.verified_user_rounded : Icons.person,
+                          color: isAssignedToMe ? const Color(0xFF0F766E) : const Color(0xFF64748B),
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -751,6 +976,51 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 ),
               ],
             ),
+
+            // Worker Assignment Badge
+            if (!isQueued) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isAssignedToMe ? const Color(0xFFCCFBF1) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isAssignedToMe
+                            ? const Color(0xFF14B8A6).withValues(alpha: 0.4)
+                            : const Color(0xFFCBD5E1),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isAssignedToMe ? Icons.verified_user_rounded : Icons.person_outline_rounded,
+                          size: 13,
+                          color: isAssignedToMe ? const Color(0xFF0F766E) : const Color(0xFF475569),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isAssignedToMe
+                              ? 'Your Active Case'
+                              : (acceptedByName != null && acceptedByName.isNotEmpty
+                                  ? 'Assigned: $acceptedByName'
+                                  : 'Assigned to Unit Worker'),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: isAssignedToMe ? const Color(0xFF0F766E) : const Color(0xFF334155),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
             const SizedBox(height: 10),
 
             // Reason / Symptoms box
@@ -815,11 +1085,17 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                     child: ElevatedButton.icon(
                       onPressed: () => _openPatientAssessment(req),
                       icon: const Icon(Icons.medical_services_rounded, size: 16, color: Colors.white),
-                      label: const Text('Assess Patient (Vitals & Clinical)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                      label: Text(
+                        isAssignedToMe
+                            ? 'Assess Patient (Vitals & Clinical)'
+                            : 'Assess / Assist Case (${acceptedByName != null && acceptedByName.isNotEmpty ? acceptedByName : "Assigned Worker"})',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0F766E),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       ),
                     ),
                   ),
@@ -953,6 +1229,21 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                         style: const TextStyle(fontSize: 11, color: Color(0xFF334155)),
                       ),
                     ),
+                    if (appt.notes?['forwarded_by'] != null ||
+                        appt.notes?['referred_by_worker_name'] != null ||
+                        appt.notes?['accepted_by_name'] != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(Icons.forward_to_inbox_rounded, size: 13, color: Color(0xFF0F766E)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Referred by: ${appt.notes?['forwarded_by'] ?? appt.notes?['referred_by_worker_name'] ?? appt.notes?['accepted_by_name']}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF0F766E)),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -964,6 +1255,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   }
 
   Widget _buildPatientsRosterTab(List<HospitalAdminPatient> filteredPatients) {
+    if (_isLoadingPatients) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF0F766E)));
+    }
     if (filteredPatients.isEmpty) {
       return const Center(
         child: Column(
@@ -1307,80 +1601,236 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   // 1. IN-PERSON PRESCRIPTION WORKFLOW
   // ==============================================================
   void _openInPersonPrescriptionDialog(HospitalAdminPatient pat) {
-    final medCtrl = TextEditingController(text: 'Paracetamol 500mg, ORS Hydration Pack');
-    final dosageCtrl = TextEditingController(text: '1 Tablet twice daily after food');
+    final medCtrl = TextEditingController(text: '');
+    final dosageCtrl = TextEditingController(text: '1 Tablet');
     final durationCtrl = TextEditingController(text: '5 Days');
     final notesCtrl = TextEditingController(text: 'Adequate hydration, warm water rest');
 
+    bool morningOn = true;
+    bool afternoonOn = false;
+    bool nightOn = false;
+
+    const commonMedicines = [
+      'Paracetamol',
+      'Ibuprofen',
+      'Amoxicillin',
+      'Azithromycin',
+      'Cetirizine',
+      'Pantoprazole',
+      'Omeprazole',
+      'Metformin',
+      'Amlodipine',
+      'ORS',
+      'Ondansetron',
+      'Diclofenac',
+      'Levocetirizine',
+      'Albendazole',
+      'Atorvastatin',
+    ];
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.edit_note_rounded, color: Color(0xFF0F766E)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'In-Person Prescription: ${pat.name}',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) {
+          final frequency =
+              '${morningOn ? "1" : "0"}-${afternoonOn ? "1" : "0"}-${nightOn ? "1" : "0"}';
+          final hasValidTiming = morningOn || afternoonOn || nightOn;
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                const Icon(Icons.edit_note_rounded, color: Color(0xFF0F766E)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'In-Person Prescription: ${pat.name}',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      'Patient: ${pat.name} (${pat.age} Yrs, ${pat.gender})\nDiagnosis: ${pat.diagnosis}',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF334155)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Medicine Selector
+                  const Text('Medicine', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: medCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'Select or type medicine... ▼',
+                      prefixIcon: const Icon(Icons.medication_outlined, size: 20, color: Color(0xFF0F766E)),
+                      suffixIcon: PopupMenuButton<String>(
+                        icon: const Icon(Icons.arrow_drop_down_rounded, size: 30, color: Color(0xFF0F766E)),
+                        tooltip: 'Choose medicine',
+                        onSelected: (val) {
+                          medCtrl.text = val;
+                          setDlgState(() {});
+                        },
+                        itemBuilder: (ctx) => commonMedicines
+                            .map((m) => PopupMenuItem(value: m, child: Text(m)))
+                            .toList(),
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: commonMedicines.map((m) {
+                        final isSel = medCtrl.text.trim().toLowerCase() == m.toLowerCase();
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ActionChip(
+                            visualDensity: VisualDensity.compact,
+                            label: Text(m, style: TextStyle(fontSize: 11, color: isSel ? Colors.white : const Color(0xFF334155))),
+                            backgroundColor: isSel ? const Color(0xFF0F766E) : const Color(0xFFF1F5F9),
+                            onPressed: () {
+                              medCtrl.text = m;
+                              setDlgState(() {});
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextField(
+                    controller: dosageCtrl,
+                    decoration: const InputDecoration(labelText: 'Dosage (e.g. 1 Tablet)'),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Timing Switches
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: !hasValidTiming ? const Color(0xFFE11D48) : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Medicine Timing', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
+                            Text(
+                              'Frequency: $frequency',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: hasValidTiming ? const Color(0xFF0F766E) : const Color(0xFFE11D48),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Morning'),
+                            Switch.adaptive(
+                              value: morningOn,
+                              onChanged: (val) => setDlgState(() => morningOn = val),
+                              activeTrackColor: const Color(0xFF0F766E),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Afternoon'),
+                            Switch.adaptive(
+                              value: afternoonOn,
+                              onChanged: (val) => setDlgState(() => afternoonOn = val),
+                              activeTrackColor: const Color(0xFF0F766E),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Night'),
+                            Switch.adaptive(
+                              value: nightOn,
+                              onChanged: (val) => setDlgState(() => nightOn = val),
+                              activeTrackColor: const Color(0xFF0F766E),
+                            ),
+                          ],
+                        ),
+                        if (!hasValidTiming)
+                          const Text('Select at least one time.', style: TextStyle(fontSize: 11, color: Color(0xFFE11D48))),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextField(
+                    controller: durationCtrl,
+                    decoration: const InputDecoration(labelText: 'Duration'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: notesCtrl,
+                    decoration: const InputDecoration(labelText: 'Field Care Instructions & Diet'),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'Patient: ${pat.name} (${pat.age} Yrs, ${pat.gender})\nDiagnosis: ${pat.diagnosis}',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF334155)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: medCtrl,
-                decoration: const InputDecoration(labelText: 'Prescribed Medicines / In-Person Field Rx'),
-              ),
-              TextField(
-                controller: dosageCtrl,
-                decoration: const InputDecoration(labelText: 'Dosage / Instructions'),
-              ),
-              TextField(
-                controller: durationCtrl,
-                decoration: const InputDecoration(labelText: 'Duration'),
-              ),
-              TextField(
-                controller: notesCtrl,
-                decoration: const InputDecoration(labelText: 'Field Care Instructions & Diet'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () {
+                  if (medCtrl.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please select or type a medicine name')),
+                    );
+                    return;
+                  }
+                  if (!hasValidTiming) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Select at least one time')),
+                    );
+                    return;
+                  }
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: const Color(0xFF0F766E),
+                      content: Text('Prescription issued for ${pat.name} ($frequency)!'),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F766E)),
+                child: const Text('Create Prescription', style: TextStyle(color: Colors.white)),
               ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: const Color(0xFF0F766E),
-                  content: Text('In-person prescription issued successfully for ${pat.name}!'),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F766E)),
-            child: const Text('Issue In-Person Rx', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -1630,6 +2080,29 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                           );
                         });
 
+                        // Also persist to live backend database
+                        ApiClient.createAppointment(
+                          patientId: pat.id,
+                          doctorUserId: selectedDoctor!.id,
+                          appointmentType: 'clinic',
+                          status: 'confirmed',
+                          reason: reasonCtrl.text.trim().isNotEmpty
+                              ? reasonCtrl.text.trim()
+                              : 'Worker Clinical Forwarding ($selectedUrgency)',
+                          notes: {
+                            'referral_type': 'asha_referral',
+                            'urgency': selectedUrgency,
+                            'forwarded_by': widget.userProfile?.name ?? 'Worker Sunita Devi',
+                            'forwarded_by_user_id': widget.userProfile?.userId,
+                            'accepted_by_user_id': widget.userProfile?.userId,
+                            'accepted_by_name': widget.userProfile?.name ?? 'Worker Sunita Devi',
+                            'specialty': selectedSpecialty,
+                            'vitals': pat.vitals,
+                          },
+                        ).then((_) {
+                          if (mounted) _loadLiveAppointments();
+                        });
+
                         Navigator.pop(ctx);
 
                         // Show Forwarded Confirmation Alert Dialog
@@ -1668,7 +2141,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF312E81)),
                                       ),
                                       Text(
-                                        '${selectedDoctor!.designation} (${selectedSpecialty})',
+                                        '${selectedDoctor!.designation} ($selectedSpecialty)',
                                         style: const TextStyle(fontSize: 12, color: Color(0xFF4338CA)),
                                       ),
                                       Text(

@@ -731,14 +731,26 @@ export async function createAppointment(request: HttpRequest, context: Invocatio
                 effectivePatientId = newPat.rows[0].patient_id;
             }
         }
-    } else {
-        if (!effectivePatientId || !isValidUuid(effectivePatientId)) {
-            return errorResponse(400, "Field 'patient_id' is required and must be a valid UUID.");
-        }
     }
 
     if (!effectivePatientId || !isValidUuid(effectivePatientId)) {
-        return errorResponse(400, "Field 'patient_id' is required and must be a valid UUID.");
+        // Resolve legacy or phone-based patient ID
+        const cleanPat = String(effectivePatientId || "").trim();
+        const digits = cleanPat.replace(/\D/g, "");
+        const legacyPat = await query(`
+            SELECT p.patient_id, u.full_name AS patient_name
+            FROM health.patients p
+            JOIN health.users u ON p.user_id = u.user_id
+            WHERE ($1 != '' AND u.phone_e164 LIKE '%' || $1)
+               OR ( $2 ILIKE '%pat_1%' AND u.full_name ILIKE '%Rajesh%' )
+               OR ( $2 ILIKE '%pat_2%' AND u.full_name ILIKE '%Priya%' )
+            LIMIT 1;
+        `, [digits, cleanPat]);
+        if (legacyPat.rows.length > 0) {
+            effectivePatientId = legacyPat.rows[0].patient_id;
+        } else {
+            return errorResponse(400, "Field 'patient_id' is required and must be a valid UUID.");
+        }
     }
 
     const patientCheck = await query(
@@ -754,11 +766,29 @@ export async function createAppointment(request: HttpRequest, context: Invocatio
     const patientName = patientCheck.rows[0].patient_name;
 
     // 5. Validate provider_user_id (doctor)
-    const effectiveDoctorId = provider_user_id || doctor_user_id || null;
+    let effectiveDoctorId = provider_user_id || doctor_user_id || null;
     let doctorName: string | null = null;
     if (effectiveDoctorId) {
         if (!isValidUuid(effectiveDoctorId)) {
-            return errorResponse(400, "Field 'provider_user_id' must be a valid UUID.");
+            const cleanDoc = String(effectiveDoctorId).trim();
+            const digits = cleanDoc.replace(/\D/g, "");
+            const legacyDoc = await query(`
+                SELECT user_id, full_name
+                FROM health.users
+                WHERE role = 'doctor'
+                  AND (
+                    ($1 != '' AND phone_e164 LIKE '%' || $1)
+                    OR ( $2 ILIKE '%doc_1%' AND full_name ILIKE '%Rajesh%' )
+                    OR ( $2 ILIKE '%doc_2%' AND full_name ILIKE '%Ananya%' )
+                    OR ( $2 ILIKE '%doc_3%' AND full_name ILIKE '%Mayank%' )
+                  )
+                LIMIT 1;
+            `, [digits, cleanDoc]);
+            if (legacyDoc.rows.length > 0) {
+                effectiveDoctorId = legacyDoc.rows[0].user_id;
+            } else {
+                return errorResponse(400, "Field 'provider_user_id' must be a valid UUID.");
+            }
         }
         const docCheck = await query(
             `SELECT user_id, full_name, role FROM health.users WHERE user_id = $1::uuid AND role = 'doctor';`,

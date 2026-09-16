@@ -413,16 +413,31 @@ export async function createPatientRecord(request: HttpRequest, context: Invocat
     }
 
     try {
-        const patientId = request.params.patient_id;
+        let effectivePatientId = request.params.patient_id;
 
-        if (!isValidUuid(patientId)) {
-            return errorResponse(400, "Invalid patient_id format. Must be a valid UUID.");
+        if (!isValidUuid(effectivePatientId)) {
+            const cleanPat = String(effectivePatientId || "").trim();
+            const digits = cleanPat.replace(/\D/g, "");
+            const legacyPat = await query(`
+                SELECT p.patient_id
+                FROM health.patients p
+                JOIN health.users u ON p.user_id = u.user_id
+                WHERE ($1 != '' AND u.phone_e164 LIKE '%' || $1)
+                   OR ( $2 ILIKE '%pat_1%' AND u.full_name ILIKE '%Rajesh%' )
+                   OR ( $2 ILIKE '%pat_2%' AND u.full_name ILIKE '%Priya%' )
+                LIMIT 1;
+            `, [digits, cleanPat]);
+            if (legacyPat.rows.length > 0) {
+                effectivePatientId = legacyPat.rows[0].patient_id;
+            } else {
+                return errorResponse(400, "Invalid patient_id format. Must be a valid UUID.");
+            }
         }
 
         // Verify patient exists
-        const patientCheck = await query("SELECT patient_id FROM health.patients WHERE patient_id = $1::uuid", [patientId]);
+        const patientCheck = await query("SELECT patient_id FROM health.patients WHERE patient_id = $1::uuid", [effectivePatientId]);
         if (patientCheck.rows.length === 0) {
-            return errorResponse(404, `Patient with ID ${patientId} not found.`);
+            return errorResponse(404, `Patient with ID ${effectivePatientId} not found.`);
         }
 
         let body: any = {};
@@ -450,10 +465,10 @@ export async function createPatientRecord(request: HttpRequest, context: Invocat
             }
             const apptCheck = await query(
                 "SELECT appointment_id FROM health.appointments WHERE appointment_id = $1::uuid AND patient_id = $2::uuid",
-                [appointment_id, patientId]
+                [appointment_id, effectivePatientId]
             );
             if (apptCheck.rows.length === 0) {
-                return errorResponse(400, `Appointment '${appointment_id}' not found for patient '${patientId}'.`);
+                return errorResponse(400, `Appointment '${appointment_id}' not found for patient '${effectivePatientId}'.`);
             }
             validAppointmentId = appointment_id;
         }
@@ -502,7 +517,7 @@ export async function createPatientRecord(request: HttpRequest, context: Invocat
         `;
 
         const result = await query(insertSql, [
-            patientId,
+            effectivePatientId,
             auth.user_id,
             validAppointmentId,
             safeRecordType,

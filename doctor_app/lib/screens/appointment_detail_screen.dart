@@ -93,80 +93,494 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     if (mounted) setState(() {});
   }
 
-  void _addMedicine() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        final nameCtrl = TextEditingController();
-        final doseCtrl = TextEditingController();
-        final durCtrl = TextEditingController();
-        final clinicCtrl = TextEditingController(
-          text: 'Ashwini Central Pharmacy (Available)',
-        );
+  static const List<String> _commonMedicines = [
+    'Paracetamol',
+    'Ibuprofen',
+    'Amoxicillin',
+    'Azithromycin',
+    'Cetirizine',
+    'Pantoprazole',
+    'Omeprazole',
+    'Metformin',
+    'Amlodipine',
+    'ORS',
+    'Ondansetron',
+    'Diclofenac',
+    'Levocetirizine',
+    'Albendazole',
+    'Atorvastatin',
+  ];
 
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text('Add Medicine'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Medicine Name (e.g. Paracetamol 500mg)',
-                ),
+  Widget _buildTimingSwitchRow({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String timeHint,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
               ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: doseCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Dosage (e.g. 1-0-1 after food)',
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: durCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Duration (e.g. 5 Days)',
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: clinicCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Linked Clinic / Pharmacy',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Icon(icon, size: 18, color: iconColor),
             ),
-            ElevatedButton(
-              onPressed: () {
-                if (nameCtrl.text.isNotEmpty) {
-                  setState(() {
-                    _medicines.add(
-                      MedicineItem(
-                        name: nameCtrl.text,
-                        dosage: doseCtrl.text.isEmpty ? '1-0-1' : doseCtrl.text,
-                        duration: durCtrl.text.isEmpty
-                            ? '3 Days'
-                            : durCtrl.text,
-                        closestClinic: clinicCtrl.text,
-                      ),
-                    );
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text('Add'),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.headingText,
+                    ),
+                  ),
+                  Text(
+                    timeHint,
+                    style: const TextStyle(fontSize: 10.5, color: AppColors.muted),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              margin: const EdgeInsets.only(right: 6),
+              decoration: BoxDecoration(
+                color: value ? AppColors.primary.withValues(alpha: 0.12) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                value ? 'ON' : 'OFF',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: value ? AppColors.primary : const Color(0xFF94A3B8),
+                ),
+              ),
+            ),
+            Switch.adaptive(
+              value: value,
+              onChanged: onChanged,
+              activeTrackColor: AppColors.primary,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _addMedicine() {
+    final nameCtrl = TextEditingController(text: '');
+    final doseCtrl = TextEditingController(text: '1 Tablet');
+    final durCtrl = TextEditingController(text: '5 Days');
+    final instCtrl = TextEditingController(text: 'Take after food');
+    final clinicCtrl = TextEditingController(
+      text: 'Ashwini Central Pharmacy (Available)',
+    );
+
+    bool morningOn = true;
+    bool afternoonOn = false;
+    bool nightOn = false;
+
+    showDialog(
+      context: context,
+      builder: (dlgContext) {
+        return StatefulBuilder(
+          builder: (context, setDlgState) {
+            final frequency =
+                '${morningOn ? "1" : "0"}-${afternoonOn ? "1" : "0"}-${nightOn ? "1" : "0"}';
+            final hasValidTiming = morningOn || afternoonOn || nightOn;
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Row(
+                children: [
+                  Icon(Icons.medication_outlined, color: AppColors.primary),
+                  SizedBox(width: 8),
+                  Text(
+                    'Create Prescription',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. Medicine Selection (Common Medicines + Custom Entry)
+                      const Text(
+                        'Medicine',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.headingText,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: nameCtrl,
+                        onChanged: (_) => setDlgState(() {}),
+                        decoration: InputDecoration(
+                          hintText: 'Select or type medicine... ▼',
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            size: 20,
+                            color: AppColors.primary,
+                          ),
+                          suffixIcon: PopupMenuButton<String>(
+                            icon: const Icon(
+                              Icons.arrow_drop_down_rounded,
+                              size: 30,
+                              color: AppColors.primary,
+                            ),
+                            tooltip: 'Select from 15 common medicines',
+                            onSelected: (val) {
+                              nameCtrl.text = val;
+                              setDlgState(() {});
+                            },
+                            itemBuilder: (ctx) => _commonMedicines
+                                .map(
+                                  (med) => PopupMenuItem<String>(
+                                    value: med,
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.healing_outlined,
+                                          size: 16,
+                                          color: AppColors.primary,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          med,
+                                          style: const TextStyle(fontSize: 13.5),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 14,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Quick select horizontal chips for common medicines
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: _commonMedicines.map((med) {
+                            final isSelected = nameCtrl.text.trim().toLowerCase() ==
+                                med.toLowerCase();
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: ActionChip(
+                                visualDensity: VisualDensity.compact,
+                                label: Text(
+                                  med,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : const Color(0xFF334155),
+                                  ),
+                                ),
+                                backgroundColor: isSelected
+                                    ? AppColors.primary
+                                    : const Color(0xFFF1F5F9),
+                                side: BorderSide(
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : const Color(0xFFE2E8F0),
+                                ),
+                                onPressed: () {
+                                  nameCtrl.text = med;
+                                  setDlgState(() {});
+                                },
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // 2. Dosage Field
+                      TextField(
+                        controller: doseCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Dosage',
+                          hintText: 'e.g. 1 Tablet / 500mg / 5ml',
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 14,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // 3. Medicine Timing — Three Simple Switches
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: !hasValidTiming
+                                ? const Color(0xFFE11D48)
+                                : const Color(0xFFCBD5E1),
+                            width: !hasValidTiming ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Medicine Timing',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.headingText,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: hasValidTiming
+                                        ? AppColors.primaryLight
+                                        : const Color(0xFFFFE4E6),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Frequency: $frequency',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: hasValidTiming
+                                          ? AppColors.primaryDark
+                                          : const Color(0xFFE11D48),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Morning Switch
+                            _buildTimingSwitchRow(
+                              icon: Icons.wb_sunny_outlined,
+                              iconColor: const Color(0xFFD97706),
+                              label: 'Morning',
+                              timeHint: '08:00 AM • Breakfast',
+                              value: morningOn,
+                              onChanged: (val) =>
+                                  setDlgState(() => morningOn = val),
+                            ),
+                            const Divider(height: 10, thickness: 0.5),
+
+                            // Afternoon Switch
+                            _buildTimingSwitchRow(
+                              icon: Icons.wb_sunny,
+                              iconColor: const Color(0xFFF59E0B),
+                              label: 'Afternoon',
+                              timeHint: '01:00 PM • Lunch',
+                              value: afternoonOn,
+                              onChanged: (val) =>
+                                  setDlgState(() => afternoonOn = val),
+                            ),
+                            const Divider(height: 10, thickness: 0.5),
+
+                            // Night Switch
+                            _buildTimingSwitchRow(
+                              icon: Icons.bedtime_outlined,
+                              iconColor: const Color(0xFF4F46E5),
+                              label: 'Night',
+                              timeHint: '08:00 PM • Dinner',
+                              value: nightOn,
+                              onChanged: (val) =>
+                                  setDlgState(() => nightOn = val),
+                            ),
+
+                            if (!hasValidTiming) ...[
+                              const SizedBox(height: 6),
+                              const Row(
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    size: 14,
+                                    color: Color(0xFFE11D48),
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Select at least one time.',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: Color(0xFFE11D48),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // 4. Duration Field
+                      TextField(
+                        controller: durCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Duration',
+                          hintText: 'e.g. 5 Days',
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 14,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // 5. Instructions Field
+                      TextField(
+                        controller: instCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Instructions',
+                          hintText: 'e.g. Take after food / With warm water',
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 14,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dlgContext),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final medName = nameCtrl.text.trim();
+                    if (medName.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          backgroundColor: Color(0xFFE11D48),
+                          content: Text('Please select or type a medicine name'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (!hasValidTiming) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          backgroundColor: Color(0xFFE11D48),
+                          content: Text('Select at least one time (Morning, Afternoon, or Night)'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    final dosageStr = doseCtrl.text.trim().isEmpty
+                        ? frequency
+                        : '${doseCtrl.text.trim()} ($frequency)';
+
+                    setState(() {
+                      _medicines.add(
+                        MedicineItem(
+                          name: medName,
+                          dosage: dosageStr,
+                          frequency: frequency,
+                          duration: durCtrl.text.trim().isEmpty
+                              ? '5 Days'
+                              : durCtrl.text.trim(),
+                          closestClinic: clinicCtrl.text.trim().isEmpty
+                              ? 'Ashwini Central Pharmacy (In-Stock)'
+                              : clinicCtrl.text.trim(),
+                          instructions: instCtrl.text.trim().isEmpty
+                              ? 'Take as directed'
+                              : instCtrl.text.trim(),
+                        ),
+                      );
+                    });
+                    Navigator.pop(dlgContext);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Create Prescription'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -392,14 +806,19 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
           final days = daysMatch != null
               ? int.tryParse(daysMatch.group(0)!)
               : 5;
+          final freq = m.frequency ?? (m.dosage.contains('-') ? m.dosage : '1-0-0');
           return {
             'medication_name': m.name,
             'dosage': m.dosage,
-            'frequency': m.dosage,
+            'frequency': freq,
             'duration_days': (days != null && days > 0) ? days : 5,
             'route': 'oral',
             'closestClinic': m.closestClinic,
-            'instructions': {'timing': m.dosage, 'clinic': m.closestClinic},
+            'instructions': {
+              'timing': freq,
+              'instructions': m.instructions ?? m.dosage,
+              'clinic': m.closestClinic,
+            },
           };
         }).toList(),
       );
@@ -1619,84 +2038,140 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Column(
-                    children: _medicines.map((med) {
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  med.name,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.headingText,
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primaryLight,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    med.dosage,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primaryDark,
+                  if (_medicines.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.medication_outlined, size: 28, color: Colors.grey.shade400),
+                          const SizedBox(height: 6),
+                          Text(
+                            'No medicines prescribed yet.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Tap "+ Add Medicine" to select or type medicine & configure timing.',
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Column(
+                      children: _medicines.map((med) {
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      med.name,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.headingText,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Duration: ${med.duration}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.muted,
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryLight,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      med.dosage,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primaryDark,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  InkWell(
+                                    onTap: () => setState(() => _medicines.remove(med)),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(4),
+                                      child: Icon(
+                                        Icons.close,
+                                        size: 16,
+                                        color: Color(0xFF94A3B8),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.local_pharmacy_outlined,
-                                  size: 14,
-                                  color: AppColors.info,
+                              const SizedBox(height: 4),
+                              Text(
+                                'Duration: ${med.duration}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.muted,
                                 ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    'Linked Clinic: ${med.closestClinic}',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.info,
-                                    ),
+                              ),
+                              if (med.instructions != null && med.instructions!.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Instructions: ${med.instructions}',
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    color: Color(0xFF475569),
                                   ),
                                 ),
                               ],
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.local_pharmacy_outlined,
+                                    size: 14,
+                                    color: AppColors.info,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      'Linked Clinic: ${med.closestClinic}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.info,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
                 ],
               ),
             ),

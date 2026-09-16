@@ -273,8 +273,15 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               ActionChip(
                 avatar: const Icon(Icons.badge_outlined, size: 14, color: Color(0xFF0D9488)),
-                label: const Text('Worker: 3456789012', style: TextStyle(fontSize: 11)),
+                label: const Text('Worker 1: 3456789012', style: TextStyle(fontSize: 11)),
                 onPressed: () => _fillTestCredentials('3456789012', 'Worker@12345'),
+                backgroundColor: AppColors.surface,
+                side: const BorderSide(color: AppColors.border),
+              ),
+              ActionChip(
+                avatar: const Icon(Icons.badge_outlined, size: 14, color: Color(0xFF0D9488)),
+                label: const Text('Worker 2: 3456789013', style: TextStyle(fontSize: 11)),
+                onPressed: () => _fillTestCredentials('3456789013', 'Worker@12345'),
                 backgroundColor: AppColors.surface,
                 side: const BorderSide(color: AppColors.border),
               ),

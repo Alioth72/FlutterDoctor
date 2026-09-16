@@ -204,10 +204,23 @@ class UserProfile {
       password: '1',
     ),
     '3456789012': UserProfile(
+      userId: 'd7b4e3f1-2856-4c91-9e8a-729938b82001',
       phone: '3456789012',
       name: 'Worker Sunita Devi',
       qualification: 'ANM / Healthcare Specialist',
       designation: 'Primary Field Healthcare Worker',
+      profileImagePath: AppAssets.logo,
+      role: UserRole.worker,
+      hospitalId: 'hosp_1',
+      hospitalName: 'Ashwini Central Hospital',
+      password: '1',
+    ),
+    '3456789013': UserProfile(
+      userId: 'd7b4e3f1-2856-4c91-9e8a-729938b82002',
+      phone: '3456789013',
+      name: 'Worker Anita Sharma',
+      qualification: 'GNM / Certified Community Health Officer',
+      designation: 'Field Community Health Worker',
       profileImagePath: AppAssets.logo,
       role: UserRole.worker,
       hospitalId: 'hosp_1',
@@ -228,6 +241,7 @@ class UserProfile {
     if (entity != null) {
       if (entity is HospitalDetailInfo) {
         return UserProfile(
+          userId: entity.id,
           phone: entity.adminPhone,
           name: entity.adminName,
           qualification: 'Hospital System Administrator',
@@ -240,6 +254,7 @@ class UserProfile {
         );
       } else if (entity is HospitalAdminStaffDoctor) {
         return UserProfile(
+          userId: entity.id,
           phone: entity.phone,
           name: entity.name,
           qualification: entity.qualification,
@@ -252,6 +267,7 @@ class UserProfile {
         );
       } else if (entity is HospitalAdminStaffWorker) {
         return UserProfile(
+          userId: entity.id,
           phone: entity.phone,
           name: entity.name,
           qualification: entity.qualification,

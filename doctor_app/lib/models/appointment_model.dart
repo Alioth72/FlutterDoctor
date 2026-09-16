@@ -8,12 +8,16 @@ class MedicineItem {
   final String dosage;
   final String duration;
   final String closestClinic;
+  final String? frequency;
+  final String? instructions;
 
   MedicineItem({
     required this.name,
     required this.dosage,
     required this.duration,
     required this.closestClinic,
+    this.frequency,
+    this.instructions,
   });
 }
 
@@ -60,6 +64,7 @@ class AppointmentItem {
   final String? bloodGroup;
   final String? patientPhone;
   final String? doctorName;
+  final String? providerUserId;
   final Map<String, dynamic>? clinicalData;
   final List<String>? allergies;
   final Map<String, dynamic>? emergencyContact;
@@ -94,6 +99,7 @@ class AppointmentItem {
     this.bloodGroup,
     this.patientPhone,
     this.doctorName,
+    this.providerUserId,
     this.clinicalData,
     this.allergies,
     this.emergencyContact,

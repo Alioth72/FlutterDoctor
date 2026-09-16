@@ -2686,7 +2686,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 );
 
                                 final recordData = recordRes['data'] is Map ? recordRes['data'] as Map : {};
-                                final recordId = recordData['record_id']?.toString();
+                                final recordId = recordData['medical_record_id']?.toString() ?? recordData['record_id']?.toString();
 
                                 if (decisionMode == 'manage') {
                                   // Update ASHA request to completed with managed_in_field
@@ -2728,15 +2728,21 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                     ),
                                   );
                                 } else {
-                                  // Refer to Doctor: parse slot timing
+                                  // Refer to Doctor: parse slot timing safely (e.g. '10:00 - 10:30 AM' or '02:00 - 02:30 PM')
+                                  final isPm = selectedSlot.toUpperCase().contains('PM');
                                   final slotParts = selectedSlot.split(' - ');
-                                  final startParts = slotParts.first.split(':');
-                                  int hour = int.parse(startParts[0]);
-                                  final minAndPeriod = startParts[1].split(' ');
-                                  int min = int.parse(minAndPeriod[0]);
-                                  final period = minAndPeriod[1].toUpperCase();
-                                  if (period == 'PM' && hour != 12) hour += 12;
-                                  if (period == 'AM' && hour == 12) hour = 0;
+                                  final timeStr = slotParts.first.trim();
+                                  final timeComponents = timeStr.split(':');
+                                  int hour = int.tryParse(timeComponents[0]) ?? 10;
+                                  int min = timeComponents.length > 1
+                                      ? (int.tryParse(timeComponents[1].replaceAll(RegExp(r'\D'), '')) ?? 0)
+                                      : 0;
+
+                                  if (isPm && hour < 12) {
+                                    hour += 12;
+                                  } else if (!isPm && hour == 12) {
+                                    hour = 0;
+                                  }
 
                                   final scheduledStart = DateTime(
                                     selectedDate.year,
@@ -2763,6 +2769,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                       'symptoms': symptomsController.text.trim(),
                                       'field_care_advice': fieldCareController.text.trim(),
                                       'slot_time': selectedSlot,
+                                      'referred_by_worker_id': widget.userProfile?.userId,
+                                      'referred_by_worker_name': widget.userProfile?.name ?? 'Healthcare Worker',
+                                      'accepted_by_user_id': widget.userProfile?.userId,
+                                      'accepted_by_name': widget.userProfile?.name ?? 'Healthcare Worker',
                                     },
                                   );
 
@@ -2772,14 +2782,19 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
 
                                     // Mark original request as completed (resolution: referred_to_doctor)
                                     if (ashaReq != null) {
+                                      final origNotes = ashaReq.notes != null ? Map<String, dynamic>.from(ashaReq.notes!) : <String, dynamic>{};
+                                      origNotes['resolution'] = 'referred_to_doctor';
+                                      origNotes['referred_appointment_id'] = newApptId;
+                                      origNotes['asha_assessment_id'] = recordId;
+                                      origNotes['referred_by_worker_id'] = widget.userProfile?.userId;
+                                      origNotes['referred_by_worker_name'] = widget.userProfile?.name ?? 'Healthcare Worker';
+                                      origNotes['accepted_by_user_id'] ??= widget.userProfile?.userId;
+                                      origNotes['accepted_by_name'] ??= widget.userProfile?.name ?? 'Healthcare Worker';
+
                                       await ApiClient.updateAppointment(
                                         appointmentId: ashaReq.id,
                                         status: 'completed',
-                                        notes: {
-                                          'resolution': 'referred_to_doctor',
-                                          'referred_appointment_id': newApptId,
-                                          'asha_assessment_id': recordId,
-                                        },
+                                        notes: origNotes,
                                       );
                                     }
 
@@ -2823,15 +2838,43 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                   } else {
                                     setModalState(() => isSubmitting = false);
                                     final err = apptRes['error']?.toString() ?? 'Failed to book consultation.';
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(err), backgroundColor: Colors.redAccent),
+                                    showDialog(
+                                      context: context,
+                                      builder: (c) => AlertDialog(
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                        title: const Row(
+                                          children: [
+                                            Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 24),
+                                            SizedBox(width: 8),
+                                            Text('Booking Failed'),
+                                          ],
+                                        ),
+                                        content: Text(err),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.pop(c), child: const Text('OK')),
+                                        ],
+                                      ),
                                     );
                                   }
                                 }
                               } catch (e) {
                                 setModalState(() => isSubmitting = false);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent),
+                                showDialog(
+                                  context: context,
+                                  builder: (c) => AlertDialog(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    title: const Row(
+                                      children: [
+                                        Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 24),
+                                        SizedBox(width: 8),
+                                        Text('Error'),
+                                      ],
+                                    ),
+                                    content: Text('Error: $e'),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(c), child: const Text('OK')),
+                                    ],
+                                  ),
                                 );
                               }
                             },

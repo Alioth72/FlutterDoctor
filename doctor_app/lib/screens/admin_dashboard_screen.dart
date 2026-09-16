@@ -3253,105 +3253,214 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   void _openAddWorkerDialog() {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
-    final passCtrl = TextEditingController();
+    final passCtrl = TextEditingController(text: 'Worker@12345');
     final qualCtrl = TextEditingController(text: 'ANM / Healthcare Specialist');
     final desigCtrl = TextEditingController(text: 'Primary Field Healthcare Worker');
     final wardCtrl = TextEditingController(text: 'Ward A & Field Clinic');
     final shiftCtrl = TextEditingController(text: '07:30 AM - 03:30 PM');
+    bool isSubmitting = false;
+    bool obscurePass = true;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.badge_rounded, color: Color(0xFF0D9488)),
-            SizedBox(width: 8),
-            Text('Add Healthcare Worker', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+      barrierDismissible: !isSubmitting,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
             children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Worker Full Name', hintText: 'e.g. Sunita Devi'),
-              ),
-              TextField(
-                controller: phoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Phone (Login Username)'),
-              ),
-              TextField(
-                controller: passCtrl,
-                decoration: const InputDecoration(labelText: 'Password (Credentials)'),
-              ),
-              TextField(
-                controller: qualCtrl,
-                decoration: const InputDecoration(labelText: 'Qualification / Certification'),
-              ),
-              TextField(
-                controller: desigCtrl,
-                decoration: const InputDecoration(labelText: 'Designation / Field Role'),
-              ),
-              TextField(
-                controller: wardCtrl,
-                decoration: const InputDecoration(labelText: 'Assigned Ward / Community Unit'),
-              ),
-              TextField(
-                controller: shiftCtrl,
-                decoration: const InputDecoration(labelText: 'Shift Timing'),
-              ),
+              Icon(Icons.badge_rounded, color: Color(0xFF0D9488)),
+              SizedBox(width: 8),
+              Text('Add Healthcare Worker', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ],
           ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              final name = nameCtrl.text.trim();
-              final phone = phoneCtrl.text.trim();
-              final pass = passCtrl.text.trim();
-
-              if (name.isEmpty || phone.isEmpty || pass.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please fill Name, Phone, and Password')),
-                );
-                return;
-              }
-
-              final newWorker = HospitalAdminStaffWorker(
-                id: 'work_${DateTime.now().millisecondsSinceEpoch}',
-                name: name.startsWith('Worker') ? name : 'Worker $name',
-                phone: phone,
-                password: pass,
-                qualification: qualCtrl.text.trim(),
-                designation: desigCtrl.text.trim(),
-                assignedWard: wardCtrl.text.trim(),
-                hospitalId: _hospitalId,
-                hospitalName: _hospital.name,
-                isOnDuty: true,
-                shiftTiming: shiftCtrl.text.trim(),
-                email: '${phone}@${_hospital.name.toLowerCase().replaceAll(' ', '')}.org',
-              );
-
-              setState(() {
-                HospitalAdminRepository.addWorker(newWorker);
-              });
-
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: const Color(0xFF0D9488),
-                  content: Text('${newWorker.name} added to database!'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Worker Full Name *',
+                    hintText: 'e.g. Aarushi Anand',
+                    prefixIcon: Icon(Icons.person_outline, size: 20),
+                  ),
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
-            child: const Text('Save Worker', style: TextStyle(color: Colors.white)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number (Login ID) *',
+                    hintText: '10 digits (e.g. 3456789014)',
+                    prefixIcon: Icon(Icons.phone_outlined, size: 20),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: passCtrl,
+                  obscureText: obscurePass,
+                  decoration: InputDecoration(
+                    labelText: 'Password (Credentials) *',
+                    hintText: 'e.g. Worker@12345',
+                    prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscurePass ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 20),
+                      onPressed: () => setDlgState(() => obscurePass = !obscurePass),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: qualCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Qualification / Certification',
+                    prefixIcon: Icon(Icons.school_outlined, size: 20),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: desigCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Designation / Field Role',
+                    prefixIcon: Icon(Icons.work_outline, size: 20),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: wardCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Assigned Ward / Community Unit',
+                    prefixIcon: Icon(Icons.location_city_outlined, size: 20),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: shiftCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Shift Timing',
+                    prefixIcon: Icon(Icons.access_time, size: 20),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final name = nameCtrl.text.trim();
+                      final phone = phoneCtrl.text.trim();
+                      final pass = passCtrl.text.trim();
+                      final phoneDigits = phone.replaceAll(RegExp(r'\D'), '');
+
+                      if (name.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Color(0xFFE11D48),
+                            content: Text('Please enter worker full name'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (phoneDigits.length < 10) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Color(0xFFE11D48),
+                            content: Text('Please enter a valid 10-digit phone number'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (pass.length < 8) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Color(0xFFE11D48),
+                            content: Text('Password must be at least 8 characters'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDlgState(() => isSubmitting = true);
+
+                      final res = await ApiClient.createWorker(
+                        fullName: name,
+                        phone: phone,
+                        password: pass,
+                        qualification: qualCtrl.text.trim(),
+                        designation: desigCtrl.text.trim(),
+                        ward: wardCtrl.text.trim(),
+                        shift: shiftCtrl.text.trim(),
+                      );
+
+                      if (!mounted || !ctx.mounted) return;
+
+                      if (res['success'] == true) {
+                        final data = res['data'] is Map ? res['data'] as Map : {};
+                        final workerId = data['user_id']?.toString() ?? 'work_${DateTime.now().millisecondsSinceEpoch}';
+                        final formattedName = name.startsWith('Worker') ? name : 'Worker $name';
+
+                        final newWorker = HospitalAdminStaffWorker(
+                          id: workerId,
+                          name: formattedName,
+                          phone: phone,
+                          password: pass,
+                          qualification: qualCtrl.text.trim(),
+                          designation: desigCtrl.text.trim(),
+                          assignedWard: wardCtrl.text.trim(),
+                          hospitalId: _hospitalId,
+                          hospitalName: _hospital.name,
+                          isOnDuty: true,
+                          shiftTiming: shiftCtrl.text.trim(),
+                          email: '${phoneDigits.length >= 10 ? phoneDigits.substring(phoneDigits.length - 10) : phoneDigits}@${_hospital.name.toLowerCase().replaceAll(' ', '')}.org',
+                        );
+
+                        setState(() {
+                          HospitalAdminRepository.addWorker(newWorker);
+                        });
+
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFF0D9488),
+                            content: Row(
+                              children: [
+                                const Icon(Icons.check_circle_outline, color: Colors.white),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text('${newWorker.name} registered in database!')),
+                              ],
+                            ),
+                          ),
+                        );
+                      } else {
+                        setDlgState(() => isSubmitting = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFFE11D48),
+                            content: Text(res['error'] ?? 'Failed to register worker in database.'),
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Save Worker', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
       ),
     );
   }
