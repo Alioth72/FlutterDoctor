@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../providers/language_provider.dart';
+import '../../../../services/stt/sarvam_stt_service.dart';
 import '../../../../services/tts/sarvam_tts_service.dart';
 import '../../domain/models/patient_profile.dart';
 import '../../domain/repositories/chat_storage_repository.dart';
@@ -94,6 +95,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _textController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
+    SarvamSttService.instance.cancel();
     SarvamTtsService.instance.stop();
     super.dispose();
   }
@@ -108,6 +110,50 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     });
+  }
+
+  Future<void> _handleMicPressed() async {
+    final langProvider = Provider.of<LanguageProvider>(context, listen: false);
+    final stt = SarvamSttService.instance;
+    final currentStatus = stt.statusNotifier.value;
+
+    if (currentStatus.isListening) {
+      final transcribedText = await stt.stopAndTranscribe(
+        languageCode: langProvider.currentLanguageCode,
+      );
+      if (mounted && transcribedText != null && transcribedText.trim().isNotEmpty) {
+        setState(() {
+          _textController.text = transcribedText.trim();
+        });
+        _sendMessage();
+      }
+    } else if (currentStatus.isTranscribing) {
+      return;
+    } else {
+      // Stop any audio readout before listening to the patient
+      SarvamTtsService.instance.stop();
+
+      final started = await stt.startListening(
+        languageCode: langProvider.currentLanguageCode,
+        onPartialResult: (partialText) {
+          if (mounted) {
+            setState(() {
+              _textController.text = partialText;
+            });
+          }
+        },
+      );
+
+      if (!started && mounted) {
+        final err = stt.statusNotifier.value.errorMessage ?? 'Microphone permission denied';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(err),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _sendMessage([String? presetText]) async {
@@ -874,6 +920,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildInputBar() {
+    final langProvider = Provider.of<LanguageProvider>(context);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
@@ -887,52 +935,166 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
       child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: TextField(
-                  controller: _textController,
-                  focusNode: _focusNode,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _sendMessage(),
-                  maxLines: null,
-                  decoration: const InputDecoration(
-                    hintText: 'Ask MediAssist (e.g. Can I take Amoxicillin?)...',
-                    hintStyle: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 10),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFF006A6A),
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: _isGenerating
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        child: ValueListenableBuilder<SttStatus>(
+          valueListenable: SarvamSttService.instance.statusNotifier,
+          builder: (context, sttStatus, _) {
+            final isListening = sttStatus.isListening;
+            final isTranscribing = sttStatus.isTranscribing;
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isListening)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEE),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      )
-                    : const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                onPressed: _isGenerating ? null : () => _sendMessage(),
-              ),
-            ),
-          ],
+                        const SizedBox(width: 8),
+                        Text(
+                          'Listening in ${langProvider.currentLanguage.name}... Tap mic when done',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.red.shade900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (isTranscribing)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0F2F1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFF006A6A).withValues(alpha: 0.3)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 10,
+                          height: 10,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF006A6A)),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Transcribing speech with Sarvam AI...',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF006A6A),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: isListening ? const Color(0xFFFFF1F2) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: isListening ? Colors.red.shade300 : Colors.transparent,
+                          ),
+                        ),
+                        child: TextField(
+                          controller: _textController,
+                          focusNode: _focusNode,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendMessage(),
+                          maxLines: null,
+                          decoration: InputDecoration(
+                            hintText: isListening
+                                ? 'Speak now in ${langProvider.currentLanguage.name}...'
+                                : 'Ask MediAssist (e.g. Can I take Amoxicillin?)...',
+                            hintStyle: TextStyle(
+                              fontSize: 13,
+                              color: isListening ? Colors.red.shade400 : const Color(0xFF94A3B8),
+                            ),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Sarvam STT Microphone Button
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isListening
+                            ? Colors.red
+                            : const Color(0xFF006A6A).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: isTranscribing
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF006A6A)),
+                                ),
+                              )
+                            : Icon(
+                                isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                                color: isListening ? Colors.white : const Color(0xFF006A6A),
+                                size: 20,
+                              ),
+                        tooltip: isListening ? 'Finish speaking' : 'Speak to MediAssist',
+                        onPressed: _isGenerating || isTranscribing ? null : _handleMicPressed,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Send Button
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF006A6A),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: _isGenerating
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                        onPressed: _isGenerating || isListening ? null : () => _sendMessage(),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

@@ -138,10 +138,11 @@ class GeminiCloudLlmClient implements LlmClient {
 
     dynamic lastException;
     int retries = 0;
-    const maxRetries = 3;
+    const maxRetries = 6;
 
     while (retries < maxRetries) {
-      final currentKey = _apiKey.isNotEmpty ? _apiKey : getNextPoolKey();
+      // Use custom key on first attempt if specified; otherwise rotate through 18-key pool
+      final currentKey = (_apiKey.isNotEmpty && retries == 0) ? _apiKey : getNextPoolKey();
 
       for (final currentModel in candidateList) {
         final uri = Uri.parse(
@@ -194,7 +195,11 @@ class GeminiCloudLlmClient implements LlmClient {
           final str = e.toString().toLowerCase();
 
           // If rate limit (429) or quota error or high demand (503), break model loop and retry with next key in pool
-          if (str.contains('429') || str.contains('quota') || str.contains('resource_exhausted')) {
+          if (str.contains('429') ||
+              str.contains('quota') ||
+              str.contains('resource_exhausted') ||
+              str.contains('limit') ||
+              str.contains('503')) {
             break;
           }
         }

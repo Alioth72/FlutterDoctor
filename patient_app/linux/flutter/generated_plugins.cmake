@@ -7,6 +7,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   file_selector_linux
   flutter_onnxruntime
   flutter_webrtc
+  record_linux
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
