@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/localization/app_strings.dart';
 import 'dynamic_translated_text.dart';
+import '../features/chatbot/chatbot_ui.dart';
 
 class PatientActionSheets {
   /// Language Switcher Dialog covering all 22 Official Scheduled Indian Languages + English
@@ -468,78 +469,12 @@ class PatientActionSheets {
     );
   }
 
-  /// AI Assistant Multilingual Chatbot Modal
+  /// AI Assistant Multilingual Chatbot Entry Point
   static void showAiAssistant(BuildContext context) {
-    final lang = Provider.of<LanguageProvider>(context, listen: false);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const CircleAvatar(
-                  backgroundColor: Color(0xFFE1BEE7),
-                  child: Icon(Icons.smart_toy_rounded, color: Colors.purple),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(lang.tr('ai_assistant_title'), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                      Text(lang.tr('ai_assistant_sub'), style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.purple.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                lang.tr('ai_greeting_msg'),
-                style: const TextStyle(fontSize: 13),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              stylusHandwritingEnabled: false,
-              decoration: InputDecoration(
-                hintText: lang.tr('ai_symptom_hint'),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.send_rounded, color: Colors.purple),
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(lang.tr('ai_analysing_msg'))),
-                    );
-                  },
-                ),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ],
-        ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ChatbotPage(),
       ),
     );
   }

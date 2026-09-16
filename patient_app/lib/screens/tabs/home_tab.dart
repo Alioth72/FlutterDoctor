@@ -18,6 +18,7 @@ import '../rppg_screen.dart';
 import '../request_asha_visit_screen.dart';
 import '../../widgets/dynamic_translated_text.dart';
 import '../../services/localization/healthcare_catalog.dart';
+import '../../features/chatbot/chatbot_ui.dart';
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
@@ -755,7 +756,14 @@ class HomeTab extends StatelessWidget {
                       category: langProvider.tr('instant_ai_sub'),
                       title: langProvider.tr('ai_assistant'),
                       icon: Icons.auto_awesome_rounded,
-                      onTap: () => PatientActionSheets.showAiAssistant(context),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ChatbotPage(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 14),
