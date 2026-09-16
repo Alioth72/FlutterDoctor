@@ -53,6 +53,39 @@ class PromptBuilder {
       buffer.writeln('5. GENERAL QUESTIONS: If the user asks generic disease questions (e.g. symptoms of dengue), answer directly and clearly using verified medical facts.\n');
     }
 
+    // 2. Inject Comprehensive Ashwini Patient App Features & User Guide
+    buffer.writeln('--- ASHWINI HEALTHCARE PORTAL & APP GUIDE (App Features & Navigation) ---');
+    buffer.writeln('The user is using the Ashwini Patient Portal app. If the user has any doubt, question, or inquiry about this app, its features, tabs, or how to do something, provide clear, step-by-step guidance using the following verified facts:');
+    buffer.writeln('• App Name: Ashwini Patient Healthcare & Teleconsultation Portal.');
+    buffer.writeln('• AI Assistant (This Chatbot):');
+    buffer.writeln('  - Medical guidance, allergy warnings, prescription explanations, and answers to all app questions.');
+    buffer.writeln('  - Voice Output (Sarvam TTS): Tap the speaker ("Listen") button on any bot bubble to hear the answer in the active language.');
+    buffer.writeln('  - Voice Input (Sarvam STT): Tap the microphone button in the chat input bar to speak queries in Hindi, Bengali, Tamil, Telugu, English, or any of 22 Indian languages.');
+    buffer.writeln('• Prescription Scanner & Jan Aushadhi Savings (Pharmacy Tab):');
+    buffer.writeln('  - How to scan: Tap "Scan Prescription" on Home Tab or open Pharmacy Tab. Take a camera photo, upload from gallery, or choose a sample.');
+    buffer.writeln('  - Multimodal Vision OCR: Extracts medicine names, strengths, timings, and schedules.');
+    buffer.writeln('  - Jan Aushadhi generic matching: Automatically substitutes expensive branded medicines with certified government Jan Aushadhi generic drugs, providing 60% to 80% cost savings.');
+    buffer.writeln('  - Ordering: Add prescribed generic medicines to your cart for doorstep delivery or Jan Aushadhi Kendra pickup.');
+    buffer.writeln('• Video Teleconsultation & Appointments (Appointments Tab):');
+    buffer.writeln('  - How to book: Tap "Book Teleconsultation" on Home or open Appointments Tab. Select doctor specialty (General Medicine, Pediatrics, Cardiology, Ayush, etc.) and time slot.');
+    buffer.writeln('  - WebRTC Video Calls: Secure online video call with attending doctors with live vitals display and digital prescriptions.');
+    buffer.writeln('• Contactless Face Vitals Scanner (rPPG Camera Scan):');
+    buffer.writeln('  - How to use: Tap "Face Vitals" on Home Tab. Align face in the circle for 30-45 seconds in well-lit surroundings.');
+    buffer.writeln('  - Measured vitals: Measures Heart Rate (BPM), SpO2 (Oxygen Saturation), Heart Rate Variability (HRV), and Respiration Rate without needing any physical sensor or smart watch.');
+    buffer.writeln('• Request ASHA Worker Home Visit (Home Tab):');
+    buffer.writeln('  - How to use: Tap "Request ASHA Visit" on Home Tab. Select service (Maternal care, Elderly checkup, Post-operative, Child immunization) and confirm address.');
+    buffer.writeln('  - Connects rural and homebound patients with certified ASHA healthcare workers.');
+    buffer.writeln('• Emergency SOS Protocol (Red Floating SOS Button):');
+    buffer.writeln('  - How to use: Tap the red floating SOS button on the screen.');
+    buffer.writeln('  - Automatically triggers 108 Ambulance / 112 National Emergency call, broadcasts real-time GPS coordinates, and alerts designated emergency family contacts.');
+    buffer.writeln('• Government Healthcare Schemes (Schemes Tab):');
+    buffer.writeln('  - Check eligibility for Ayushman Bharat (PM-JAY, up to ₹5 Lakh free hospital cover), Janani Suraksha Yojana (JSY), RBSK, and state health welfare programs.');
+    buffer.writeln('• Multilingual Language Switcher (All 22 Scheduled Indian Languages):');
+    buffer.writeln('  - How to switch: Tap the Globe icon at the top right of the Home Tab.');
+    buffer.writeln('  - Instantly switches the entire app into Hindi, Bengali, Telugu, Marathi, Tamil, Urdu, Gujarati, Kannada, Malayalam, Odia, Punjabi, Assamese, Maithili, Santali, Kashmiri, Nepali, Konkani, Dogri, Sindhi, Bodo, Manipuri, Sanskrit, or English.');
+    buffer.writeln('• Health Records & Family Vault (Medical History):');
+    buffer.writeln('  - ABHA ID integration, offline encrypted records (HRX protocol), and QR code scanner to link family health profiles.\n');
+
     // 2. Inject Verified Medical Context Chunks
     if (chunks.isNotEmpty) {
       buffer.writeln('--- Verified Medical Context ---');

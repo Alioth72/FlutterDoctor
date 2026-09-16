@@ -50,9 +50,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
   static const List<String> _suggestions = [
     'Can I take Amoxicillin for my cold?',
-    'When should I take Cetirizine?',
-    'Where is my room or appointment?',
-    'What are the symptoms of dengue?',
+    'How do I scan prescriptions for Jan Aushadhi savings?',
+    'How to measure my Heart Rate using Face Vitals?',
+    'How to request an ASHA worker home visit?',
+    'What happens when I press the red Emergency SOS button?',
+    'How do I switch the app to Hindi or other languages?',
   ];
 
   @override

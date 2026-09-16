@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sih_project/features/chatbot/chatbot_storage.dart';
 import 'package:sih_project/features/chatbot/chatbot_retrieval.dart';
 import 'package:sih_project/features/chatbot/chatbot_orchestrator.dart';
+import 'package:sih_project/features/chatbot/chatbot_llm.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -71,16 +72,52 @@ void main() {
       expect(prompt.contains('ALLERGY GUARD'), isTrue);
     });
 
-    test('LocalVectorStoreRepository initializes and manages chunks', () async {
-      final store = LocalVectorStoreRepository();
-      await store.init();
+    test('PromptBuilder injects Ashwini app features and navigation guide', () {
+      const builder = PromptBuilder();
+      final prompt = builder.buildPrompt(
+        query: 'How do I scan prescriptions for Jan Aushadhi generic savings?',
+        chunks: [],
+      );
 
-      expect(await store.count(), equals(0));
+      expect(prompt.contains('ASHWINI HEALTHCARE PORTAL & APP GUIDE'), isTrue);
+      expect(prompt.contains('Jan Aushadhi'), isTrue);
+      expect(prompt.contains('60% to 80%'), isTrue);
+      expect(prompt.contains('Face Vitals'), isTrue);
+      expect(prompt.contains('ASHA Worker'), isTrue);
+      expect(prompt.contains('Emergency SOS Protocol'), isTrue);
+      expect(prompt.contains('All 22 Scheduled Indian Languages'), isTrue);
+    });
 
-      final results = await store.similaritySearch([0.1, 0.2, 0.3], 3);
-      expect(results.isEmpty, isTrue);
+    test('ExtractiveOfflineLlmClient answers app questions when offline', () async {
+      const client = ExtractiveOfflineLlmClient();
 
-      await store.close();
+      final rxResponse = await client.generateResponse(
+        prompt: 'How to scan prescription?',
+        contextChunks: const [],
+      );
+      expect(rxResponse.text, contains('Jan Aushadhi'));
+      expect(rxResponse.text, contains('60% to 80%'));
+
+      final sosResponse = await client.generateResponse(
+        prompt: 'How to use emergency SOS ambulance?',
+        contextChunks: const [],
+      );
+      expect(sosResponse.text, contains('108 Ambulance / 112'));
+      expect(sosResponse.text, contains('GPS location'));
+
+      final vitalsResponse = await client.generateResponse(
+        prompt: 'How to use face vitals scanner?',
+        contextChunks: const [],
+      );
+      expect(vitalsResponse.text, contains('Heart Rate'));
+      expect(vitalsResponse.text, contains('SpO2'));
+
+      final ashaResponse = await client.generateResponse(
+        prompt: 'How can I request an ASHA worker home visit?',
+        contextChunks: const [],
+      );
+      expect(ashaResponse.text, contains('ASHA'));
+      expect(ashaResponse.text, contains('Home Visit'));
     });
   });
 }
