@@ -2,15 +2,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
+import '../screens/rppg_screen.dart';
+import '../screens/schemes/schemes_results_screen.dart';
+import '../screens/tabs/appointments_tab.dart';
 
-/// Data model representing a blank Poster / Banner slot.
-/// Posters and links can be configured here later.
+/// Data model representing a Poster / Banner item in the news flash carousel.
 class NewsFlashItem {
   final String id;
   final String? imageUrl;
   final String? assetPath;
   final String? targetUrl;
   final String? label;
+  final String? actionRoute;
 
   const NewsFlashItem({
     required this.id,
@@ -18,29 +21,35 @@ class NewsFlashItem {
     this.assetPath,
     this.targetUrl,
     this.label,
+    this.actionRoute,
   });
 }
 
-/// Service maintaining placeholder poster slots for future banners and links.
+/// Service providing authentic national health scheme and service posters.
 class NewsBannerService {
   static final List<NewsFlashItem> banners = [
     const NewsFlashItem(
-      id: 'poster_slot_1',
-      label: 'Poster Slot 1',
+      id: 'poster_pmjay',
+      label: 'Ayushman Bharat PM-JAY',
+      assetPath: 'assets/images/poster_pmjay.jpg',
+      actionRoute: 'schemes',
     ),
     const NewsFlashItem(
-      id: 'poster_slot_2',
-      label: 'Poster Slot 2',
+      id: 'poster_rppg',
+      label: 'AI Contactless Vitals Scan',
+      assetPath: 'assets/images/poster_rppg.jpg',
+      actionRoute: 'rppg',
     ),
     const NewsFlashItem(
-      id: 'poster_slot_3',
-      label: 'Poster Slot 3',
+      id: 'poster_teleconsult',
+      label: 'National Rural Telemedicine',
+      assetPath: 'assets/images/poster_teleconsult.jpg',
+      actionRoute: 'appointments',
     ),
   ];
 }
 
-/// Full-width blank poster space carousel widget.
-/// Keeps designated clean spaces for promotional posters and links to be added later.
+/// Full-width poster space carousel widget.
 class NewsFlashBannerWidget extends StatefulWidget {
   final List<NewsFlashItem>? customBanners;
   final double height;
@@ -48,7 +57,7 @@ class NewsFlashBannerWidget extends StatefulWidget {
   const NewsFlashBannerWidget({
     super.key,
     this.customBanners,
-    this.height = 170.0,
+    this.height = 175.0,
   });
 
   @override
@@ -92,14 +101,26 @@ class _NewsFlashBannerWidgetState extends State<NewsFlashBannerWidget> {
   }
 
   void _onPosterTap(NewsFlashItem item) {
-    if (item.targetUrl != null && item.targetUrl!.isNotEmpty) {
-      // Future redirect logic when links are added
+    if (item.actionRoute == 'rppg') {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const RppgScreen()),
+      );
+    } else if (item.actionRoute == 'schemes') {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const SchemesResultsScreen()),
+      );
+    } else if (item.actionRoute == 'appointments') {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const AppointmentsTab()),
+      );
+    } else if (item.targetUrl != null && item.targetUrl!.isNotEmpty) {
+      // Future external redirect logic
     } else {
       final lang = Provider.of<LanguageProvider>(context, listen: false);
       final labelText = item.id.isNotEmpty ? lang.tr(item.id) : (item.label ?? lang.tr('poster_space'));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$labelText — ${lang.tr('poster_sub')}.'),
+          content: Text(labelText),
           duration: const Duration(seconds: 1),
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFF7C3AED),
@@ -174,23 +195,32 @@ class _NewsFlashBannerWidgetState extends State<NewsFlashBannerWidget> {
 
                       // Carousel Page Dots (Bottom Center)
                       Positioned(
-                        bottom: 10,
+                        bottom: 8,
                         left: 0,
                         right: 0,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                            _items.length,
-                            (dotIdx) => AnimatedContainer(
-                              duration: const Duration(milliseconds: 250),
-                              margin: const EdgeInsets.symmetric(horizontal: 3),
-                              width: _currentPage == dotIdx ? 16 : 6,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: _currentPage == dotIdx
-                                    ? const Color(0xFF7C3AED)
-                                    : const Color(0xFFD8B4FE),
-                                borderRadius: BorderRadius.circular(3),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.35),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: List.generate(
+                                _items.length,
+                                (dotIdx) => AnimatedContainer(
+                                  duration: const Duration(milliseconds: 250),
+                                  margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                                  width: _currentPage == dotIdx ? 16 : 5,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: _currentPage == dotIdx
+                                        ? Colors.white
+                                        : Colors.white.withValues(alpha: 0.5),
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
