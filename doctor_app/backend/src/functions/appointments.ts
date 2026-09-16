@@ -513,6 +513,48 @@ export async function updateAppointment(request: HttpRequest, context: Invocatio
                 }
             }
 
+            // Synchronize medical record into health.medical_records if consultation is completed or has prescriptions
+            if (newStatus === "completed" || (Array.isArray(rxList) && rxList.length > 0)) {
+                const diagnosisText = (newReason && newReason !== 'rent due' && newReason !== 'good' && !newReason.startsWith('Pre-Consultation'))
+                    ? newReason
+                    : (savedPrescriptions.length > 0 ? 'Clinical Diagnosis & Prescribed Therapy' : 'Completed Clinical Consultation');
+
+                const clinicalRecordPayload = {
+                    appointment_id: appointmentId,
+                    diagnosis: diagnosisText,
+                    prescriptions: savedPrescriptions,
+                    notes: mergedNotes,
+                    dietary_suggestions: mergedNotes?.dietary_suggestions || null,
+                    vitals: mergedNotes?.pre_call_rppg || null,
+                };
+
+                const docUserId = existingAppt.provider_user_id || authPayload.user_id;
+
+                // Remove previous consultation/diagnosis record for this appointment to avoid duplicates
+                await client.query(
+                    `DELETE FROM health.medical_records WHERE appointment_id = $1::uuid AND record_type IN ('diagnosis', 'progress_note');`,
+                    [appointmentId]
+                );
+
+                await client.query(
+                    `INSERT INTO health.medical_records (
+                        patient_id, author_user_id, appointment_id,
+                        record_type, recorded_at, diagnosis, symptoms, clinical_data, confidence, is_preliminary
+                    ) VALUES (
+                        $1::uuid, $2::uuid, $3::uuid,
+                        'diagnosis', NOW(), $4, $5::jsonb, $6::jsonb, 0.98, false
+                    );`,
+                    [
+                        existingAppt.patient_id,
+                        docUserId,
+                        appointmentId,
+                        diagnosisText,
+                        JSON.stringify(mergedNotes?.symptoms || []),
+                        JSON.stringify(clinicalRecordPayload),
+                    ]
+                );
+            }
+
             await client.query("COMMIT;");
 
             return jsonResponse(200, {

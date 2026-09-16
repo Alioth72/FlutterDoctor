@@ -573,7 +573,7 @@ class PatientActionSheets {
             const SizedBox(height: 16),
             Text(lang.tr('generic_medicines_sub'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
             const SizedBox(height: 8),
-            _buildMedicineTile('Paracetamol 650mg (Jan Aushadhi)', '₹12 for 10 tabs', 'In Stock', lang),
+            _buildMedicineTile('Azithromycin 500mg (Jan Aushadhi)', '₹22 for 3 tabs', 'In Stock', lang),
             _buildMedicineTile('Amoxicillin 500mg', '₹28 for 10 caps', 'In Stock', lang),
             _buildMedicineTile('Metformin 500mg', '₹15 for 10 tabs', 'In Stock', lang),
           ],

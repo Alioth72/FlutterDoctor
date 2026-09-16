@@ -198,10 +198,10 @@ class PatientProfile {
       familyHistory: 'Father: Type 2 Diabetes, Mother: Hypertension',
       prescriptions: [
         PatientPrescription(
-          medicine: 'Paracetamol 650mg',
-          dosage: '650mg',
-          frequency: '1-0-1 after food',
-          duration: '3 days',
+          medicine: 'Amoxicillin 500mg',
+          dosage: '500mg',
+          frequency: '1-0-0 after breakfast',
+          duration: '5 days',
           status: 'active',
         ),
         PatientPrescription(

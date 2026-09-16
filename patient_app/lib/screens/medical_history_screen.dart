@@ -250,6 +250,94 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
               ),
             ],
 
+            // Prescribed Medicines from Doctor
+            if (record['clinical_data'] is Map &&
+                (record['clinical_data']['prescriptions'] is List) &&
+                (record['clinical_data']['prescriptions'] as List).isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F3FF),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFDDD6FE)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.medication_rounded, size: 14, color: Color(0xFF7C3AED)),
+                        SizedBox(width: 5),
+                        Text(
+                          'Prescribed Medicines:',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF6D28D9)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: ((record['clinical_data']['prescriptions'] as List)).map((item) {
+                        final p = item is Map ? item : {};
+                        final name = p['medication_name'] ?? p['name'] ?? 'Medicine';
+                        final dosage = p['dosage'] ?? '';
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFC4B5FD)),
+                          ),
+                          child: Text(
+                            dosage.toString().isNotEmpty ? '$name ($dosage)' : name.toString(),
+                            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF5B21B6)),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Dietary Suggestions or Vitals
+            if (record['clinical_data'] is Map &&
+                record['clinical_data']['dietary_suggestions'] != null &&
+                record['clinical_data']['dietary_suggestions'].toString().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.restaurant_rounded, size: 13, color: Color(0xFF059669)),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      'Diet: ${record['clinical_data']['dietary_suggestions']}',
+                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF047857), fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            if (record['clinical_data'] is Map &&
+                record['clinical_data']['heart_rate_bpm'] != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.favorite_rounded, size: 13, color: Color(0xFFE11D48)),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Recorded Pulse: ${record['clinical_data']['heart_rate_bpm']} BPM',
+                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFFE11D48)),
+                  ),
+                ],
+              ),
+            ],
+
             const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
