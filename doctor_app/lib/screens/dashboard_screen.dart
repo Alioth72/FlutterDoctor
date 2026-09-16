@@ -11,6 +11,8 @@ import 'pharmacy_stock_screen.dart';
 import 'machine_records_screen.dart';
 import 'colleague_consult_screen.dart';
 import 'login_screen.dart';
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
 
@@ -54,17 +56,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return AppColors.primaryDark; // Deep Purple (0xFF4C1D95)
       case DoctorAvailabilityMode.emergency:
         return const Color(0xFF991B1B); // Deep Red
-    }
-  }
-
-  Color get _currentPrimaryLight {
-    switch (_availabilityMode) {
-      case DoctorAvailabilityMode.notAvailable:
-        return const Color(0xFFE5E7EB); // Light Grey
-      case DoctorAvailabilityMode.available:
-        return AppColors.primaryLight; // Light Purple
-      case DoctorAvailabilityMode.emergency:
-        return const Color(0xFFFEE2E2); // Light Red
     }
   }
 
@@ -211,18 +202,93 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ),
   ];
 
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  String get _dismissedStorageKey {
+    final id = widget.userProfile?.userId;
+    final phone = widget.userProfile?.phone;
+    final key = (id != null && id.isNotEmpty) ? id : ((phone != null && phone.isNotEmpty) ? phone : "default");
+    return 'doctor_dismissed_appts_$key';
+  }
+
+  Future<void> _loadDismissedIds() async {
+    try {
+      final keys = <String>{
+        _dismissedStorageKey,
+        if (widget.userProfile?.phone != null && widget.userProfile!.phone.isNotEmpty)
+          'doctor_dismissed_appts_${widget.userProfile!.phone}',
+        if (widget.userProfile?.userId != null && widget.userProfile!.userId!.isNotEmpty)
+          'doctor_dismissed_appts_${widget.userProfile!.userId}',
+      };
+      for (final k in keys) {
+        final raw = await _secureStorage.read(key: k);
+        if (raw != null && raw.isNotEmpty) {
+          final List<dynamic> list = jsonDecode(raw);
+          _dismissedAppointmentIds.addAll(list.map((e) => e.toString()));
+        }
+      }
+    } catch (e) {
+      debugPrint('[Dashboard] Error loading dismissed appointment IDs: $e');
+    }
+  }
+
+  Future<void> _saveDismissedIds() async {
+    try {
+      final val = jsonEncode(_dismissedAppointmentIds.toList());
+      await _secureStorage.write(
+        key: _dismissedStorageKey,
+        value: val,
+      );
+      if (widget.userProfile?.phone != null && widget.userProfile!.phone.isNotEmpty) {
+        await _secureStorage.write(
+          key: 'doctor_dismissed_appts_${widget.userProfile!.phone}',
+          value: val,
+        );
+      }
+      if (widget.userProfile?.userId != null && widget.userProfile!.userId!.isNotEmpty) {
+        await _secureStorage.write(
+          key: 'doctor_dismissed_appts_${widget.userProfile!.userId}',
+          value: val,
+        );
+      }
+    } catch (e) {
+      debugPrint('[Dashboard] Error saving dismissed appointment IDs: $e');
+    }
+  }
+
+  Future<void> _dismissAppointment(String id) async {
+    _dismissedAppointmentIds.add(id);
+    await _saveDismissedIds();
+  }
+
   final List<AppointmentItem> _transferredAppointments = [];
   bool _isLoadingAppointments = false;
 
   @override
   void initState() {
     super.initState();
-    _loadLiveAppointments();
+    _initDashboard();
+  }
+
+  Future<void> _initDashboard() async {
+    await _loadDismissedIds();
+    if (mounted) {
+      setState(() {
+        _appointments.removeWhere(
+          (a) =>
+              _dismissedAppointmentIds.contains(a.id) ||
+              a.isCompleted ||
+              a.status.toLowerCase() == 'completed',
+        );
+      });
+    }
+    await _loadLiveAppointments();
   }
 
   Future<void> _loadLiveAppointments() async {
     setState(() => _isLoadingAppointments = true);
     try {
+      await _loadDismissedIds();
+
       var liveList = await ApiClient.getAppointments(
         providerUserId: widget.userProfile?.userId,
       );
@@ -233,7 +299,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
         setState(() {
           _appointments.clear();
           _appointments.addAll(
-            liveList!.where((a) => !_dismissedAppointmentIds.contains(a.id)),
+            liveList!.where(
+              (a) =>
+                  !_dismissedAppointmentIds.contains(a.id) &&
+                  !a.isCompleted &&
+                  a.status.toLowerCase() != 'completed',
+            ),
+          );
+        });
+      } else if (mounted) {
+        setState(() {
+          _appointments.removeWhere(
+            (a) =>
+                _dismissedAppointmentIds.contains(a.id) ||
+                a.isCompleted ||
+                a.status.toLowerCase() == 'completed',
           );
         });
       }
@@ -245,27 +325,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final appt = _appointments[index];
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Delete Appointment'),
         content: Text('Are you sure you want to delete appointment for ${appt.patientName}?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogCtx),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
               setState(() {
                 _appointments.removeAt(index);
               });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Appointment ${appt.appointmentNo} deleted'),
-                  backgroundColor: AppColors.danger,
-                ),
-              );
+              await _dismissAppointment(appt.id);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Appointment ${appt.appointmentNo} deleted'),
+                    backgroundColor: AppColors.danger,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             child: const Text('Delete'),
@@ -296,7 +379,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (context) => AppointmentDetailScreen(appointment: appt),
       ),
     );
-    if (result == true) {
+    if (result == true || appt.isCompleted || appt.status.toLowerCase() == 'completed') {
+      // Once swiped right or marked completed, dismiss and persist across relogs
+      await _dismissAppointment(appt.id);
       _loadLiveAppointments();
     }
   }
@@ -918,24 +1003,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
       key: Key(appt.id),
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
-          if (appt.isCompleted) {
-            // Remove completed consultation from doctor's screen only (not database)
-            setState(() {
-              _dismissedAppointmentIds.add(appt.id);
-              _appointments.removeWhere((a) => a.id == appt.id);
-            });
+          // Remove consultation from doctor's screen & persist to secure storage
+          await _dismissAppointment(appt.id);
+          setState(() {
+            _appointments.removeWhere((a) => a.id == appt.id);
+          });
+          if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Completed consultation for ${appt.patientName} removed from your screen.'),
+                content: Text(
+                  (appt.isCompleted || appt.status.toLowerCase() == 'completed')
+                      ? 'Completed consultation for ${appt.patientName} removed from your screen.'
+                      : 'Consultation for ${appt.patientName} dismissed from your active queue.',
+                ),
                 backgroundColor: AppColors.success,
                 behavior: SnackBarBehavior.floating,
               ),
             );
-            return true;
-          } else {
-            _openAppointmentDetail(appt);
-            return false;
           }
+          return true;
         } else if (direction == DismissDirection.endToStart) {
           _transferAppointment(index);
           return false;
@@ -947,27 +1033,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
         padding: const EdgeInsets.only(left: 20),
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: appt.isCompleted ? const Color(0xFFDCFCE7) : AppColors.primaryLight,
+          color: const Color(0xFFDCFCE7),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: (appt.isCompleted ? AppColors.success : AppColors.primary).withValues(alpha: 0.3),
+            color: AppColors.success.withValues(alpha: 0.3),
             width: 1.2,
           ),
         ),
         child: Row(
           children: [
-            Icon(
-              appt.isCompleted ? Icons.check_circle_rounded : Icons.touch_app_rounded,
-              color: appt.isCompleted ? AppColors.success : AppColors.primary,
+            const Icon(
+              Icons.check_circle_rounded,
+              color: AppColors.success,
               size: 24,
             ),
             const SizedBox(width: 8),
             Text(
-              appt.isCompleted
+              (appt.isCompleted || appt.status.toLowerCase() == 'completed')
                   ? 'Remove Completed'
-                  : 'Open Rx & Details',
-              style: TextStyle(
-                color: appt.isCompleted ? const Color(0xFF15803D) : AppColors.primaryDark,
+                  : 'Dismiss Consultation',
+              style: const TextStyle(
+                color: Color(0xFF15803D),
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
               ),
