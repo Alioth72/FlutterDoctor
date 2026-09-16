@@ -45,6 +45,7 @@ dependencies:
     path: packages/teleconsult_vitals
   hrx_protocol:
     path: packages/hrx_protocol
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:

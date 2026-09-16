@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +6,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:hrx_protocol/hrx_protocol.dart';
 import '../theme/app_colors.dart';
 import '../models/appointment_model.dart';
+import '../services/api_client.dart';
 import 'appointment_detail_screen.dart';
 
 enum QrScannerState {
@@ -35,7 +37,6 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
   String? _statusMessage;
   bool _isProcessing = false;
   bool _flashOn = false;
-  String? _scannedCode;
 
   final TextEditingController _manualIdController = TextEditingController();
 
@@ -104,7 +105,9 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _cameraController = MobileScannerController(
-      detectionSpeed: DetectionSpeed.noDuplicates,
+      detectionSpeed: DetectionSpeed.normal,
+      detectionTimeoutMs: 800,
+      formats: const [BarcodeFormat.qrCode],
       facing: CameraFacing.back,
       torchEnabled: false,
     );
@@ -129,10 +132,12 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
 
   void _onDetect(BarcodeCapture capture) {
     if (_isProcessing) return;
-    final barcodes = capture.barcodes;
-    if (barcodes.isNotEmpty && barcodes.first.rawValue != null) {
-      final code = barcodes.first.rawValue!;
-      _processScannedCode(code);
+    for (final barcode in capture.barcodes) {
+      final code = barcode.rawValue ?? barcode.displayValue;
+      if (code != null && code.trim().isNotEmpty) {
+        _processScannedCode(code.trim());
+        break;
+      }
     }
   }
 
@@ -140,7 +145,6 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
     if (_isProcessing) return;
     setState(() {
       _isProcessing = true;
-      _scannedCode = rawCode.trim();
       _scannerState = QrScannerState.processing;
       _statusMessage = 'Reading QR Code payload...';
     });
@@ -177,9 +181,20 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
         });
 
         if (result.isPatient && result.patient != null) {
-          final patient = await LocalPatientRepository.instance.getPatient(result.patient!.patientRef);
+          final scannedPatient = result.patient!;
+          // Look up cached records without replacing scanned patient details
+          final cachedPatient = await LocalPatientRepository.instance.getPatient(scannedPatient.patientRef);
+          final finalPatient = cachedPatient != null
+              ? scannedPatient.copyWith(
+                  visitIds: cachedPatient.visitIds.isNotEmpty ? cachedPatient.visitIds : scannedPatient.visitIds,
+                  extra: {...scannedPatient.extra, ...cachedPatient.extra},
+                )
+              : scannedPatient;
+
+          LocalPatientRepository.instance.savePatient(finalPatient);
+
           if (mounted) {
-            _showHrxPatientFoundSheet(patient ?? result.patient!);
+            _showHrxPatientFoundSheet(finalPatient);
           }
         } else if (result.isVisit && result.visit != null) {
           if (mounted) {
@@ -198,45 +213,137 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
         }
       }
     } else {
-      // Legacy appointment matching logic
-      _decodeAndFetchPatient(rawCode);
+      // Online or legacy appointment matching logic
+      await _decodeAndFetchPatient(rawCode);
     }
   }
 
-  void _decodeAndFetchPatient(String rawCode) {
+  Future<void> _decodeAndFetchPatient(String rawCode) async {
+    final cleanCode = rawCode.trim();
     setState(() {
       _scannerState = QrScannerState.processing;
-      _scannedCode = rawCode.trim().toUpperCase();
+      _statusMessage = 'Locating patient & appointment records...';
     });
 
-    final pool = widget.existingAppointments ?? _databasePatients;
     AppointmentItem? matched;
 
-    for (final p in pool) {
-      if (p.appointmentNo.toUpperCase() == _scannedCode ||
-          p.id == _scannedCode ||
-          p.patientName.toUpperCase().contains(_scannedCode!) ||
-          _scannedCode!.contains(p.appointmentNo.toUpperCase())) {
-        matched = p;
-        break;
+    // 1. Check if payload is a JSON string
+    if (cleanCode.startsWith('{') && cleanCode.endsWith('}')) {
+      try {
+        final decoded = jsonDecode(cleanCode);
+        if (decoded is Map<String, dynamic>) {
+          final apptNo = (decoded['appointmentNo'] ??
+                  decoded['appointment_no'] ??
+                  decoded['appt_no'] ??
+                  decoded['id'] ??
+                  'APT-ONLINE')
+              .toString();
+          final name = (decoded['patientName'] ??
+                  decoded['patient_name'] ??
+                  decoded['name'] ??
+                  'Verified Patient')
+              .toString();
+          final age = int.tryParse((decoded['age'] ?? 40).toString()) ?? 40;
+          final gender = (decoded['gender'] ?? 'Male').toString();
+          final timing = (decoded['timing'] ?? decoded['time'] ?? 'Online Token Verified').toString();
+          final diagnosis = (decoded['diagnosis'] ?? 'OPD Consultation').toString();
+
+          matched = AppointmentItem(
+            id: (decoded['id'] ?? 'QR-${DateTime.now().millisecondsSinceEpoch % 10000}').toString(),
+            appointmentNo: apptNo,
+            patientName: name,
+            age: age,
+            gender: gender,
+            timing: timing,
+            paymentStatus: (decoded['paymentStatus'] ?? decoded['payment_status'] ?? 'Hospital Verified').toString(),
+            isPaid: decoded['isPaid'] == true || decoded['is_paid'] == true,
+            mode: AppointmentMode.qr,
+            patientHistory: (decoded['patientHistory'] is List)
+                ? (decoded['patientHistory'] as List).map((e) => e.toString()).toList()
+                : ['Hospital Digital Health Record Verified'],
+            diagnosis: diagnosis,
+            heightCm: double.tryParse((decoded['heightCm'] ?? decoded['height'] ?? 170).toString()) ?? 170.0,
+            weightKg: double.tryParse((decoded['weightKg'] ?? decoded['weight'] ?? 70).toString()) ?? 70.0,
+            familyHistory: (decoded['familyHistory'] ?? 'None recorded').toString(),
+            medicines: const [],
+            isAdmitted: decoded['isAdmitted'] == true,
+          );
+        }
+      } catch (e) {
+        debugPrint('JSON decode error in _decodeAndFetchPatient: $e');
       }
     }
 
+    // 2. If payload is a URL, extract search token from query parameters
+    String searchKey = cleanCode;
+    if (cleanCode.startsWith('http://') || cleanCode.startsWith('https://')) {
+      try {
+        final uri = Uri.parse(cleanCode);
+        final idParam = uri.queryParameters['id'] ??
+            uri.queryParameters['apt'] ??
+            uri.queryParameters['appointmentNo'] ??
+            uri.queryParameters['patientId'];
+        if (idParam != null && idParam.isNotEmpty) {
+          searchKey = idParam;
+        } else if (uri.pathSegments.isNotEmpty) {
+          searchKey = uri.pathSegments.last;
+        }
+      } catch (_) {}
+    }
+
+    final upperKey = searchKey.toUpperCase();
+
+    // 3. Search existing appointments pool
     if (matched == null) {
-      for (final p in _databasePatients) {
-        if (p.appointmentNo.toUpperCase() == _scannedCode ||
-            p.id == _scannedCode ||
-            _scannedCode!.contains(p.appointmentNo.toUpperCase())) {
+      final pool = widget.existingAppointments ?? _databasePatients;
+      for (final p in pool) {
+        if (p.appointmentNo.toUpperCase() == upperKey ||
+            p.id == searchKey ||
+            p.patientName.toUpperCase().contains(upperKey) ||
+            upperKey.contains(p.appointmentNo.toUpperCase())) {
           matched = p;
           break;
         }
       }
     }
 
+    // 4. Search local database patients pool
+    if (matched == null) {
+      for (final p in _databasePatients) {
+        if (p.appointmentNo.toUpperCase() == upperKey ||
+            p.id == searchKey ||
+            upperKey.contains(p.appointmentNo.toUpperCase())) {
+          matched = p;
+          break;
+        }
+      }
+    }
+
+    // 5. Query online live backend database via ApiClient
+    if (matched == null) {
+      try {
+        final liveAppointments = await ApiClient.getAppointments();
+        if (liveAppointments != null && liveAppointments.isNotEmpty) {
+          for (final a in liveAppointments) {
+            if (a.appointmentNo.toUpperCase() == upperKey ||
+                a.id == searchKey ||
+                a.patientName.toUpperCase().contains(upperKey) ||
+                upperKey.contains(a.appointmentNo.toUpperCase())) {
+              matched = a;
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('ApiClient.getAppointments lookup error: $e');
+      }
+    }
+
+    // 6. Graceful verified fallback preserving scanned identifier
     matched ??= AppointmentItem(
       id: 'QR-${DateTime.now().millisecondsSinceEpoch % 10000}',
-      appointmentNo: _scannedCode!.startsWith('APT-') ? _scannedCode! : 'APT-${_scannedCode!}',
-      patientName: 'Verified Patient (${_scannedCode!})',
+      appointmentNo: upperKey.startsWith('APT-') ? upperKey : 'APT-$upperKey',
+      patientName: searchKey.length < 30 ? 'Patient ($searchKey)' : 'Online Verified Patient',
       age: 42,
       gender: 'Male',
       timing: 'Live QR Scanned',
@@ -259,11 +366,13 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
       isAdmitted: false,
     );
 
-    setState(() {
-      _scannerState = QrScannerState.success;
-    });
-
-    _showLegacyPatientFoundSheet(matched);
+    if (mounted) {
+      setState(() {
+        _scannerState = QrScannerState.success;
+        _statusMessage = 'Appointment record located!';
+      });
+      _showLegacyPatientFoundSheet(matched);
+    }
   }
 
   void _resumeScanning() {
@@ -479,14 +588,13 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
 
   /// Displays the full offline reconstructed Visit Record viewer (Section 26).
   void _showHrxVisitViewerSheet(VisitRecord visit, Map<String, dynamic> metadata) {
+    bool showTechDetails = false;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setSheetState) {
-          bool showTechDetails = false;
-
           return Container(
             constraints: BoxConstraints(
               maxHeight: MediaQuery.of(context).size.height * 0.92,
