@@ -5,7 +5,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../data/appointment_repository.dart';
 import '../models/teleconsult_models.dart';
 import '../services/call_service.dart';
-import 'post_call_screen.dart';
+import '../../screens/appointment_detail_screen.dart';
 
 class DoctorCallScreen extends StatefulWidget {
   const DoctorCallScreen({
@@ -106,18 +106,27 @@ class _DoctorCallScreenState extends State<DoctorCallScreen> {
     setState(() => _ending = true);
     _callLog.endedAt = DateTime.now();
     await _callService?.hangUp();
-    await widget.repository.saveCallLog(_callLog);
+    try {
+      await widget.repository.saveCallLog(_callLog);
+    } catch (e) {
+      debugPrint('[DoctorCallScreen] Error saving call log: $e');
+    }
     if (!mounted) return;
-    await Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => PostCallScreen(
-          appointment: widget.appointment,
-          repository: widget.repository,
-          callLog: _callLog,
-          bpmSamples: const <BpmSample>[],
+
+    // Do NOT automatically complete the consultation.
+    // Redirect directly back to the original prescription & clinical detail screen.
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else if (widget.repository is DoctorAppointmentRepository) {
+      final apptItem = (widget.repository as DoctorAppointmentRepository).source;
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => AppointmentDetailScreen(appointment: apptItem),
         ),
-      ),
-    );
+      );
+    } else {
+      Navigator.of(context).pop();
+    }
   }
 
   @override

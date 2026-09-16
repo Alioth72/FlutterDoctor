@@ -90,7 +90,24 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         ),
       ),
     );
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {
+        if (widget.appointment.status != 'completed' &&
+            widget.appointment.status != 'cancelled') {
+          widget.appointment.status = 'in_progress';
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Video call ended. Finalize the prescription below and tap COMPLETE CONSULTATION.',
+          ),
+          backgroundColor: AppColors.primary,
+          duration: Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   static const List<String> _commonMedicines = [
