@@ -1074,7 +1074,14 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
               ),
         // 6. BOTTOM STICKY BOOKING BAR
         bottomSheet: Container(
-          padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+          padding: EdgeInsets.fromLTRB(
+            18,
+            14,
+            18,
+            18.0 + (MediaQuery.viewPaddingOf(context).bottom > 20
+                ? (MediaQuery.viewPaddingOf(context).bottom * 0.35 + 6.0)
+                : 0.0),
+          ),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),

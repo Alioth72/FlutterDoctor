@@ -616,6 +616,72 @@ class PatientDatabaseService {
     }
   }
 
+  /// Save Pre-Call rPPG heart rate & waveform to backend linked to appointment
+  /// POST /appointments/{id}/pre-call-vitals
+  Future<Map<String, dynamic>> savePreCallVitals(
+    String appointmentId, {
+    required double bpm,
+    required List<double> waveform,
+    DateTime? measuredAt,
+  }) async {
+    final token = await _storageService.getAuthToken();
+    try {
+      final url = Uri.parse('$apiBaseUrl/appointments/$appointmentId/pre-call-vitals');
+      final headers = {
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      };
+
+      final body = {
+        'heart_rate_bpm': bpm,
+        'rppg_waveform': waveform,
+        'measured_at': (measuredAt ?? DateTime.now()).toUtc().toIso8601String(),
+        'source': 'Camera rPPG',
+      };
+
+      final response = await _httpClient
+          .post(url, headers: headers, body: jsonEncode(body))
+          .timeout(requestTimeout);
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data['data']};
+      } else {
+        return {
+          'success': false,
+          'error': data['error'] ?? 'Failed to save pre-call vitals (${response.statusCode})',
+          'statusCode': response.statusCode,
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network connection error: $e'};
+    }
+  }
+
+  /// Get Pre-Call rPPG vitals for an appointment
+  /// GET /appointments/{id}/pre-call-vitals
+  Future<Map<String, dynamic>?> getPreCallVitals(String appointmentId) async {
+    final token = await _storageService.getAuthToken();
+    try {
+      final url = Uri.parse('$apiBaseUrl/appointments/$appointmentId/pre-call-vitals');
+      final headers = {
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      };
+
+      final response = await _httpClient.get(url, headers: headers).timeout(requestTimeout);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (data['data'] != null) {
+          return data['data'] as Map<String, dynamic>;
+        }
+      }
+    } catch (e) {
+      debugPrint('[PatientDatabaseService] getPreCallVitals error: $e');
+    }
+    return null;
+  }
+
   /// Safely extracts patient_id from JWT token payload without network calls
   String? _extractPatientIdFromToken(String token) {
     try {

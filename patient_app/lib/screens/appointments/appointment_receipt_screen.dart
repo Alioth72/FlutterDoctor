@@ -1,4 +1,4 @@
-import 'video_consultation_screen.dart';
+import 'pre_call_heart_rate_screen.dart';
 import 'package:flutter/material.dart';
 import '../../models/appointment.dart';
 import '../tabs/appointments_tab.dart';
@@ -314,7 +314,7 @@ class AppointmentReceiptScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => VideoConsultationScreen(appointment: appointment),
+                        builder: (_) => PreCallHeartRateScreen(appointment: appointment),
                       ),
                     );
                   },
@@ -383,7 +383,14 @@ class AppointmentReceiptScreen extends StatelessWidget {
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            12,
+            20,
+            16.0 + (MediaQuery.viewPaddingOf(context).bottom > 20
+                ? (MediaQuery.viewPaddingOf(context).bottom * 0.35 + 6.0)
+                : 0.0),
+          ),
           decoration: BoxDecoration(
             color: theme.scaffoldBackgroundColor,
             border: Border(

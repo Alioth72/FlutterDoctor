@@ -38,12 +38,21 @@ function drawPlot() {
     });
     ctx.stroke();
 
-    // Convert to ImageBitmap and post
-    canvas.convertToBlob().then((blob) => {
-        createImageBitmap(blob).then((imageBitmap) => {
-            self.postMessage({ imageBitmap });
-        });
-    });
+    // Convert to ImageBitmap and post with robust error handling
+    try {
+        if (typeof canvas.transferToImageBitmap === "function") {
+            const imageBitmap = canvas.transferToImageBitmap();
+            self.postMessage({ imageBitmap }, [imageBitmap]);
+        } else if (typeof canvas.convertToBlob === "function") {
+            canvas.convertToBlob().then((blob) => {
+                createImageBitmap(blob).then((imageBitmap) => {
+                    self.postMessage({ imageBitmap });
+                }).catch((e) => console.warn("createImageBitmap err:", e));
+            }).catch((e) => console.warn("convertToBlob err:", e));
+        }
+    } catch (err) {
+        console.warn("drawPlot transfer error:", err);
+    }
 }
 
 self.onmessage = (event) => {

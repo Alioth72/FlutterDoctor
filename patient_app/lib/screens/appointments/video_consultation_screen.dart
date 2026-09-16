@@ -382,7 +382,9 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen> {
               Positioned(
                 left: 24,
                 right: 24,
-                bottom: 28,
+                bottom: 28.0 + (MediaQuery.viewPaddingOf(context).bottom > 20
+                    ? (MediaQuery.viewPaddingOf(context).bottom * 0.45 + 14.0)
+                    : (MediaQuery.viewPaddingOf(context).bottom > 0 ? 8.0 : 0.0)),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: <Widget>[

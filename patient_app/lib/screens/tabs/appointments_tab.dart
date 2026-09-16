@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/appointment.dart';
 import '../../providers/appointment_provider.dart';
-import '../../services/patient_database_service.dart';
 import '../../providers/language_provider.dart';
 import '../../widgets/dynamic_translated_text.dart';
 import '../appointments/appointment_receipt_screen.dart';
 import '../appointments/book_appointment_screen.dart';
-import '../appointments/video_consultation_screen.dart';
+import '../appointments/pre_call_heart_rate_screen.dart';
 
 class AppointmentsTab extends StatefulWidget {
   const AppointmentsTab({super.key});
@@ -17,71 +16,12 @@ class AppointmentsTab extends StatefulWidget {
 }
 
 class _AppointmentsTabState extends State<AppointmentsTab> {
-  final _dbService = PatientDatabaseService();
-
-  Future<void> _joinTelehealth(BuildContext context, Appointment appointment) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(color: Color(0xFF7C3AED)),
-                SizedBox(height: 16),
-                Text(
-                  'Verifying consultation room access...',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-          ),
-        ),
+  void _joinTelehealth(BuildContext context, Appointment appointment) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PreCallHeartRateScreen(appointment: appointment),
       ),
     );
-
-    try {
-      final res = await _dbService.requestTelehealthAccess(appointment.id);
-      if (res['success'] != true && res['statusCode'] != null) {
-        throw Exception(res['error'] ?? 'Consultation join window is not open.');
-      }
-      if (context.mounted) {
-        Navigator.of(context).pop(); // dismiss loading dialog
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => VideoConsultationScreen(appointment: appointment),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.of(context).pop(); // dismiss loading dialog
-        final msg = e.toString().replaceAll('Exception: ', '');
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            icon: const Icon(Icons.lock_clock_rounded, color: Color(0xFF7C3AED), size: 40),
-            title: const Text('Consultation Room Locked', style: TextStyle(fontWeight: FontWeight.bold)),
-            content: Text(
-              msg.contains('join window')
-                  ? 'The secure video consultation room opens 15 minutes before your scheduled appointment time (${appointment.timeSlot}). Please return closer to your slot.'
-                  : msg,
-              style: const TextStyle(fontSize: 14, height: 1.4),
-            ),
-            actions: [
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Understood'),
-              ),
-            ],
-          ),
-        );
-      }
-    }
   }
 
   @override

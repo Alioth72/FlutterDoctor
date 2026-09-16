@@ -110,17 +110,52 @@ class ApiClient {
     final status = json['status']?.toString().toLowerCase();
     final isCompleted = status == 'completed';
 
-    // Format timing
-    String timing = '10:30 AM - Today';
-    if (json['scheduled_start'] != null) {
+    // Format timing accurately using slot_time and appointment_date
+    final slotTime = notes['slot_time']?.toString().trim() ??
+        json['time_slot']?.toString().trim();
+    final apptDateStr = notes['appointment_date']?.toString().trim() ??
+        json['appointment_date']?.toString().trim();
+
+    String timePart = '';
+    if (slotTime != null && slotTime.isNotEmpty) {
+      timePart = slotTime;
+    } else if (json['scheduled_start'] != null) {
       try {
         final dt = DateTime.parse(json['scheduled_start'].toString()).toLocal();
         final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
         final ampm = dt.hour >= 12 ? 'PM' : 'AM';
         final minute = dt.minute.toString().padLeft(2, '0');
-        timing = '$hour:$minute $ampm - Today';
+        timePart = '$hour:$minute $ampm';
+      } catch (_) {
+        timePart = '10:30 AM';
+      }
+    } else {
+      timePart = '10:30 AM';
+    }
+
+    String datePart = 'Today';
+    if (apptDateStr != null && apptDateStr.isNotEmpty) {
+      datePart = apptDateStr;
+    } else if (json['scheduled_start'] != null) {
+      try {
+        final dt = DateTime.parse(json['scheduled_start'].toString()).toLocal();
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final apptDay = DateTime(dt.year, dt.month, dt.day);
+        final diffDays = apptDay.difference(today).inDays;
+        if (diffDays == 0) {
+          datePart = 'Today';
+        } else if (diffDays == 1) {
+          datePart = 'Tomorrow';
+        } else if (diffDays == -1) {
+          datePart = 'Yesterday';
+        } else {
+          datePart = '${dt.day}/${dt.month}/${dt.year}';
+        }
       } catch (_) {}
     }
+
+    final timing = '$timePart • $datePart';
 
     // Parse height and weight from clinical_data or notes
     double heightCm = 170.0;
@@ -370,6 +405,25 @@ class ApiClient {
         'error': 'Network or client error: $e',
       };
     }
+  }
+
+  /// Get pre-call rPPG vitals for an appointment
+  /// GET /api/appointments/{id}/pre-call-vitals
+  static Future<Map<String, dynamic>?> getPreCallVitals(String appointmentId) async {
+    try {
+      final uri = Uri.parse('$baseUrl/appointments/$appointmentId/pre-call-vitals');
+      final headers = await _headers();
+      final response = await http.get(uri, headers: headers);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['data'] != null && data['data'] is Map) {
+          return Map<String, dynamic>.from(data['data'] as Map);
+        }
+      }
+    } catch (e) {
+      debugPrint('ApiClient.getPreCallVitals error: $e');
+    }
+    return null;
   }
 
   // ==========================================================

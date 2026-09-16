@@ -76,7 +76,14 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
         elevation: 0,
       ),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          12,
+          16,
+          16.0 + (MediaQuery.viewPaddingOf(context).bottom > 20
+              ? (MediaQuery.viewPaddingOf(context).bottom * 0.35 + 6.0)
+              : 0.0),
+        ),
         decoration: BoxDecoration(
           color: theme.scaffoldBackgroundColor,
           boxShadow: [

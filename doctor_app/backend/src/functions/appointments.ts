@@ -1267,19 +1267,8 @@ export async function getTelehealthAccess(request: HttpRequest, context: Invocat
             return errorResponse(400, "This consultation was cancelled.");
         }
 
-        // 4. Join window validation
-        const startTime = new Date(appt.scheduled_start).getTime();
-        const now = Date.now();
-        const fifteenMinutesMs = 15 * 60 * 1000;
-        const isTooEarly = now < (startTime - fifteenMinutesMs);
-
-        if (isTooEarly && appt.status !== "in_progress") {
-            const minutesLeft = Math.ceil((startTime - fifteenMinutesMs - now) / 60000);
-            return errorResponse(
-                403,
-                `Consultation join window is not open yet. You can join 15 minutes before the scheduled time (in ~${minutesLeft} minutes).`
-            );
-        }
+        // 4. Join window validation - open access without time restriction
+        // Consultation rooms are unlocked for immediate patient/doctor access
 
         // 5. If Doctor joins a confirmed consultation, transition status to 'in_progress'
         let currentStatus = appt.status;
@@ -1330,6 +1319,200 @@ export async function getFacilities(request: HttpRequest, context: InvocationCon
     } catch (err: any) {
         context.error("Error in getFacilities:", err);
         return errorResponse(500, "Internal server error fetching facilities.");
+    }
+}
+
+// POST /api/appointments/{appointment_id}/pre-call-vitals
+export async function savePreCallVitals(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    const authResult = authenticate(request);
+    if ("status" in authResult) {
+        return authResult;
+    }
+    const auth = authResult as TokenPayload;
+
+    const appointmentId = request.params.appointment_id;
+    if (!isValidUuid(appointmentId)) {
+        return errorResponse(400, "Invalid appointment_id format. Must be a valid UUID.");
+    }
+
+    try {
+        const apptSql = `
+            SELECT appointment_id, patient_id, provider_user_id, notes, status
+            FROM health.appointments
+            WHERE appointment_id = $1::uuid;
+        `;
+        const apptRes = await query(apptSql, [appointmentId]);
+        if (apptRes.rows.length === 0) {
+            return errorResponse(404, `Appointment with ID ${appointmentId} not found.`);
+        }
+        const appt = apptRes.rows[0];
+
+        // Security check: Patients can only submit vitals for their own appointment
+        if (auth.role === "patient" && appt.patient_id !== auth.patient_id) {
+            // Check if patient_id belongs to the same user
+            const patientUserCheck = await query(
+                `SELECT 1 FROM health.patients WHERE patient_id = $1::uuid AND user_id = $2::uuid;`,
+                [appt.patient_id, auth.user_id]
+            );
+            if (patientUserCheck.rows.length === 0) {
+                return errorResponse(403, "Access denied. Patients can only submit vitals for their own appointment.");
+            }
+        }
+
+        let body: any = {};
+        try {
+            body = await request.json();
+        } catch {
+            return errorResponse(400, "Invalid JSON payload in request body.");
+        }
+
+        const { heart_rate_bpm, rppg_waveform, measured_at, confidence } = body;
+
+        const bpmNum = Number(heart_rate_bpm);
+        if (isNaN(bpmNum) || bpmNum < 30 || bpmNum > 250) {
+            return errorResponse(400, "Invalid heart_rate_bpm. Must be a valid number between 30 and 250 BPM.");
+        }
+
+        let safeWaveform: number[] = [];
+        if (Array.isArray(rppg_waveform)) {
+            safeWaveform = rppg_waveform
+                .map((n: any) => Number(n))
+                .filter((n: number) => !isNaN(n))
+                .slice(-150);
+        }
+
+        const timestamp = measured_at && !isNaN(new Date(measured_at).getTime())
+            ? new Date(measured_at).toISOString()
+            : new Date().toISOString();
+
+        const preCallData = {
+            heart_rate_bpm: Math.round(bpmNum * 10) / 10,
+            rppg_waveform: safeWaveform,
+            measured_at: timestamp,
+            source: "Camera rPPG",
+            confidence: typeof confidence === "number" ? confidence : 1.0,
+        };
+
+        // 1. Insert into health.medical_records
+        const insertMrSql = `
+            INSERT INTO health.medical_records (
+                patient_id,
+                author_user_id,
+                appointment_id,
+                record_type,
+                recorded_at,
+                diagnosis,
+                symptoms,
+                clinical_data,
+                is_preliminary
+            ) VALUES (
+                $1::uuid,
+                $2::uuid,
+                $3::uuid,
+                'triage',
+                $4::timestamptz,
+                'Pre-Consultation rPPG Heart Rate',
+                '{}'::jsonb,
+                $5::jsonb,
+                false
+            ) RETURNING medical_record_id;
+        `;
+        await query(insertMrSql, [
+            appt.patient_id,
+            auth.user_id,
+            appointmentId,
+            timestamp,
+            JSON.stringify(preCallData),
+        ]);
+
+        // 2. Also merge into health.appointments.notes['pre_call_rppg'] for immediate access
+        const updateApptSql = `
+            UPDATE health.appointments
+            SET notes = jsonb_set(COALESCE(notes, '{}'::jsonb), '{pre_call_rppg}', $2::jsonb, true)
+            WHERE appointment_id = $1::uuid;
+        `;
+        await query(updateApptSql, [appointmentId, JSON.stringify(preCallData)]);
+
+        return jsonResponse(200, {
+            success: true,
+            message: "Pre-call heart rate and rPPG data saved successfully.",
+            data: {
+                vitals: preCallData,
+                ...preCallData,
+            },
+        });
+    } catch (err: any) {
+        context.error("Error in savePreCallVitals:", err);
+        return errorResponse(500, "Internal server error saving pre-call vitals.");
+    }
+}
+
+// GET /api/appointments/{appointment_id}/pre-call-vitals
+export async function getPreCallVitals(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    const authResult = authenticate(request);
+    if ("status" in authResult) {
+        return authResult;
+    }
+    const auth = authResult as TokenPayload;
+
+    const appointmentId = request.params.appointment_id;
+    if (!isValidUuid(appointmentId)) {
+        return errorResponse(400, "Invalid appointment_id format. Must be a valid UUID.");
+    }
+
+    try {
+        const apptSql = `
+            SELECT appointment_id, patient_id, provider_user_id, notes
+            FROM health.appointments
+            WHERE appointment_id = $1::uuid;
+        `;
+        const apptRes = await query(apptSql, [appointmentId]);
+        if (apptRes.rows.length === 0) {
+            return errorResponse(404, `Appointment with ID ${appointmentId} not found.`);
+        }
+        const appt = apptRes.rows[0];
+
+        const isPatient = auth.role === "patient" && (appt.patient_id === auth.patient_id || appt.patient_id === auth.user_id);
+        const isDoctor = auth.role === "doctor" && appt.provider_user_id === auth.user_id;
+        const isAdminOrWorker = auth.role === "admin" || auth.role === "worker" || auth.role === "nurse";
+
+        if (!isPatient && !isDoctor && !isAdminOrWorker) {
+            return errorResponse(403, "Access denied. You are not authorized to view vitals for this appointment.");
+        }
+
+        const mrSql = `
+            SELECT clinical_data, recorded_at
+            FROM health.medical_records
+            WHERE appointment_id = $1::uuid AND (record_type = 'triage' OR record_type = 'pre_call_rppg')
+            ORDER BY recorded_at DESC
+            LIMIT 1;
+        `;
+        const mrRes = await query(mrSql, [appointmentId]);
+        let vitalsData = null;
+        if (mrRes.rows.length > 0 && mrRes.rows[0].clinical_data) {
+            vitalsData = mrRes.rows[0].clinical_data;
+        } else if (appt.notes && appt.notes.pre_call_rppg) {
+            vitalsData = appt.notes.pre_call_rppg;
+        }
+
+        if (vitalsData) {
+            return jsonResponse(200, {
+                success: true,
+                data: {
+                    vitals: vitalsData,
+                    ...vitalsData,
+                },
+            });
+        }
+
+        return jsonResponse(200, {
+            success: true,
+            data: null,
+            message: "No pre-consultation heart-rate measurement available.",
+        });
+    } catch (err: any) {
+        context.error("Error in getPreCallVitals:", err);
+        return errorResponse(500, "Internal server error fetching pre-call vitals.");
     }
 }
 
@@ -1387,6 +1570,20 @@ app.http("getTelehealthAccess", {
     authLevel: "anonymous",
     route: "appointments/{appointment_id}/telehealth-access",
     handler: getTelehealthAccess,
+});
+
+app.http("savePreCallVitals", {
+    methods: ["POST"],
+    authLevel: "anonymous",
+    route: "appointments/{appointment_id}/pre-call-vitals",
+    handler: savePreCallVitals,
+});
+
+app.http("getPreCallVitals", {
+    methods: ["GET"],
+    authLevel: "anonymous",
+    route: "appointments/{appointment_id}/pre-call-vitals",
+    handler: getPreCallVitals,
 });
 
 app.http("getFacilities", {

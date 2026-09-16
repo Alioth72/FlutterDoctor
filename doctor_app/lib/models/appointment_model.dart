@@ -72,6 +72,16 @@ class AppointmentItem {
   final String? appointmentType;
   final String? reason;
 
+  Map<String, dynamic>? get preCallRppg {
+    if (notes != null && notes!['pre_call_rppg'] is Map) {
+      return Map<String, dynamic>.from(notes!['pre_call_rppg'] as Map);
+    }
+    if (clinicalData != null && clinicalData!['pre_call_rppg'] is Map) {
+      return Map<String, dynamic>.from(clinicalData!['pre_call_rppg'] as Map);
+    }
+    return null;
+  }
+
   AppointmentItem({
     required this.id,
     required this.appointmentNo,

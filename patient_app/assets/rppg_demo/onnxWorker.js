@@ -43,7 +43,8 @@ fetch("./state.json")
 
 self.onmessage = async (event) => {
     if (!onnxSession || !state) {
-        console.log("Model session or state not ready");
+        console.warn("onnxWorker: Model session or state not ready, replying safe drop");
+        self.postMessage({ output: null, delay: 0, timestamp: Date.now(), type: "not_ready" });
         return;
     }
     const startTime = Date.now();

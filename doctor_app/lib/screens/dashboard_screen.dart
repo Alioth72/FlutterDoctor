@@ -214,8 +214,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final keys = <String>{
         _dismissedStorageKey,
-        if (widget.userProfile?.phone != null && widget.userProfile!.phone.isNotEmpty)
+        'doctor_dismissed_appts_global',
+        if (widget.userProfile?.phone != null && widget.userProfile!.phone.isNotEmpty) ...[
           'doctor_dismissed_appts_${widget.userProfile!.phone}',
+          'doctor_dismissed_appts_${widget.userProfile!.phone.replaceAll(RegExp(r'\D'), '')}',
+        ],
         if (widget.userProfile?.userId != null && widget.userProfile!.userId!.isNotEmpty)
           'doctor_dismissed_appts_${widget.userProfile!.userId}',
       };
@@ -238,9 +241,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         key: _dismissedStorageKey,
         value: val,
       );
+      await _secureStorage.write(
+        key: 'doctor_dismissed_appts_global',
+        value: val,
+      );
       if (widget.userProfile?.phone != null && widget.userProfile!.phone.isNotEmpty) {
         await _secureStorage.write(
           key: 'doctor_dismissed_appts_${widget.userProfile!.phone}',
+          value: val,
+        );
+        await _secureStorage.write(
+          key: 'doctor_dismissed_appts_${widget.userProfile!.phone.replaceAll(RegExp(r'\D'), '')}',
           value: val,
         );
       }
@@ -289,13 +300,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       await _loadDismissedIds();
 
-      var liveList = await ApiClient.getAppointments(
-        providerUserId: widget.userProfile?.userId,
-      );
-      if (liveList == null || liveList.isEmpty) {
+      // Query appointments assigned to the current doctor
+      List<AppointmentItem>? liveList;
+      if (widget.userProfile?.userId != null && widget.userProfile!.userId!.isNotEmpty) {
+        liveList = await ApiClient.getAppointments(
+          providerUserId: widget.userProfile!.userId,
+        );
+      }
+
+      // If doctor userId is not configured or offline demo, fallback to general
+      if (liveList == null && (widget.userProfile?.userId == null || widget.userProfile!.userId!.isEmpty)) {
         liveList = await ApiClient.getAppointments();
       }
-      if (liveList != null && liveList.isNotEmpty && mounted) {
+
+      if (liveList != null && mounted) {
         setState(() {
           _appointments.clear();
           _appointments.addAll(
@@ -317,7 +335,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[Dashboard] Error loading live appointments: $e');
+    }
     if (mounted) setState(() => _isLoadingAppointments = false);
   }
 
@@ -1008,13 +1028,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
           setState(() {
             _appointments.removeWhere((a) => a.id == appt.id);
           });
+
+          // Permanently mark appointment as completed in the backend database
+          try {
+            await ApiClient.updateAppointment(
+              appointmentId: appt.id,
+              status: 'completed',
+              notes: {
+                'completed_at': DateTime.now().toIso8601String(),
+                'completed_via': 'doctor_swipe',
+              },
+            );
+          } catch (e) {
+            debugPrint('[Dashboard] Error syncing completed status to backend: $e');
+          }
+
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  (appt.isCompleted || appt.status.toLowerCase() == 'completed')
-                      ? 'Completed consultation for ${appt.patientName} removed from your screen.'
-                      : 'Consultation for ${appt.patientName} dismissed from your active queue.',
+                  'Consultation for ${appt.patientName} marked as completed & cleared from queue.',
                 ),
                 backgroundColor: AppColors.success,
                 behavior: SnackBarBehavior.floating,
