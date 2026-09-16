@@ -7,7 +7,6 @@ import 'tabs/pharmacy_tab.dart';
 import 'tabs/schemes_tab.dart';
 import 'tabs/profile_tab.dart';
 import '../widgets/patient_drawer.dart';
-import '../widgets/dynamic_floating_voice_button.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -213,21 +212,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ];
         },
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            return Stack(
-              children: [
-                IndexedStack(
-                  index: _currentIndex,
-                  children: _screens,
-                ),
-                DynamicFloatingVoiceButton(
-                  parentWidth: constraints.maxWidth,
-                  parentHeight: constraints.maxHeight,
-                ),
-              ],
-            );
-          },
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _screens,
         ),
       ),
       bottomNavigationBar: NavigationBar(

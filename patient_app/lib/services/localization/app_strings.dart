@@ -26,8 +26,8 @@ class AppLanguages {
     badge: 'EN',
   );
 
-  /// All 22 Official Scheduled Languages of India + English
-  static const List<LanguageInfo> supportedLanguages = [
+  /// Top 11 Sarvam AI voice-supported native languages
+  static const List<LanguageInfo> voiceSupported11Languages = [
     LanguageInfo(code: 'en', sarvamCode: 'en-IN', name: 'English', nativeName: 'English', badge: 'EN'),
     LanguageInfo(code: 'hi', sarvamCode: 'hi-IN', name: 'Hindi', nativeName: 'हिन्दी', badge: 'HI'),
     LanguageInfo(code: 'bn', sarvamCode: 'bn-IN', name: 'Bengali', nativeName: 'বাংলা', badge: 'BN'),
@@ -39,6 +39,11 @@ class AppLanguages {
     LanguageInfo(code: 'ml', sarvamCode: 'ml-IN', name: 'Malayalam', nativeName: 'മലയാളം', badge: 'ML'),
     LanguageInfo(code: 'pa', sarvamCode: 'pa-IN', name: 'Punjabi', nativeName: 'ਪੰਜਾਬੀ', badge: 'PA'),
     LanguageInfo(code: 'or', sarvamCode: 'od-IN', name: 'Odia', nativeName: 'ଓଡ଼ିଆ', badge: 'OR'),
+  ];
+
+  /// All 22 Official Scheduled Languages of India + English (Top 11 ordered first)
+  static const List<LanguageInfo> supportedLanguages = [
+    ...voiceSupported11Languages,
     LanguageInfo(code: 'as', sarvamCode: 'as-IN', name: 'Assamese', nativeName: 'অসমীয়া', badge: 'AS'),
     LanguageInfo(code: 'ur', sarvamCode: 'ur-IN', name: 'Urdu', nativeName: 'اردو', badge: 'UR'),
     LanguageInfo(code: 'sa', sarvamCode: 'sa-IN', name: 'Sanskrit', nativeName: 'संस्कृतम्', badge: 'SA'),

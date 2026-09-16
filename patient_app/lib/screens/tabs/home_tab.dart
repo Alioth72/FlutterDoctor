@@ -16,7 +16,9 @@ import '../../widgets/patient_action_sheets.dart';
 import '../rppg_screen.dart';
 import '../request_asha_visit_screen.dart';
 import '../../widgets/dynamic_translated_text.dart';
+import '../../services/localization/app_strings.dart';
 import '../../services/localization/healthcare_catalog.dart';
+import '../../features/chatbot/chatbot_ui.dart';
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
@@ -569,7 +571,76 @@ class HomeTab extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
+
+          // TOP 11 VOICE LANGUAGES HORIZONTAL QUICK-SELECT BAR
+          SizedBox(
+            height: 34,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: AppLanguages.voiceSupported11Languages.length,
+              separatorBuilder: (context, i) => const SizedBox(width: 8),
+              itemBuilder: (context, i) {
+                final vLang = AppLanguages.voiceSupported11Languages[i];
+                final isSelected = vLang.code == langProvider.currentLanguageCode;
+                return InkWell(
+                  onTap: () => langProvider.setLanguage(vLang.code),
+                  borderRadius: BorderRadius.circular(17),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFF7C3AED) : Colors.white,
+                      borderRadius: BorderRadius.circular(17),
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFFE2E8F0),
+                        width: 1.2,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF7C3AED).withValues(alpha: 0.25),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          vLang.nativeName,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: isSelected ? Colors.white : const Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: isSelected ? Colors.white.withValues(alpha: 0.25) : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            vLang.badge,
+                            style: TextStyle(
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w900,
+                              color: isSelected ? Colors.white : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
 
           // 3. FULL-WIDTH NEWS FLASH BANNER
           const NewsFlashBannerWidget(),
@@ -700,7 +771,14 @@ class HomeTab extends StatelessWidget {
                       category: langProvider.tr('instant_ai_sub'),
                       title: langProvider.tr('ai_assistant'),
                       icon: Icons.auto_awesome_rounded,
-                      onTap: () => PatientActionSheets.showAiAssistant(context),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ChatbotPage(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 14),
