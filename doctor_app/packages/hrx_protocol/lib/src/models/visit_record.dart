@@ -320,6 +320,50 @@ class VisitRecord {
     };
   }
 
+  VisitRecord copyWith({
+    String? visitId,
+    String? patientRef,
+    String? doctorRef,
+    String? doctorName,
+    String? facilityRef,
+    String? facilityName,
+    String? timestamp,
+    List<String>? chiefComplaints,
+    List<String>? symptoms,
+    List<DiagnosisItem>? diagnosis,
+    Map<String, dynamic>? vitals,
+    List<MedicationItem>? medications,
+    List<String>? labTests,
+    List<String>? procedures,
+    List<String>? allergies,
+    List<String>? advice,
+    FollowUpInfo? followUp,
+    String? notes,
+    Map<String, dynamic>? extra,
+  }) {
+    return VisitRecord(
+      visitId: visitId ?? this.visitId,
+      patientRef: patientRef ?? this.patientRef,
+      doctorRef: doctorRef ?? this.doctorRef,
+      doctorName: doctorName ?? this.doctorName,
+      facilityRef: facilityRef ?? this.facilityRef,
+      facilityName: facilityName ?? this.facilityName,
+      timestamp: timestamp ?? this.timestamp,
+      chiefComplaints: chiefComplaints ?? this.chiefComplaints,
+      symptoms: symptoms ?? this.symptoms,
+      diagnosis: diagnosis ?? this.diagnosis,
+      vitals: vitals ?? this.vitals,
+      medications: medications ?? this.medications,
+      labTests: labTests ?? this.labTests,
+      procedures: procedures ?? this.procedures,
+      allergies: allergies ?? this.allergies,
+      advice: advice ?? this.advice,
+      followUp: followUp ?? this.followUp,
+      notes: notes ?? this.notes,
+      extra: extra ?? this.extra,
+    );
+  }
+
   static MedicationItem _parseMedicationString(String raw) {
     final trimmed = raw.trim();
     final regex = RegExp(r'^(.+?)(?:\s+(\d+(?:\.\d+)?\s*(?:mg|g|ml|mcg|IU|%)))?(?:\s*\((.*?)\))?$');

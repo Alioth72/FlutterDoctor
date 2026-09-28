@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hrx_protocol/hrx_protocol.dart';
 import 'package:provider/provider.dart';
 import '../../providers/health_profile_provider.dart';
 
@@ -81,6 +83,143 @@ class _FamilyQrCameraScannerScreenState extends State<FamilyQrCameraScannerScree
 
     // Show relationship selector sheet directly
     _showRelationshipSelectionSheet(qrData);
+  }
+
+  void _processRawQrCode(String rawCode) {
+    final trimmed = rawCode.trim();
+    if (trimmed.isEmpty) return;
+
+    try {
+      final decoder = HrxDecoder();
+      final result = decoder.decode(trimmed);
+
+      if (result.success && result.patient != null) {
+        final p = result.patient!;
+        final ageInfo = p.dateOfBirth.isNotEmpty ? p.dateOfBirth : (p.extra['age']?.toString() ?? '');
+        final ageGender = [if (ageInfo.isNotEmpty) ageInfo, if (p.gender.isNotEmpty) p.gender].join(' • ');
+
+        _onQrScanned({
+          'name': p.name,
+          'id': p.patientId.isNotEmpty ? p.patientId : p.patientRef,
+          'ageGender': ageGender.isNotEmpty ? ageGender : 'Patient',
+          'blood': p.bloodGroup.isNotEmpty ? p.bloodGroup : 'Unknown',
+          'phone': p.phone,
+        });
+        return;
+      } else if (result.success && result.visit != null) {
+        final v = result.visit!;
+        final diagName = v.diagnosis.isNotEmpty ? v.diagnosis.first.name : (v.chiefComplaints.isNotEmpty ? v.chiefComplaints.first : 'Medical Visit');
+        _onQrScanned({
+          'name': v.patientRef,
+          'id': v.patientRef,
+          'ageGender': 'Visit • $diagName',
+          'blood': 'Unknown',
+          'phone': '',
+        });
+        return;
+      }
+
+      // Fallback: Check if it's raw non-HRX JSON
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        final Map<String, dynamic> map = jsonDecode(trimmed) as Map<String, dynamic>;
+        final name = map['name'] ?? map['patientName'] ?? 'Family Member';
+        final id = map['id'] ?? map['patientId'] ?? map['patientRef'] ?? 'ASH-PT-0000';
+        final age = map['age']?.toString() ?? '';
+        final gender = map['gender']?.toString() ?? '';
+        final blood = map['blood'] ?? map['bloodGroup'] ?? '';
+        final phone = map['phone'] ?? map['contact'] ?? '';
+
+        final ageGender = [if (age.isNotEmpty) '$age Yrs', if (gender.isNotEmpty) gender].join(' • ');
+
+        _onQrScanned({
+          'name': name.toString(),
+          'id': id.toString(),
+          'ageGender': ageGender.isNotEmpty ? ageGender : 'Family Member',
+          'blood': blood.toString(),
+          'phone': phone.toString(),
+        });
+        return;
+      }
+
+      // If format not recognized
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unrecognized QR payload: ${result.errorMessage ?? trimmed.substring(0, math.min(trimmed.length, 30))}'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to parse QR code: $e'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    }
+  }
+
+  void _showManualQrInputDialog() {
+    final textController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF7C3AED)),
+            SizedBox(width: 8),
+            Text('Enter / Paste QR', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Paste an HRX QR string (e.g. HRX:P|1|...) or JSON data to decode:',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: textController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'HRX:P|1|... or {"name": "..."}',
+                hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.content_paste_rounded, size: 20),
+                  tooltip: 'Paste from Clipboard',
+                  onPressed: () async {
+                    final data = await Clipboard.getData(Clipboard.kTextPlain);
+                    if (data?.text != null) {
+                      textController.text = data!.text!;
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+            onPressed: () {
+              final text = textController.text.trim();
+              Navigator.pop(dialogCtx);
+              if (text.isNotEmpty) {
+                _processRawQrCode(text);
+              }
+            },
+            child: const Text('Decode & Add'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showRelationshipSelectionSheet(Map<String, String> qrData) {
@@ -552,17 +691,39 @@ class _FamilyQrCameraScannerScreenState extends State<FamilyQrCameraScannerScree
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Capture in View Trigger Button
-                    FilledButton.icon(
-                      onPressed: () => _onQrScanned(_sampleFamilyQrs[0]),
-                      icon: const Icon(Icons.camera_rounded, size: 20),
-                      label: const Text('Scan QR in Frame', style: TextStyle(fontWeight: FontWeight.bold)),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF7C3AED),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(46),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
+                    // Action Buttons Row: Capture & Manual Paste
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: FilledButton.icon(
+                            onPressed: () => _onQrScanned(_sampleFamilyQrs[0]),
+                            icon: const Icon(Icons.camera_rounded, size: 19),
+                            label: const Text('Scan in Frame', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF7C3AED),
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size.fromHeight(46),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: OutlinedButton.icon(
+                            onPressed: _showManualQrInputDialog,
+                            icon: const Icon(Icons.paste_rounded, size: 18, color: Color(0xFFDDD6FE)),
+                            label: const Text('Paste QR', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFF7C3AED), width: 1.5),
+                              backgroundColor: const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                              minimumSize: const Size.fromHeight(46),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
 

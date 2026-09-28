@@ -270,7 +270,10 @@ class PatientQrSheets {
       backgroundColor: Colors.transparent,
       builder: (modalCtx) => StatefulBuilder(
         builder: (ctx, setModalState) {
-          final visits = LocalVisitRepository.instance.getLastFiveVisits('P-7A92F81C');
+          final patientRef = profile?.patientId != null && profile!.patientId.isNotEmpty
+              ? 'P-${profile.patientId.replaceAll(RegExp(r'[^A-Za-z0-9]'), '')}'
+              : 'P-7A92F81C';
+          final visits = LocalVisitRepository.instance.getLastFiveVisits(patientRef);
 
           return FutureBuilder<List<VisitRecord>>(
             future: visits,
