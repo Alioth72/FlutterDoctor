@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/language_provider.dart';
+import '../widgets/dynamic_translated_text.dart';
 import '../services/patient_database_service.dart';
 import 'appointments/book_appointment_screen.dart';
 
@@ -38,12 +41,13 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
     }
   }
 
-  String _formatDate(String? rawDate) {
+  String _formatDate(String? rawDate, [LanguageProvider? lang]) {
     if (rawDate == null) return 'Recent';
     try {
       final dt = DateTime.parse(rawDate).toLocal();
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return '${dt.day.toString().padLeft(2, '0')} ${months[dt.month - 1]} ${dt.year}';
+      final mStr = lang != null ? lang.tr('month_${dt.month}') : months[dt.month - 1];
+      return '${dt.day.toString().padLeft(2, '0')} $mStr ${dt.year}';
     } catch (_) {
       return rawDate;
     }
@@ -51,6 +55,7 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
     final filtered = _records.where((r) {
       if (_searchQuery.isEmpty) return true;
       final q = _searchQuery.toLowerCase();
@@ -63,8 +68,8 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text(
-          'Medical History',
+        title: Text(
+          lang.tr('medical_history_title'),
           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
         ),
         elevation: 0,
@@ -92,7 +97,7 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                         TextField(
                           onChanged: (val) => setState(() => _searchQuery = val.trim()),
                           decoration: InputDecoration(
-                            hintText: 'Search diagnoses, symptoms, doctors...',
+                            hintText: lang.tr('search_records_hint'),
                             hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
                             prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF7C3AED)),
                             filled: true,
@@ -127,14 +132,14 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                         const SizedBox(height: 10),
 
                         // Cards
-                        ...filtered.map((r) => _buildRecordCard(r)),
+                        ...filtered.map((r) => _buildRecordCard(r, lang)),
                       ],
                     ),
             ),
     );
   }
 
-  Widget _buildRecordCard(Map<String, dynamic> record) {
+  Widget _buildRecordCard(Map<String, dynamic> record, LanguageProvider lang) {
     final diagnosis = record['diagnosis']?.toString() ?? 'Clinical Consultation';
     final doctorName = record['author_name']?.toString() ?? 'Attending Physician';
     final dateStr = _formatDate(record['recorded_at']?.toString());
@@ -197,8 +202,8 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
             const SizedBox(height: 10),
 
             // Diagnosis
-            Text(
-              diagnosis,
+            DynamicTranslatedText(
+              text: diagnosis,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -212,14 +217,8 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
               children: [
                 const Icon(Icons.person_rounded, size: 14, color: Color(0xFF64748B)),
                 const SizedBox(width: 4),
-                Text(
-                  'Consulted with $doctorName',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: Color(0xFF475569),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text('${lang.tr('consulted_with')} ', style: const TextStyle(fontSize: 12.5, color: Color(0xFF475569), fontWeight: FontWeight.w600)),
+                Expanded(child: DynamicTranslatedText(text: doctorName, style: const TextStyle(fontSize: 12.5, color: Color(0xFF475569), fontWeight: FontWeight.w600))),
               ],
             ),
 
@@ -236,13 +235,13 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Reported Symptoms:',
+                    Text(
+                      lang.tr('reported_symptoms'),
                       style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      symptoms,
+                    DynamicTranslatedText(
+                      text: symptoms,
                       style: const TextStyle(fontSize: 12.5, color: Color(0xFF1E293B)),
                     ),
                   ],
@@ -266,12 +265,12 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.medication_rounded, size: 14, color: Color(0xFF7C3AED)),
-                        SizedBox(width: 5),
+                        const Icon(Icons.medication_rounded, size: 14, color: Color(0xFF7C3AED)),
+                        const SizedBox(width: 5),
                         Text(
-                          'Prescribed Medicines:',
+                          lang.tr('prescribed_medicines'),
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF6D28D9)),
                         ),
                       ],
@@ -291,8 +290,8 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(color: const Color(0xFFC4B5FD)),
                           ),
-                          child: Text(
-                            dosage.toString().isNotEmpty ? '$name ($dosage)' : name.toString(),
+                          child: DynamicTranslatedText(
+                            text: dosage.toString().isNotEmpty ? '$name ($dosage)' : name.toString(),
                             style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF5B21B6)),
                           ),
                         );
@@ -376,6 +375,7 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
@@ -395,8 +395,8 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'No Medical Records Found',
+            Text(
+              lang.tr('no_medical_records'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
@@ -404,8 +404,8 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Your diagnoses, clinical notes, and lab records will appear here after consultations with hospital doctors.',
+            Text(
+              lang.tr('no_medical_records_sub'),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, height: 1.4, color: Color(0xFF64748B)),
             ),
@@ -418,7 +418,7 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                 );
               },
               icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Book Doctor Consultation'),
+              label: Text(lang.tr('book_doctor_consultation')),
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF7C3AED),
                 padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),

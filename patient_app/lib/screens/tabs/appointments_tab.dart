@@ -42,8 +42,8 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
               icon: const Icon(Icons.refresh_rounded),
               onPressed: () async {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Syncing appointments with health system...'),
+                  SnackBar(
+                    content: Text(langProvider.tr('syncing_appointments')),
                     duration: Duration(seconds: 1),
                   ),
                 );
@@ -67,7 +67,7 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Upcoming', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(langProvider.tr('upcoming'), style: const TextStyle(fontWeight: FontWeight.bold)),
                     if (upcomingAppointments.isNotEmpty) ...[
                       const SizedBox(width: 6),
                       Container(
@@ -89,7 +89,7 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('History', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(langProvider.tr('history'), style: const TextStyle(fontWeight: FontWeight.bold)),
                     if (pastAppointments.isNotEmpty) ...[
                       const SizedBox(width: 6),
                       Container(
@@ -130,8 +130,8 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
               child: pastAppointments.isEmpty
                   ? _buildEmptyState(
                       context,
-                      title: 'No Past Appointments',
-                      subtitle: 'Your completed and cancelled consultation records will appear here.',
+                      title: langProvider.tr('no_past_appointments'),
+                      subtitle: langProvider.tr('no_past_appointments_sub'),
                       showBookButton: false,
                     )
                   : _buildAppointmentsList(context, pastAppointments, isUpcoming: false),
@@ -304,7 +304,7 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
                               Text(
                                 apt.isOnline
                                     ? (apt.appointmentType.toLowerCase() == 'telehealth'
-                                        ? 'TELEHEALTH'
+                                        ? langProvider.tr('telehealth_badge')
                                         : langProvider.tr('online_badge'))
                                     : langProvider.tr('offline_badge'),
                                 style: TextStyle(
@@ -325,7 +325,17 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isConfirmed ? langProvider.tr('status_confirmed') : (apt.status == 'Cancelled' ? langProvider.tr('status_cancelled') : apt.status),
+                        isConfirmed
+        ? langProvider.tr('status_confirmed')
+        : (apt.status.toLowerCase() == 'cancelled'
+            ? langProvider.tr('status_cancelled')
+            : (apt.status.toLowerCase() == 'completed'
+                ? langProvider.tr('completed_status')
+                : (isInProgress
+                    ? langProvider.tr('in_progress_status')
+                    : (apt.status.toLowerCase() == 'queued'
+                        ? langProvider.tr('queued_status')
+                        : apt.status)))),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -463,17 +473,17 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Appointment?'),
-        content: Text('Are you sure you want to cancel your appointment with ${appointment.doctorName}?'),
+        title: Text(Provider.of<LanguageProvider>(context, listen: false).tr('cancel_appointment_q')),
+        content: Text('${Provider.of<LanguageProvider>(context, listen: false).tr('cancel_appointment_confirm')} ${appointment.doctorName}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('No, Keep It'),
+            child: Text(Provider.of<LanguageProvider>(context, listen: false).tr('no_keep_it')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Yes, Cancel'),
+            child: Text(Provider.of<LanguageProvider>(context, listen: false).tr('yes_cancel')),
           ),
         ],
       ),
@@ -484,7 +494,7 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
       await provider.cancelAppointment(appointment.id);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Appointment cancelled successfully.')),
+          SnackBar(content: Text(Provider.of<LanguageProvider>(context, listen: false).tr('appointment_cancelled'))),
         );
       }
     }
@@ -494,17 +504,17 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Appointment?'),
-        content: const Text('Do you want to permanently remove this appointment from your history?'),
+        title: Text(Provider.of<LanguageProvider>(context, listen: false).tr('delete_appointment_q')),
+        content: Text(Provider.of<LanguageProvider>(context, listen: false).tr('delete_appointment_confirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(Provider.of<LanguageProvider>(context, listen: false).tr('close_btn')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete'),
+            child: Text(Provider.of<LanguageProvider>(context, listen: false).tr('delete_btn')),
           ),
         ],
       ),
@@ -515,7 +525,7 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
       await provider.deleteAppointment(appointment.id);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Appointment deleted.')),
+          SnackBar(content: Text(Provider.of<LanguageProvider>(context, listen: false).tr('appointment_deleted'))),
         );
       }
     }
@@ -525,17 +535,17 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Clear All Appointments?'),
-        content: const Text('This will delete all appointment records from your local storage. You can refresh from the backend anytime.'),
+        title: Text(Provider.of<LanguageProvider>(context, listen: false).tr('clear_all_appointments_q')),
+        content: Text(Provider.of<LanguageProvider>(context, listen: false).tr('clear_all_confirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(Provider.of<LanguageProvider>(context, listen: false).tr('close_btn')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Clear All'),
+            child: Text(Provider.of<LanguageProvider>(context, listen: false).tr('clear_all_btn')),
           ),
         ],
       ),
@@ -546,7 +556,7 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
       await provider.clearAllAppointments();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('All appointments cleared.')),
+          SnackBar(content: Text(Provider.of<LanguageProvider>(context, listen: false).tr('all_appointments_cleared'))),
         );
       }
     }

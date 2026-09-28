@@ -6,7 +6,76 @@ import 'indic_transliterator.dart';
 /// Provides synchronous offline translation and phonetic script conversion
 /// guaranteeing 0% Latin/English characters remain in the UI.
 class OfflinePhraseEngine {
-  static const Map<String, Map<String, String>> _phraseDictionary = {
+  static const Map<String, Map<String, String>> _phraseDictionary = {    // UI Navigation, Statuses & Appointments
+    'upcoming': {
+      'pa': 'ਆਉਣ ਵਾਲੀਆਂ', 'hi': 'आगामी', 'bn': 'আসন্ন', 'te': 'రాబోయేవి', 'ta': 'வரவிருக்கும்', 'mr': 'आगामी',
+      'gu': 'આગામી', 'kn': 'ಮುಂಬರುವ', 'ml': 'വരാനിരിക്കുന്നവ', 'or': 'ଆଗାମୀ', 'as': 'আসন্ন', 'ur': 'آنے والی',
+    },
+    'history': {
+      'pa': 'ਇਤਿਹਾਸ', 'hi': 'इतिहास', 'bn': 'ইতিহাস', 'te': 'చరిత్ర', 'ta': 'வரலாறு', 'mr': 'इतिहास',
+      'gu': 'ઇતિહાસ', 'kn': 'ಇತಿಹಾಸ', 'ml': 'ചരിത്രം', 'or': 'ଇତିହାସ', 'as': 'ইতিহাস', 'ur': 'تاریخ',
+    },
+    'general checkup': {
+      'pa': 'ਆਮ ਜਾਂਚ', 'hi': 'सामान्य जांच', 'bn': 'সাধারণ স্বাস্থ্য পরীক্ষা', 'te': 'సాధారణ తనిఖీ', 'ta': 'பொதுப் பரிசோதனை', 'mr': 'सामान्य तपासणी',
+      'gu': 'સામાન્ય તપાસ', 'kn': 'ಸಾಮಾನ್ಯ ತಪಾಸಣೆ', 'ml': 'ജനറൽ ചെക്കപ്പ്', 'or': 'ସାଧାରଣ ଯାଞ୍ଚ', 'as': 'সাধাৰণ পৰীক্ষা', 'ur': 'عام معائنہ',
+    },
+    'fever & cough': {
+      'pa': 'ਬੁਖ਼ਾਰ ਅਤੇ ਖੰਘ', 'hi': 'बुखार और खांसी', 'bn': 'জ্বর ও কাশি', 'te': 'జ్వరం & దగ్గు', 'ta': 'காய்ச்சல் & இருமல்', 'mr': 'ताप आणि खोकला',
+      'gu': 'તાવ અને ખાંસી', 'kn': 'ಜ್ವರ ಮತ್ತು ಕೆಮ್ಮು', 'ml': 'പനിയും ചുമയും', 'or': 'ଜ୍ୱର ଏବଂ କାଶ', 'as': 'জ্বৰ আৰু কাহ', 'ur': 'بخار اور کھانسی',
+    },
+    'body pain': {
+      'pa': 'ਸਰੀਰ ਦਾ ਦਰਦ', 'hi': 'बदन दर्द', 'bn': 'শরীর ব্যথা', 'te': 'శరీర నొప్పులు', 'ta': 'உடல் வலி', 'mr': 'अंगदुखी',
+      'gu': 'શરીરનો દુખાવો', 'kn': 'ಮೈಕೈ ನೋವು', 'ml': 'ശരീരവേദന', 'or': 'ଶରୀର ଯନ୍ତ୍ରଣା', 'as': 'গাৰ বিষ', 'ur': 'جسم میں درد',
+    },
+    'follow-up visit': {
+      'pa': 'ਦੁਬਾਰਾ ਮੁਲਾਕਾਤ', 'hi': 'फॉलो-अप परामर्श', 'bn': 'পরবর্তী ফলো-আপ', 'te': 'ఫాలో-అప్ సందర్శన', 'ta': 'தொடர் ஆலோசனை', 'mr': 'पुढील तपासणी',
+      'gu': 'ફરીથી મુલાકાત', 'kn': 'ಮುಂದಿನ ಭೇಟಿ', 'ml': 'തുടർ സന്ദർശനം', 'or': 'ଫଲୋ-ଅପ୍ ପରାମର୍ଶ', 'as': 'অনুৱৰ্তী সাক্ষাৎ', 'ur': 'دوبارہ معائنہ',
+    },
+    'prescription renewal': {
+      'pa': 'ਦਵਾਈ ਪਰਚੀ ਨਵਿਆਉਣਾ', 'hi': 'दवा पर्ची नवीनीकरण', 'bn': 'প্রেসক্রিপশন নবায়ন', 'te': 'ప్రిస్క్రిప్షన్ పునరుద్ధరణ', 'ta': 'மருந்துச் சீட்டு புதுப்பித்தல்', 'mr': 'प्रिस्क्रिप्शन नूतनीकरण',
+      'gu': 'પ્રિસ્ક્રિપ્શન નવીકરણ', 'kn': 'ಪ್ರಿಸ್ಕ್ರಿಪ್ಷನ್ ನವೀಕರಣ', 'ml': 'കുറിപ്പടി പുതുക്കൽ', 'or': 'ପ୍ରେସକ୍ରିପସନ୍ ନବୀକରଣ', 'as': 'প্ৰেছক্ৰিপচন নবীকৰণ', 'ur': 'نسخہ کی تجدید',
+    },
+    'blood pressure': {
+      'pa': 'ਬਲੱਡ ਪ੍ਰੈਸ਼ਰ', 'hi': 'रक्तचाप', 'bn': 'রক্তচাপ', 'te': 'రక్తపోటు', 'ta': 'இரத்த அழுத்தம்', 'mr': 'रक्तदाब',
+      'gu': 'બ્લડ પ્રેશર', 'kn': 'ರಕ್ತದೊತ್ತಡ', 'ml': 'രക്തസമ്മർദ്ദം', 'or': 'ରକ୍ତଚାପ', 'as': 'ৰক্তচাপ', 'ur': 'بلڈ پریشر',
+    },
+    'heart rate': {
+      'pa': 'ਦਿਲ ਦੀ ਧੜਕਣ', 'hi': 'हृदय गति', 'bn': 'হৃদস্পন্দন', 'te': 'గుండె స్పందన', 'ta': 'இதயத் துடிப்பு', 'mr': 'हृदयाचे ठोके',
+      'gu': 'હૃદયના ધબકારા', 'kn': 'ಹೃದಯ ಬಡಿತ', 'ml': 'ഹൃദയമിടിപ്പ്', 'or': 'ହୃଦସ୍ପନ୍ଦନ', 'as': 'হৃদস্পন্দন', 'ur': 'دل کی دھڑکن',
+    },
+    'cancel': {
+      'pa': 'ਰੱਦ ਕਰੋ', 'hi': 'रद्द करें', 'bn': 'বাতিল', 'te': 'రద్దు చేయి', 'ta': 'ரத்து', 'mr': 'रद्द करा',
+      'gu': 'રદ કરો', 'kn': 'ರದ್ದುಮಾಡಿ', 'ml': 'റദ്ദാക്കുക', 'or': 'ବାତିଲ କରନ୍ତୁ', 'as': 'বাতিল কৰক', 'ur': 'منسوخ کریں',
+    },
+    'delete': {
+      'pa': 'ਹਟਾਓ', 'hi': 'हटाएं', 'bn': 'মুছুন', 'te': 'తొలగించు', 'ta': 'நீக்கு', 'mr': 'काढून टाका',
+      'gu': 'કાઢી નાખો', 'kn': 'ಅಳಿಸಿ', 'ml': 'നീക്കം ചെയ്യുക', 'or': 'ହଟାନ୍ତୁ', 'as': 'মচক', 'ur': 'حذف کریں',
+    },
+    'active': {
+      'pa': 'ਸਰਗਰਮ', 'hi': 'सक्रिय', 'bn': 'সক্রিয়', 'te': 'యాక్టివ్', 'ta': 'செயலில்', 'mr': 'सक्रिय',
+      'gu': 'સક્રિય', 'kn': 'ಸಕ್ರಿಯ', 'ml': 'സജീവം', 'or': 'ସକ୍ରିୟ', 'as': 'সক্ৰিয়', 'ur': 'فعال',
+    },
+    'completed': {
+      'pa': 'ਮੁਕੰਮਲ', 'hi': 'पूर्ण', 'bn': 'সম্পন্ন', 'te': 'పూర్తయింది', 'ta': 'முடிந்தது', 'mr': 'पूर्ण',
+      'gu': 'પૂર્ણ', 'kn': 'ಪೂರ್ಣಗೊಂಡಿದೆ', 'ml': 'പൂർത്തിയായി', 'or': 'ସମ୍ପୂର୍ଣ୍ଣ', 'as': 'সম্পূৰ্ণ', 'ur': 'مکمل',
+    },
+    'book': {
+      'pa': 'ਬੁੱਕ ਕਰੋ', 'hi': 'बुक करें', 'bn': 'বুক করুন', 'te': 'బుక్ చేయండి', 'ta': 'பதிவு செய்க', 'mr': 'बुक करा',
+      'gu': 'બુક કરો', 'kn': 'ಬುಕ್ ಮಾಡಿ', 'ml': 'ബുക്ക് ചെയ്യുക', 'or': 'ବୁକ୍ କରନ୍ତୁ', 'as': 'বুক কৰক', 'ur': 'بک کریں',
+    },
+    'receipt': {
+      'pa': 'ਰਸੀਦ', 'hi': 'रसीद', 'bn': 'রসিদ', 'te': 'రసీదు', 'ta': 'ரசீது', 'mr': 'पावती',
+      'gu': 'રસીદ', 'kn': 'ರಸೀದಿ', 'ml': 'രസീത്', 'or': 'ରସିଦ', 'as': 'ৰছিদ', 'ur': 'رسید',
+    },
+    'male': {
+      'pa': 'ਪੁਰਸ਼', 'hi': 'पुरुष', 'bn': 'পুরুষ', 'te': 'పురుషుడు', 'ta': 'ஆண்', 'mr': 'पुरुष',
+      'gu': 'પુરુષ', 'kn': 'ಪುರುಷ', 'ml': 'പുരുഷൻ', 'or': 'ପୁରୁଷ', 'as': 'পুৰুষ', 'ur': 'مرد',
+    },
+    'female': {
+      'pa': 'ਮਹਿਲਾ', 'hi': 'महिला', 'bn': 'মহিলা', 'te': 'మహిళ', 'ta': 'பெண்', 'mr': 'महिला',
+      'gu': 'મહિલા', 'kn': 'ಮಹಿಳೆ', 'ml': 'സ്ത്രീ', 'or': 'ମହିଳା', 'as': 'মহিলা', 'ur': 'خاتون',
+    },
+
     // Financial & Scheme Terms
     'financial assistance': {
       'pa': 'ਵਿੱਤੀ ਸਹਾਇਤਾ', 'hi': 'वित्तीय सहायता', 'bn': 'আর্থিক সহায়তা',
@@ -120,6 +189,17 @@ class OfflinePhraseEngine {
 
   /// Translates text offline using local dictionary and phonetic transliterator.
   /// Guarantees that 0 English letters remain in the returned string.
+    static String? lookupPhrase(String phrase, String langCode) {
+    if (phrase.trim().isEmpty) return null;
+    final lang = langCode.split('-')[0].toLowerCase();
+    final lower = phrase.trim().toLowerCase();
+    if (_phraseDictionary.containsKey(lower)) {
+      final map = _phraseDictionary[lower]!;
+      return map[lang] ?? map['hi'];
+    }
+    return null;
+  }
+
   static String translate(String text, String langCode) {
     if (text.trim().isEmpty) return text;
     if (langCode == 'en' || langCode == 'en-IN') return text;
@@ -133,7 +213,7 @@ class OfflinePhraseEngine {
     }
 
     // 2. Check AppStrings
-    final appStringMatch = AppStrings.get(text, lang);
+    final appStringMatch = AppStrings.localizedValues[lang]?[text] ?? text;
     if (appStringMatch != text) {
       return appStringMatch;
     }

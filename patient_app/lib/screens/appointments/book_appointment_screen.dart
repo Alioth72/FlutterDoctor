@@ -133,22 +133,21 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     }
   }
 
-  String _formatDate(DateTime date) {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    return '${days[date.weekday - 1]}, ${date.day} ${months[date.month - 1]}';
+  String _formatDate(DateTime date, [LanguageProvider? lang]) {
+    const dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    final dayStr = lang != null ? lang.tr(dayKeys[date.weekday - 1]) : dayKeys[date.weekday - 1];
+    final monthStr = lang != null ? lang.tr('month_${date.month}') : '${date.month}';
+    return '$dayStr, ${date.day} $monthStr';
   }
 
   Future<void> _handleConfirmBooking() async {
     if (_isBooking) return;
     FocusScope.of(context).unfocus();
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
 
     if (_selectedDoctor == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a doctor')),
+        SnackBar(content: Text(lang.tr('please_select_doctor'))),
       );
       return;
     }
@@ -156,7 +155,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     if (!_selectedDoctor!.isAvailableOn(_selectedDate)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${_selectedDoctor!.name} is not available on this day. Please pick another date.'),
+          content: Text('${_selectedDoctor!.name} ${lang.tr('doctor_not_available_day')}'),
         ),
       );
       return;
@@ -164,7 +163,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
     if (_selectedTimeSlot == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an available time slot')),
+        SnackBar(content: Text(lang.tr('please_select_slot'))),
       );
       return;
     }
@@ -174,7 +173,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
     if (patient == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Patient profile not found. Please complete signup first.')),
+        SnackBar(content: Text(lang.tr('profile_not_found_signup'))),
       );
       return;
     }
@@ -599,7 +598,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                                                   ),
                                                   Flexible(
                                                     child: Text(
-                                                      ' (${doc.experienceYears}y exp)',
+                                                      ' (${doc.experienceYears} ${lang.tr('years_exp')})',
                                                       maxLines: 1,
                                                       overflow: TextOverflow.ellipsis,
                                                       style: const TextStyle(
@@ -1106,7 +1105,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${lang.tr('slot_selected')}: ${_formatDate(_selectedDate)} • ${_selectedTimeSlot ?? "09:00 AM"} • ${_selectedAppointmentType == 'Online' ? lang.tr('online_badge') : lang.tr('offline_badge')}',
+                            '${lang.tr('slot_selected')}: ${_formatDate(_selectedDate, lang)} • ${_selectedTimeSlot ?? "09:00 AM"} • ${_selectedAppointmentType == 'Online' ? lang.tr('online_badge') : lang.tr('offline_badge')}',
                             style: const TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
@@ -1346,24 +1345,25 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
   /// Time slots 3-column grid matching mockup
   Widget _buildTimeSlotGrid(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
     if (_selectedDoctor == null) {
-      return const Text('Select a doctor first.');
+      return Text(lang.tr('select_doctor_first'));
     }
 
     if (_isLoadingSlots) {
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 32),
         alignment: Alignment.center,
-        child: const Column(
+        child: Column(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 24,
               height: 24,
               child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF7C3AED)),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
-              'Checking live doctor availability...',
+              lang.tr('checking_availability'),
               style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
             ),
           ],
@@ -1385,7 +1385,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                '${_selectedDoctor!.name} is not available on this date. Please choose an active date from above.',
+                '${_selectedDoctor!.name} ${lang.tr('doctor_not_available_date')}',
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF9F1239)),
               ),
             ),
@@ -1394,7 +1394,6 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       );
     }
 
-    final lang = Provider.of<LanguageProvider>(context);
     List<DoctorAvailabilitySlot> slots = _availableSlots;
     if (slots.isEmpty && _selectedDoctor != null) {
       slots = _selectedDoctor!.availableTimeSlots.map((time) {
@@ -1432,13 +1431,13 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
           statusLabel = lang.tr('slot_full');
           statusColor = const Color(0xFFEF4444);
         } else if (slot.remainingSpots == 1) {
-          statusLabel = '1 spot left';
+          statusLabel = '1 ${lang.tr('spot_left')}';
           statusColor = const Color(0xFFD97706);
         } else if (slot.remainingSpots == 2) {
-          statusLabel = '2 spots left';
+          statusLabel = '2 ${lang.tr('spots_left')}';
           statusColor = const Color(0xFF0D9488);
         } else {
-          statusLabel = '3 spots free';
+          statusLabel = '3 ${lang.tr('spots_free')}';
           statusColor = const Color(0xFF059669);
         }
 
@@ -1447,7 +1446,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
               ? () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Slot ${slot.slotTime} is fully booked (3/3 patients). Please select another slot.'),
+                      content: Text('${slot.slotTime} ${lang.tr('slot_fully_booked')}'),
                       backgroundColor: const Color(0xFFEF4444),
                       duration: const Duration(seconds: 2),
                     ),

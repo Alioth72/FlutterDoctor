@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../providers/language_provider.dart';
 import 'package:provider/provider.dart';
 import '../providers/appointment_provider.dart';
 import '../providers/health_profile_provider.dart';
@@ -19,6 +20,21 @@ class _RequestAshaVisitScreenState extends State<RequestAshaVisitScreen> {
   String _urgency = 'routine'; // 'routine', 'priority', 'emergency'
   final Set<String> _selectedSymptoms = {};
   bool _isSubmitting = false;
+
+    String _symptomLabel(String s, LanguageProvider lang) {
+    switch (s) {
+      case 'Fever & Chills': return lang.tr('fever_chills');
+      case 'Cough & Cold': return lang.tr('cough_cold');
+      case 'High Blood Pressure': return lang.tr('high_bp');
+      case 'Dizziness / Weakness': return lang.tr('dizziness_weakness');
+      case 'Chest Discomfort': return lang.tr('chest_discomfort');
+      case 'Diabetes / Sugar Check': return lang.tr('diabetes_check');
+      case 'Joint Pain': return lang.tr('joint_pain');
+      case 'Maternal Care': return lang.tr('maternal_care');
+      case 'Elderly Care': return lang.tr('elderly_care');
+      default: return lang.tr(s);
+    }
+  }
 
   final List<String> _commonSymptoms = const [
     'Fever & Chills',
@@ -77,8 +93,8 @@ class _RequestAshaVisitScreenState extends State<RequestAshaVisitScreen> {
     final reason = _reasonController.text.trim();
     if (reason.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please describe the reason or symptoms for the visit.'),
+        SnackBar(
+          content: Text(Provider.of<LanguageProvider>(context, listen: false).tr('reported_symptoms')),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -110,7 +126,9 @@ class _RequestAshaVisitScreenState extends State<RequestAshaVisitScreen> {
       await showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
+        builder: (ctx) {
+          final lang = Provider.of<LanguageProvider>(context, listen: false);
+          return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           contentPadding: const EdgeInsets.all(24),
           content: Column(
@@ -169,13 +187,14 @@ class _RequestAshaVisitScreenState extends State<RequestAshaVisitScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Back to Home', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  child: Text(lang.tr('back_to_home'), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
             ],
           ),
-        ),
-      );
+        );
+      },
+    );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -191,6 +210,7 @@ class _RequestAshaVisitScreenState extends State<RequestAshaVisitScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -294,7 +314,7 @@ class _RequestAshaVisitScreenState extends State<RequestAshaVisitScreen> {
                 children: _commonSymptoms.map((symptom) {
                   final isSelected = _selectedSymptoms.contains(symptom);
                   return FilterChip(
-                    label: Text(symptom),
+                    label: Text(_symptomLabel(symptom, lang)),
                     selected: isSelected,
                     onSelected: (_) => _toggleSymptom(symptom),
                     selectedColor: const Color(0xFFCCFBF1),

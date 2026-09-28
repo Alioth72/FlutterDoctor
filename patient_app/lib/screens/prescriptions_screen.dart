@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/language_provider.dart';
+import '../widgets/dynamic_translated_text.dart';
 import '../services/patient_database_service.dart';
 import 'appointments/book_appointment_screen.dart';
 
@@ -38,12 +41,13 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
     }
   }
 
-  String _formatDate(String? rawDate) {
-    if (rawDate == null) return 'Active';
+  String _formatDate(String? rawDate, [LanguageProvider? lang]) {
+    if (rawDate == null) return lang != null ? lang.tr('active_status') : 'Active';
     try {
       final dt = DateTime.parse(rawDate).toLocal();
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return '${dt.day.toString().padLeft(2, '0')} ${months[dt.month - 1]} ${dt.year}';
+      final mStr = lang != null ? lang.tr('month_${dt.month}') : months[dt.month - 1];
+      return '${dt.day.toString().padLeft(2, '0')} $mStr ${dt.year}';
     } catch (_) {
       return rawDate;
     }
@@ -51,6 +55,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
     final filtered = _prescriptions.where((p) {
       if (_searchQuery.isEmpty) return true;
       final q = _searchQuery.toLowerCase();
@@ -63,8 +68,8 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text(
-          'My Prescriptions',
+        title: Text(
+          lang.tr('my_prescriptions_title'),
           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
         ),
         elevation: 0,
@@ -115,7 +120,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
                         const SizedBox(height: 16),
 
                         Text(
-                          '${filtered.length} ACTIVE PRESCRIPTION${filtered.length == 1 ? '' : 'S'}',
+                          '${filtered.length} ${lang.tr('active_prescriptions').toUpperCase()}',
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
@@ -126,21 +131,21 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
                         const SizedBox(height: 10),
 
                         // List of cards
-                        ...filtered.map((p) => _buildPrescriptionCard(p)),
+                        ...filtered.map((p) => _buildPrescriptionCard(p, lang)),
                       ],
                     ),
             ),
     );
   }
 
-  Widget _buildPrescriptionCard(Map<String, dynamic> item) {
+  Widget _buildPrescriptionCard(Map<String, dynamic> item, LanguageProvider lang) {
     final medName = item['medication_name']?.toString() ?? 'Prescription Medicine';
     final dosage = item['dosage']?.toString() ?? 'Standard Dosage';
     final frequency = item['frequency']?.toString() ?? 'As Directed';
     final durationDays = item['duration_days'] ?? 5;
     final doctorName = item['prescriber_name']?.toString() ?? 'Dr. Ananya Iyer';
     final pharmacyName = item['pharmacy_name']?.toString() ?? 'Ashwini Central Pharmacy';
-    final dateStr = _formatDate(item['created_at']?.toString());
+    final dateStr = _formatDate(item['created_at']?.toString(), lang);
     final instructions = item['instructions'];
     String instructionsText = '';
     if (instructions is Map) {
@@ -185,8 +190,8 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          medName,
+                        DynamicTranslatedText(
+                          text: medName,
                           style: const TextStyle(
                             fontSize: 15.5,
                             fontWeight: FontWeight.w800,
@@ -194,8 +199,8 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          '$dosage • $frequency',
+                        DynamicTranslatedText(
+                          text: '$dosage • $frequency',
                           style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
@@ -213,8 +218,8 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(color: const Color(0xFFA7F3D0)),
                   ),
-                  child: const Text(
-                    'Active',
+                  child: Text(
+                    lang.tr('active_status'),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -237,13 +242,13 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
                     const Icon(Icons.timer_outlined, size: 14, color: Color(0xFF64748B)),
                     const SizedBox(width: 4),
                     Text(
-                      'Duration: $durationDays days',
+                      '${lang.tr('duration_label')}: $durationDays ${lang.tr('days_label')}',
                       style: const TextStyle(fontSize: 12, color: Color(0xFF475569), fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
                 Text(
-                  'Issued: $dateStr',
+                  '${lang.tr('issued_label')}: $dateStr',
                   style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                 ),
               ],
@@ -295,6 +300,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
@@ -314,8 +320,8 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'No Prescriptions Found',
+            Text(
+              lang.tr('no_prescriptions_found'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
@@ -323,8 +329,8 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Doctor prescriptions and digital medication orders from your consultations will be listed here.',
+            Text(
+              lang.tr('no_prescriptions_sub'),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, height: 1.4, color: Color(0xFF64748B)),
             ),
@@ -337,7 +343,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
                 );
               },
               icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Book Doctor Consultation'),
+              label: Text(lang.tr('book_doctor_consultation')),
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF7C3AED),
                 padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),

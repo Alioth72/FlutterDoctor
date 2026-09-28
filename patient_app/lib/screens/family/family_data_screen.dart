@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../providers/language_provider.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../models/family_member.dart';
@@ -20,6 +21,18 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
   String _selectedRelation = 'Spouse';
   bool _isSubmitting = false;
 
+    String _relationLabel(String r, LanguageProvider lang) {
+    switch (r.toLowerCase()) {
+      case 'spouse': return lang.tr('spouse');
+      case 'child': return lang.tr('child');
+      case 'father': return lang.tr('father');
+      case 'mother': return lang.tr('mother');
+      case 'sibling': return lang.tr('sibling');
+      case 'grandparent': return lang.tr('grandparent');
+      default: return lang.tr('other_relation');
+    }
+  }
+
   final List<String> _relations = const [
     'Spouse',
     'Child',
@@ -38,6 +51,7 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
   }
 
   void _showAddMemberModal() {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     _nameController.clear();
     _patientIdController.clear();
     _selectedRelation = 'Spouse';
@@ -89,12 +103,12 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Sync Family Member',
+                              lang.tr('sync_family_member'),
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -102,7 +116,7 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
                               ),
                             ),
                             Text(
-                              'Link records using Member Name & Patient ID',
+                              lang.tr('link_family_sub'),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF64748B),
@@ -120,7 +134,7 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
                     controller: _nameController,
                     textCapitalization: TextCapitalization.words,
                     decoration: InputDecoration(
-                      labelText: 'Family Member Name',
+                      labelText: lang.tr('family_member_name'),
                       hintText: 'e.g. Pooja Malhotra',
                       prefixIcon: const Icon(Icons.person_outline),
                       filled: true,
@@ -141,7 +155,7 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
                     controller: _patientIdController,
                     textCapitalization: TextCapitalization.characters,
                     decoration: InputDecoration(
-                      labelText: 'Member Patient ID',
+                      labelText: lang.tr('member_patient_id'),
                       hintText: 'e.g. ASH-PT-4512',
                       prefixIcon: const Icon(Icons.badge_outlined),
                       prefixText: 'ID: ',
@@ -165,13 +179,13 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
                   DropdownButtonFormField<String>(
                     initialValue: _selectedRelation,
                     decoration: InputDecoration(
-                      labelText: 'Relationship',
+                      labelText: lang.tr('relationship_label'),
                       prefixIcon: const Icon(Icons.people_outline),
                       filled: true,
                       fillColor: const Color(0xFFF8FAFC),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    items: _relations.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                    items: _relations.map((r) => DropdownMenuItem(value: r, child: Text(_relationLabel(r, lang)))).toList(),
                     onChanged: (val) {
                       if (val != null) {
                         setModalState(() => _selectedRelation = val);
@@ -286,15 +300,16 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
   }
 
   void _confirmDeleteMember(BuildContext context, FamilyMember member) {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Unlink Family Member?'),
-        content: Text('Are you sure you want to remove ${member.name} (ID: ${member.patientId}) from your synced family list?'),
+        title: Text(lang.tr('unlink_family_q')),
+        content: Text('${lang.tr('unlink_family_q')} ${member.name} (ID: ${member.patientId})?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(lang.tr('close_btn')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -308,7 +323,7 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
                 ),
               );
             },
-            child: const Text('Unlink'),
+            child: Text(lang.tr('unlink_btn')),
           ),
         ],
       ),
@@ -318,6 +333,7 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<HealthProfileProvider>(context);
+    final lang = Provider.of<LanguageProvider>(context);
     final profile = provider.profile;
     final myPatientId = profile?.patientId ?? 'ASH-PT-1001';
     final familyList = provider.familyMembers;
@@ -325,8 +341,8 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFC),
       appBar: AppBar(
-        title: const Text(
-          'Family Health Data',
+        title: Text(
+          lang.tr('sync_family_member'),
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         elevation: 0,
@@ -407,8 +423,8 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: myPatientId));
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Patient ID copied to clipboard!'),
+                            SnackBar(
+                              content: Text(Provider.of<LanguageProvider>(context, listen: false).tr('patient_id_copied')),
                               behavior: SnackBarBehavior.floating,
                             ),
                           );
@@ -453,7 +469,7 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
                 ElevatedButton.icon(
                   onPressed: _showAddMemberModal,
                   icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
-                  label: const Text('Add Member'),
+                  label: Text(Provider.of<LanguageProvider>(context, listen: false).tr('add_member_btn')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,

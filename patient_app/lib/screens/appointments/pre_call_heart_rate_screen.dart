@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/language_provider.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../../models/appointment.dart';
@@ -325,6 +327,7 @@ class _PreCallHeartRateScreenState extends State<PreCallHeartRateScreen> with Si
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -337,8 +340,8 @@ class _PreCallHeartRateScreenState extends State<PreCallHeartRateScreen> with Si
             if (context.mounted) Navigator.of(context).pop();
           },
         ),
-        title: const Text(
-          'Pre-Consultation Vitals',
+        title: Text(
+          lang.tr('pre_call_vitals'),
           style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 17,
@@ -506,6 +509,7 @@ class _PreCallHeartRateScreenState extends State<PreCallHeartRateScreen> with Si
 
   /// Stage 2: Active camera scan utilizing existing rPPG WebView
   Widget _buildMeasuringView(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
     final bottomLift = _getBottomNavigationLift(context);
     return Column(
       children: [
@@ -778,7 +782,7 @@ class _PreCallHeartRateScreenState extends State<PreCallHeartRateScreen> with Si
               }
             },
             icon: const Icon(Icons.close_rounded, size: 18),
-            label: const Text('Cancel Measurement'),
+            label: Text(lang.tr('cancel_measurement')),
             style: TextButton.styleFrom(foregroundColor: const Color(0xFF64748B)),
           ),
         ),
@@ -983,6 +987,7 @@ class _PreCallHeartRateScreenState extends State<PreCallHeartRateScreen> with Si
 
   /// Stage 4: Error view
   Widget _buildErrorView(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
     final bottomLift = _getBottomNavigationLift(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
@@ -1015,7 +1020,7 @@ class _PreCallHeartRateScreenState extends State<PreCallHeartRateScreen> with Si
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
-            child: const Text('Retry Measurement', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            child: Text(lang.tr('retry_measurement'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           ),
           const SizedBox(height: 12),
           TextButton(
@@ -1026,7 +1031,7 @@ class _PreCallHeartRateScreenState extends State<PreCallHeartRateScreen> with Si
                 ),
               );
             },
-            child: const Text('Skip & Join Video Call', style: TextStyle(color: Color(0xFF64748B))),
+            child: Text(lang.tr('skip_join_call'), style: const TextStyle(color: Color(0xFF64748B))),
           ),
           SizedBox(height: 12.0 + bottomLift),
         ],

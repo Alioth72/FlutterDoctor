@@ -95,6 +95,7 @@ class _ProfileTabState extends State<ProfileTab> {
   }
 
   void _showEditProfileSheet(BuildContext context, HealthProfile profile) {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     final nameController = TextEditingController(text: profile.name);
     final ageController = TextEditingController(text: profile.age.toString());
     String selectedGender = profile.gender;
@@ -180,10 +181,10 @@ class _ProfileTabState extends State<ProfileTab> {
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                           ),
-                          items: const [
-                            DropdownMenuItem(value: 'Male', child: Text('Male')),
-                            DropdownMenuItem(value: 'Female', child: Text('Female')),
-                            DropdownMenuItem(value: 'Other', child: Text('Other')),
+                          items: [
+                            DropdownMenuItem(value: 'Male', child: Text(lang.tr('male'))),
+                            DropdownMenuItem(value: 'Female', child: Text(lang.tr('female'))),
+                            DropdownMenuItem(value: 'Other', child: Text(lang.tr('other_gender'))),
                           ],
                           onChanged: (val) {
                             if (val != null) setSheetState(() => selectedGender = val);
@@ -203,9 +204,9 @@ class _ProfileTabState extends State<ProfileTab> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
-                    items: const [
-                      DropdownMenuItem(value: 'Urban', child: Text('Urban (City / Municipality)')),
-                      DropdownMenuItem(value: 'Rural', child: Text('Rural (Panchayat / Village)')),
+                    items: [
+                      DropdownMenuItem(value: 'Urban', child: Text(lang.tr('urban'))),
+                      DropdownMenuItem(value: 'Rural', child: Text(lang.tr('rural'))),
                     ],
                     onChanged: (val) {
                       if (val != null) setSheetState(() => selectedResidence = val);
@@ -234,8 +235,8 @@ class _ProfileTabState extends State<ProfileTab> {
                       HapticFeedback.heavyImpact();
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Profile updated successfully!'),
+                          SnackBar(
+                            content: Text(lang.tr('profile_updated')),
                             behavior: SnackBarBehavior.floating,
                             backgroundColor: Color(0xFF10B981),
                           ),
@@ -248,7 +249,7 @@ class _ProfileTabState extends State<ProfileTab> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Save Changes', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    child: Text(lang.tr('save_changes'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

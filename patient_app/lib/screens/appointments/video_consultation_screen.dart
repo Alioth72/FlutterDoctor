@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/language_provider.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import '../../firebase_options.dart';
@@ -176,6 +178,7 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen> {
   }
 
   void _showSummarySheet() {
+    final lang = Provider.of<LanguageProvider>(context, listen: false);
     final duration = _callLog.duration ?? Duration.zero;
     final minutes = (duration.inSeconds ~/ 60).toString().padLeft(2, '0');
     final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
@@ -202,8 +205,8 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen> {
               child: const Icon(Icons.check_circle_rounded, color: Color(0xFF2E7D32), size: 34),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Consultation Completed',
+            Text(
+              lang.tr('consultation_completed'),
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
@@ -223,7 +226,7 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen> {
                 children: [
                   Column(
                     children: [
-                      const Text('Call Duration', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text(lang.tr('call_duration'), style: const TextStyle(fontSize: 12, color: Colors.grey)),
                       const SizedBox(height: 4),
                       Text('$minutes:$seconds', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                     ],
@@ -231,9 +234,9 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen> {
                   Container(width: 1, height: 36, color: Colors.grey.shade300),
                   Column(
                     children: [
-                      const Text('Call Status', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text(lang.tr('call_status'), style: const TextStyle(fontSize: 12, color: Colors.grey)),
                       const SizedBox(height: 4),
-                      const Text('Ended Normally', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF10B981))),
+                      Text(lang.tr('ended_normally'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF10B981))),
                     ],
                   ),
                 ],
@@ -252,7 +255,7 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen> {
                   Navigator.of(ctx).pop();
                   Navigator.of(context).pop();
                 },
-                child: const Text('Done & Return to Appointments', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(lang.tr('done_return'), style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -281,6 +284,7 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = Provider.of<LanguageProvider>(context);
     if (_checkingConsent) {
       return const Scaffold(
         backgroundColor: Colors.black,
@@ -371,7 +375,7 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen> {
                           ),
                           onPressed: _startCall,
                           icon: const Icon(Icons.refresh_rounded),
-                          label: const Text('Retry Call'),
+                          label: Text(lang.tr('retry_call')),
                         ),
                       ],
                     ),
@@ -471,7 +475,7 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Teleconsultation Consent', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(Provider.of<LanguageProvider>(context, listen: false).tr('teleconsult_consent'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         elevation: 0,
       ),
       body: Padding(

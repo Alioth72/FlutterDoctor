@@ -805,6 +805,7 @@ class HomeTab extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: () {
+                final lang = langProvider;
                 showModalBottomSheet(
                   context: context,
                   shape: const RoundedRectangleBorder(
@@ -821,19 +822,19 @@ class HomeTab extends StatelessWidget {
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 16),
-                        const ListTile(
-                          leading: Icon(Icons.favorite, color: Colors.red),
-                          title: Text('Blood Pressure'),
+                        ListTile(
+                          leading: const Icon(Icons.favorite, color: Colors.red),
+                          title: Text(lang.tr('blood_pressure')),
                           trailing: Text('120/80 mmHg (Normal)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                         ),
-                        const ListTile(
-                          leading: Icon(Icons.speed, color: Colors.blue),
-                          title: Text('Pulse / Heart Rate'),
+                        ListTile(
+                          leading: const Icon(Icons.speed, color: Colors.blue),
+                          title: Text(lang.tr('pulse_heart_rate')),
                           trailing: Text('72 bpm (Optimal)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                         ),
-                        const ListTile(
-                          leading: Icon(Icons.water_drop, color: Colors.purple),
-                          title: Text('Blood Oxygen (SpO2)'),
+                        ListTile(
+                          leading: const Icon(Icons.water_drop, color: Colors.purple),
+                          title: Text(lang.tr('blood_oxygen')),
                           trailing: Text('98% (Normal)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                         ),
                         const SizedBox(height: 16),
@@ -853,7 +854,7 @@ class HomeTab extends StatelessWidget {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           icon: const Icon(Icons.monitor_heart_rounded),
-                          label: const Text('Scan Live Heart Rate', style: TextStyle(fontWeight: FontWeight.bold)),
+                          label: Text(lang.tr('scan_live_hr'), style: const TextStyle(fontWeight: FontWeight.bold)),
                         ),
                         const SizedBox(height: 10),
                         FilledButton(
@@ -863,7 +864,7 @@ class HomeTab extends StatelessWidget {
                             backgroundColor: const Color(0xFF7C3AED),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Text('Close'),
+                          child: Text(lang.tr('close_btn')),
                         ),
                       ],
                     ),
@@ -1039,6 +1040,7 @@ class HomeTab extends StatelessWidget {
 
   /// Live Upcoming Consultation Card with instant Telehealth join or Empty State
   Widget _buildUpcomingConsultationCard(BuildContext context, Appointment? nextAppt) {
+    final langProvider = Provider.of<LanguageProvider>(context);
     if (nextAppt == null) {
       return Container(
         width: double.infinity,
@@ -1094,7 +1096,7 @@ class HomeTab extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              child: const Text('Book', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              child: Text(langProvider.tr('book_btn'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -1212,7 +1214,7 @@ class HomeTab extends StatelessWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     icon: const Icon(Icons.videocam_rounded, size: 18),
-                    label: const Text('Join Room', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    label: Text(langProvider.tr('join_room_btn'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -1233,7 +1235,7 @@ class HomeTab extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   icon: const Icon(Icons.receipt_long_rounded, size: 16),
-                  label: const Text('Receipt', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  label: Text(langProvider.tr('receipt_btn'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 ),
               ),
             ],
