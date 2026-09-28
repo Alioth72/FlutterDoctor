@@ -79,7 +79,7 @@ class MerppgDiagnostics {
   });
 
   const MerppgDiagnostics.loading()
-    : status = 'Loading ME-rPPG model…',
+    : status = 'Calibrating vitals sensor…',
       ready = false,
       processedSamples = 0,
       droppedFrames = 0,

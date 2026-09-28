@@ -228,7 +228,7 @@ class _DoctorCallScreenState extends State<DoctorCallScreen> {
                                 ),
                               ),
                               const Text(
-                                'Pre-Consultation Heart Rate (ME-rPPG)',
+                                'Pre-Consultation Heart Rate',
                                 style: TextStyle(
                                   color: Color(0xFF94A3B8),
                                   fontSize: 11,
@@ -275,7 +275,7 @@ class _DoctorCallScreenState extends State<DoctorCallScreen> {
                       builder: (context) {
                         final rawBpm = (vitals['heart_rate_bpm'] as num?)?.toDouble() ?? 0.0;
                         final bpm = _getDisplayBpm(rawBpm);
-                        final source = vitals['source']?.toString() ?? 'Camera rPPG';
+                        final source = vitals['source']?.toString() ?? 'Camera Vitals';
                         final rawWaveform = (vitals['rppg_waveform'] as List?)
                                 ?.map((e) => (e as num).toDouble())
                                 .toList() ??

@@ -766,7 +766,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            msg.isSynced ? 'Gemini AI' : 'Offline Knowledge',
+                            msg.isSynced ? 'Ashwini AI' : 'Offline Assistant',
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w600,

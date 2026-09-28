@@ -157,14 +157,14 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
       await Future.delayed(const Duration(milliseconds: 80));
       setState(() {
         _scannerState = QrScannerState.validating;
-        _statusMessage = isCompressed ? 'Reading compressed offline medical record...' : 'Verifying HMAC-SHA256 integrity...';
+        _statusMessage = isCompressed ? 'Reading offline medical record...' : 'Verifying record integrity...';
       });
 
       if (!isCompressed) {
         await Future.delayed(const Duration(milliseconds: 100));
         setState(() {
           _scannerState = QrScannerState.decrypting;
-          _statusMessage = 'Decrypting AES-256-GCM medical record...';
+          _statusMessage = 'Verifying secure record...';
         });
       }
 
@@ -176,8 +176,8 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
         setState(() {
           _scannerState = QrScannerState.success;
           _statusMessage = isCompressed
-              ? 'Offline visit decompressed & verified!'
-              : 'Record successfully decrypted & verified!';
+              ? 'Offline visit record verified!'
+              : 'Medical record verified!';
         });
 
         if (result.isPatient && result.patient != null) {
@@ -452,11 +452,11 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'HRX Patient Identity Verified',
+                        'Patient Identity Verified',
                         style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold, color: Color(0xFF1E1B4B)),
                       ),
                       Text(
-                        'Official Offline Check-in Token • ABHA Linked',
+                        'Verified Offline Check-in • ABHA Linked',
                         style: TextStyle(fontSize: 11.5, color: Color(0xFF059669), fontWeight: FontWeight.w600),
                       ),
                     ],
@@ -588,7 +588,6 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
 
   /// Displays the full offline reconstructed Visit Record viewer (Section 26).
   void _showHrxVisitViewerSheet(VisitRecord visit, Map<String, dynamic> metadata) {
-    bool showTechDetails = false;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -677,35 +676,20 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
+                              const Row(
                                 children: [
-                                  const Icon(Icons.security_rounded, size: 16, color: Color(0xFF16A34A)),
-                                  const SizedBox(width: 6),
+                                  Icon(Icons.verified_user_rounded, size: 16, color: Color(0xFF16A34A)),
+                                  SizedBox(width: 6),
                                   Text(
-                                    metadata['format'] == 'DEFLATE_BASE64URL'
-                                        ? 'OFFLINE INTEGRITY VERIFIED (HRX Built-in Deflate)'
-                                        : 'OFFLINE INTEGRITY VERIFIED (HRX v1)',
-                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF15803D)),
+                                    'OFFLINE RECORD VERIFIED',
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF15803D)),
+                                  ),
+                                  Spacer(),
+                                  Text(
+                                    '✓ Authenticated Digital Record',
+                                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF166534)),
                                   ),
                                 ],
-                              ),
-                              const SizedBox(height: 6),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 4,
-                                children: metadata['format'] == 'DEFLATE_BASE64URL'
-                                    ? const [
-                                        Text('✓ Built-in Deflate decompressed', style: TextStyle(fontSize: 10.5, color: Color(0xFF166534))),
-                                        Text('• ✓ Base64Url decoded', style: TextStyle(fontSize: 10.5, color: Color(0xFF166534))),
-                                        Text('• ✓ Clinical schema verified', style: TextStyle(fontSize: 10.5, color: Color(0xFF166534))),
-                                        Text('• ⚡ Instant camera lock', style: TextStyle(fontSize: 10.5, color: Color(0xFF166534))),
-                                      ]
-                                    : const [
-                                        Text('✓ HMAC-SHA256 signature match', style: TextStyle(fontSize: 10.5, color: Color(0xFF166534))),
-                                        Text('• ✓ AES-256-GCM decrypted', style: TextStyle(fontSize: 10.5, color: Color(0xFF166534))),
-                                        Text('• ✓ Deflate decompressed', style: TextStyle(fontSize: 10.5, color: Color(0xFF166534))),
-                                        Text('• ✓ CBOR schema parsed', style: TextStyle(fontSize: 10.5, color: Color(0xFF166534))),
-                                      ],
                               ),
                             ],
                           ),
@@ -973,69 +957,6 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
                             child: Text(visit.notes, style: const TextStyle(fontSize: 12, color: Color(0xFF475569), height: 1.4)),
                           ),
                           const SizedBox(height: 12),
-                        ],
-
-                        // Technical Diagnostics Accordion
-                        InkWell(
-                          onTap: () {
-                            setSheetState(() => showTechDetails = !showTechDetails);
-                          },
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFCBD5E1)),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Row(
-                                  children: [
-                                    Icon(Icons.terminal_rounded, size: 16, color: Color(0xFF475569)),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      'Cryptographic & Extraction Metadata',
-                                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
-                                    ),
-                                  ],
-                                ),
-                                Icon(
-                                  showTechDetails ? Icons.expand_less : Icons.expand_more,
-                                  size: 18,
-                                  color: const Color(0xFF475569),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        if (showTechDetails) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0F172A),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                for (final entry in metadata.entries)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 2),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text('${entry.key}:', style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8))),
-                                        Text('${entry.value}', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
                         ],
                       ],
                     ),
@@ -1313,7 +1234,7 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
                 Icon(Icons.science_outlined, color: Color(0xFF7C3AED), size: 22),
                 SizedBox(width: 8),
                 Text(
-                  'Test Offline HRX QR Records',
+                  'Test Offline QR Records',
                   style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold, color: Color(0xFF1E1B4B)),
                 ),
               ],
@@ -1332,7 +1253,7 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
                 child: Icon(Icons.person_rounded, color: Color(0xFF7C3AED)),
               ),
               title: const Text('Patient Identity QR (Vikram Malhotra)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-              subtitle: const Text('Ref: P-7A92F81C • Opaque ID lookup', style: TextStyle(fontSize: 11)),
+              subtitle: const Text('Ref: P-7A92F81C • Health ID', style: TextStyle(fontSize: 11)),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               tileColor: const Color(0xFFF8FAFC),
               onTap: () {

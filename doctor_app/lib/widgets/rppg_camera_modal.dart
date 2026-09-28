@@ -124,11 +124,11 @@ class _RppgCameraModalState extends State<RppgCameraModal> with SingleTickerProv
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Camera rPPG Heart Rate Scan',
+                        'Camera Heart Rate Scan',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                       ),
                       Text(
-                        'ME-rPPG Optical Pulse Estimation',
+                        'Optical Pulse Estimation',
                         style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                       ),
                     ],

@@ -388,7 +388,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'Measure camera rPPG heart rate, physical vitals, and manage or refer.',
+                  'Measure camera heart rate, physical vitals, and record notes.',
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 11),
                 ),
               ],
@@ -2048,14 +2048,14 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        '1. Vital Signs (Real Camera rPPG + Manual Device Inputs)',
+                        '1. Vital Signs (Camera Measurement + Manual Inputs)',
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Heart rate uses real phone camera rPPG. All other vitals are entered manually from physical diagnostic devices.',
+                    'Heart rate can be measured using the camera. All other vitals can be entered manually.',
                     style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                   ),
                   const SizedBox(height: 10),

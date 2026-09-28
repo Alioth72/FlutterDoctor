@@ -59,7 +59,7 @@ class MerppgInferenceService {
   Future<void> initialize() => _initialization ??= _initialize();
 
   Future<void> _initialize() async {
-    _report(status: 'Loading ME-rPPG model…');
+    _report(status: 'Calibrating vitals sensor…');
     OrtSession? session;
     final loadedState = <String, OrtValue>{};
     try {
@@ -108,13 +108,13 @@ class MerppgInferenceService {
       _state.addAll(loadedState);
       _ready = true;
       _error = null;
-      _report(status: 'Raw BVP active');
+      _report(status: 'Sensor active');
     } catch (error, stackTrace) {
       await _disposeValues(loadedState.values);
       await session?.close();
       _error = error.toString();
       debugPrint('ME-rPPG initialization failed: $error\n$stackTrace');
-      _report(status: 'ME-rPPG unavailable');
+      _report(status: 'Sensor unavailable');
     }
   }
 
@@ -133,7 +133,7 @@ class MerppgInferenceService {
     if (_disposed) return;
     if (!_ready || _processing) {
       _droppedFrames++;
-      _report(status: _ready ? 'Raw BVP active' : 'Loading ME-rPPG model…');
+      _report(status: _ready ? 'Sensor active' : 'Calibrating vitals sensor…');
       return;
     }
 
@@ -211,11 +211,11 @@ class MerppgInferenceService {
           inferenceTime: _lastInferenceTime,
         ),
       );
-      _report(status: 'Raw BVP active');
+      _report(status: 'Sensor active');
     } catch (error, stackTrace) {
       _error = error.toString();
       debugPrint('ME-rPPG inference failed: $error\n$stackTrace');
-      _report(status: 'ME-rPPG error');
+      _report(status: 'Sensor error');
     } finally {
       if (!adoptedOutputs) await _disposeValues(outputs.values);
       await frameValue?.dispose();

@@ -751,7 +751,7 @@ class _PreCallHeartRateScreenState extends State<PreCallHeartRateScreen> with Si
                           CircularProgressIndicator(color: Color(0xFF7C3AED)),
                           SizedBox(height: 16),
                           Text(
-                            'Initializing rPPG Neural Model…',
+                            'Calibrating Camera Sensor…',
                             style: TextStyle(
                               color: Color(0xFF0F172A),
                               fontSize: 14,

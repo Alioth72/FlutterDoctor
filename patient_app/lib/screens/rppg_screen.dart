@@ -403,7 +403,7 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
                               ),
                               SizedBox(height: 16),
                               Text(
-                                'Loading AI Vision & ONNX Models...',
+                                'Preparing Camera Sensor...',
                                 style: TextStyle(
                                   color: Color(0xFF0F172A),
                                   fontSize: 14,
@@ -412,7 +412,7 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
                               ),
                               SizedBox(height: 6),
                               Text(
-                                'Preparing face detection & pulse signal processing',
+                                'Calibrating for pulse measurement',
                                 style: TextStyle(
                                   color: Color(0xFF64748B),
                                   fontSize: 12,

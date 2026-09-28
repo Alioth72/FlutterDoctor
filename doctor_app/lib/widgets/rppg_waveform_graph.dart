@@ -18,7 +18,7 @@ class RppgWaveformGraph extends StatelessWidget {
     required this.waveform,
     this.bpm,
     this.measuredAt,
-    this.source = 'Camera rPPG',
+    this.source = 'Camera Vitals',
     this.height = 140,
     this.primaryColor = const Color(0xFFE11D48),
     this.showHeader = true,
@@ -75,7 +75,7 @@ class RppgWaveformGraph extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     const Text(
-                      'RPPG PULSE WAVEFORM',
+                      'LIVE PULSE WAVEFORM',
                       style: TextStyle(
                         color: Color(0xFF94A3B8),
                         fontSize: 10,

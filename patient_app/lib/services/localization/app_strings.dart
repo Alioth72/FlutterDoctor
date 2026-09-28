@@ -89,7 +89,7 @@ class AppStrings {
       'ai_explainer_title': 'AI Scheme Explainer (Rural & Offline Guide)',
       'ai_explainer_sub': 'Get a simple-language explanation of this scheme, exhaustive document checklist, and step-by-step village-level application guide.',
       'explain_simple_btn': 'Explain in Simple Language (Rural Guide)',
-      'analyzing_scheme_msg': 'Analyzing Scheme with Gemini AI...',
+      'analyzing_scheme_msg': 'Analyzing Scheme with AI Assistant...',
       'key_highlights_title': 'Key Highlights & Benefits:',
       'docs_checklist_title': 'Complete Required Documents Checklist:',
       'village_guide_title': 'Village & Offline Step-by-Step Application Guide:',

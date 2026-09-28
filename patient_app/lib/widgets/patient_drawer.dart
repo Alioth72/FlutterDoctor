@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/health_profile.dart';
 import '../providers/appointment_provider.dart';
@@ -314,7 +313,7 @@ class PatientDrawer extends StatelessWidget {
                 border: Border.all(color: const Color(0xFFBBF7D0)),
               ),
               child: const Text(
-                'Deflate QR',
+                'Offline QR',
                 style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF16A34A)),
               ),
             ),

@@ -200,7 +200,7 @@ class PatientQrSheets {
                         Icon(Icons.verified_rounded, size: 14, color: Color(0xFF059669)),
                         SizedBox(width: 4),
                         Text(
-                          'HRX Protocol v1 • Scannable Offline',
+                          'Verified Health ID • Scannable Offline',
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
                         ),
                       ],
@@ -262,7 +262,6 @@ class PatientQrSheets {
   /// Displays the 5 offline Visit QRs with full clinical reconstruction and diagnostics.
   static void showOfflineVisitsQrModal(BuildContext context, HealthProfile? profile) {
     int selectedIndex = 0;
-    bool showDiagnostics = false;
 
     showModalBottomSheet(
       context: context,
@@ -343,20 +342,6 @@ class PatientQrSheets {
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFF1E1B4B),
                                   ),
-                                ),
-                                Row(
-                                  children: [
-                                    Icon(Icons.wifi_off_rounded, color: Color(0xFF16A34A), size: 12),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      '5 Stored Visits • Encrypted & Scannable Offline',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF16A34A),
-                                      ),
-                                    ),
-                                  ],
                                 ),
                               ],
                             ),
@@ -527,20 +512,6 @@ class PatientQrSheets {
                                   ),
                                   const SizedBox(height: 8),
 
-                                  // Security Badges Row
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 4,
-                                    alignment: WrapAlignment.center,
-                                    children: [
-                                      _buildStatusBadge(Icons.compress_rounded, 'Deflate (Built-in)', const Color(0xFF7C3AED)),
-                                      _buildStatusBadge(Icons.qr_code_rounded, 'QR v${encodeResult.qrVersion} ${encodeResult.qrVersion <= 11 ? "(Chunky)" : "(Compact)"}', encodeResult.qrVersion <= 11 ? const Color(0xFF16A34A) : const Color(0xFF0284C7)),
-                                      _buildStatusBadge(Icons.verified_rounded, 'HRX:Z: Payload', const Color(0xFF0284C7)),
-                                      _buildStatusBadge(Icons.bolt_rounded, 'Instant Scan', const Color(0xFFD97706)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-
                                   // Visit ID Token Pill with Copy
                                   InkWell(
                                     onTap: () {
@@ -649,76 +620,6 @@ class PatientQrSheets {
                             ),
                             const SizedBox(height: 10),
 
-                            // Diagnostics Toggle Card
-                            InkWell(
-                              onTap: () {
-                                setModalState(() => showDiagnostics = !showDiagnostics);
-                              },
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: const Color(0xFFCBD5E1)),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.analytics_outlined, size: 16, color: Color(0xFF475569)),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          showDiagnostics ? 'Hide QR Diagnostics' : 'Show Developer QR Diagnostics',
-                                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
-                                        ),
-                                      ],
-                                    ),
-                                    Icon(
-                                      showDiagnostics ? Icons.expand_less_rounded : Icons.expand_more_rounded,
-                                      size: 18,
-                                      color: const Color(0xFF475569),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            if (showDiagnostics) ...[
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF0F172A),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'HRX PROTOCOL SPECIFICATION DIAGNOSTICS',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF38BDF8),
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildDiagRow('Original JSON Size', '${encodeResult.originalSize} B'),
-                                    _buildDiagRow('Deflate Compressed', '${encodeResult.compressedSize} B (${encodeResult.compressionAlgorithm})'),
-                                    _buildDiagRow('Final QR Payload', '${encodeResult.finalPayloadSize} chars (${encodeResult.payloadEncoding})'),
-                                    _buildDiagRow('QR Matrix Version', 'Version ${encodeResult.qrVersion} (~${encodeResult.qrVersion * 4 + 17}×${encodeResult.qrVersion * 4 + 17} grid)'),
-                                    _buildDiagRow('Compression Ratio', '${(encodeResult.compressionRatio * 100).toStringAsFixed(1)}%'),
-                                    _buildDiagRow('Camera Scannability', '⚡ ULTRA-FAST (< 150ms)'),
-                                  ],
-                                ),
-                              ),
-                            ],
-
-                            const SizedBox(height: 12),
-
                             // Offline Notice
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -733,8 +634,8 @@ class PatientQrSheets {
                                   SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      'Authenticated Medical Record: Doctor App can scan and reconstruct this visit completely offline without internet connectivity.',
-                                      style: TextStyle(fontSize: 10.5, color: Color(0xFF15803D), fontWeight: FontWeight.w600),
+                                      'Your doctor can scan this QR code to view this visit record without internet.',
+                                      style: TextStyle(fontSize: 11, color: Color(0xFF15803D), fontWeight: FontWeight.w600),
                                     ),
                                   ),
                                 ],
@@ -790,27 +691,6 @@ class PatientQrSheets {
     );
   }
 
-  static Widget _buildStatusBadge(IconData icon, String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 11, color: color),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: color),
-          ),
-        ],
-      ),
-    );
-  }
 
   static Widget _buildInfoRow(IconData icon, String title, String value) {
     return Row(
@@ -846,18 +726,6 @@ class PatientQrSheets {
     );
   }
 
-  static Widget _buildDiagRow(String key, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1.5),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(key, style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8))),
-          Text(value, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFFF8FAFC))),
-        ],
-      ),
-    );
-  }
 
   /// Displays a full-screen, high-contrast QR view for effortless camera scanning.
   static void showFullscreenQrDialog(

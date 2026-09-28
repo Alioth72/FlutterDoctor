@@ -1127,7 +1127,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                 if (vitals['heart_rate_bpm'] != null)
                   _buildReferralVitalChip(
                     Icons.favorite_rounded,
-                    '${_getDisplayBpm((vitals['heart_rate_bpm'] as num).toDouble()).toStringAsFixed(1)} BPM (Camera rPPG)',
+                    '${_getDisplayBpm((vitals['heart_rate_bpm'] as num).toDouble()).toStringAsFixed(1)} BPM (Camera)',
                     Colors.red.shade600,
                   ),
                 if (vitals['blood_pressure'] != null)
@@ -1319,7 +1319,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                         ),
                       ),
                       Text(
-                        'On-Device Contactless ME-rPPG',
+                        'Contactless Optical Vitals',
                         style: TextStyle(
                           fontSize: 11,
                           color: Color(0xFFBE123C),
@@ -1384,7 +1384,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
               builder: (context) {
                 final bpmNum = vitals['heart_rate_bpm'] as num?;
                 final bpm = bpmNum != null ? _getDisplayBpm(bpmNum.toDouble()) : 0.0;
-                final source = vitals['source']?.toString() ?? 'Camera rPPG';
+                final source = vitals['source']?.toString() ?? 'Camera Vitals';
                 DateTime? measuredAt;
                 if (vitals['measured_at'] != null) {
                   try {
