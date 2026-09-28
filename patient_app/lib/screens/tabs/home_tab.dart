@@ -33,6 +33,7 @@ class HomeTab extends StatelessWidget {
   }
 
   Widget _buildRequestAshaBanner(BuildContext context) {
+    final langProvider = Provider.of<LanguageProvider>(context);
     return InkWell(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const RequestAshaVisitScreen()),
@@ -67,32 +68,32 @@ class HomeTab extends StatelessWidget {
               child: const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 24),
             ),
             const SizedBox(width: 14),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'COMMUNITY HEALTHCARE',
-                    style: TextStyle(
+                    langProvider.tr('community_healthcare'),
+                    style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w800,
                       color: Color(0xFFCCFBF1),
                       letterSpacing: 0.8,
                     ),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
-                    'Request ASHA Worker Visit',
-                    style: TextStyle(
+                    langProvider.tr('request_asha_visit_banner_title'),
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
-                    'Vitals check, BP & pulse, home medical assessment',
-                    style: TextStyle(
+                    langProvider.tr('asha_banner_sub'),
+                    style: const TextStyle(
                       fontSize: 11.5,
                       color: Color(0xFFE6FFFA),
                     ),
@@ -106,15 +107,15 @@ class HomeTab extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Request',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F766E)),
+                    langProvider.tr('request_btn'),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F766E)),
                   ),
-                  SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_rounded, size: 14, color: Color(0xFF0F766E)),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.arrow_forward_rounded, size: 14, color: Color(0xFF0F766E)),
                 ],
               ),
             ),
@@ -666,11 +667,11 @@ class HomeTab extends StatelessWidget {
           const SizedBox(height: 18),
 
           // 6. QUICK ACTIONS HEADER
-          const Row(
+          Row(
             children: [
               Text(
-                'QUICK ACTIONS',
-                style: TextStyle(
+                langProvider.tr('quick_actions'),
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.0,
@@ -730,8 +731,8 @@ class HomeTab extends StatelessWidget {
                   Expanded(
                     child: _buildMainServiceCard(
                       context,
-                      category: 'RECORDS',
-                      title: 'Medical\nHistory',
+                      category: langProvider.tr('records_category'),
+                      title: langProvider.tr('medical_history_action'),
                       icon: Icons.history_edu_rounded,
                       onTap: () {
                         Navigator.of(context).push(
@@ -746,8 +747,8 @@ class HomeTab extends StatelessWidget {
                   Expanded(
                     child: _buildMainServiceCard(
                       context,
-                      category: 'PHARMACY',
-                      title: 'My\nPrescriptions',
+                      category: langProvider.tr('pharmacy_category'),
+                      title: langProvider.tr('my_prescriptions_action'),
                       icon: Icons.receipt_long_rounded,
                       onTap: () {
                         Navigator.of(context).push(
@@ -1711,19 +1712,53 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
 
   String _translateMealTiming(String meal, LanguageProvider langProvider) {
     switch (meal) {
+      case 'Before Breakfast':
+        return langProvider.tr('before_breakfast');
+      case 'After Breakfast':
+        return langProvider.tr('after_breakfast');
+      case 'Before Lunch':
+        return langProvider.tr('before_lunch');
       case 'After Lunch':
         return langProvider.tr('after_lunch');
       case 'Evening Snack':
         return langProvider.tr('evening_snack');
+      case 'Before Dinner':
+        return langProvider.tr('before_dinner');
       case 'After Dinner':
         return langProvider.tr('after_dinner');
       case 'Before Bedtime':
         return langProvider.tr('before_bedtime');
-      case 'Before Breakfast':
-        return langProvider.tr('before_breakfast');
       default:
-        return meal;
+        return langProvider.tr(meal);
     }
+  }
+
+  String _translateTimerBadge(String badge, LanguageProvider langProvider) {
+    switch (badge) {
+      case 'Morning Dose':
+        return langProvider.tr('morning_dose');
+      case 'Due in 15 mins':
+        return langProvider.tr('due_in_15');
+      case 'Afternoon Dose':
+        return langProvider.tr('afternoon_dose');
+      case 'Evening Dose':
+        return langProvider.tr('evening_dose');
+      case 'Night Dose':
+        return langProvider.tr('night_dose');
+      case 'Before Bedtime':
+        return langProvider.tr('before_bedtime');
+      default:
+        return langProvider.tr(badge);
+    }
+  }
+
+  String _translateDoctorName(String docName, LanguageProvider langProvider) {
+    if (docName == 'Dr. Mayank') return langProvider.tr('dr_mayank');
+    final docPrefix = langProvider.currentLanguageCode == 'hi' ? 'डॉ. ' : 'Dr. ';
+    if (docName.startsWith('Dr. ')) {
+      return docName.replaceFirst('Dr. ', docPrefix);
+    }
+    return docName;
   }
 
   void _showDoseDetails() {
@@ -2300,10 +2335,7 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                               const SizedBox(width: 3),
                               Flexible(
                                 child: Text(
-                                  HealthcareCatalog.lookup(currentDose.timerBadge, langProvider.currentLanguageCode) ??
-                                      (currentDose.timerBadge == 'Due in 15 mins'
-                                          ? langProvider.tr('due_in_15')
-                                          : currentDose.timerBadge),
+                                  _translateTimerBadge(currentDose.timerBadge, langProvider),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -2333,7 +2365,7 @@ class _MedicineReminderCardState extends State<MedicineReminderCard> {
                   ),
                   const SizedBox(height: 1.5),
                   Text(
-                    '${currentDose.timing} • ${_translateMealTiming(currentDose.mealTiming, langProvider)} • ${HealthcareCatalog.lookup(currentDose.doctorName, langProvider.currentLanguageCode) ?? currentDose.doctorName}',
+                    '${currentDose.timing} • ${_translateMealTiming(currentDose.mealTiming, langProvider)} • ${_translateDoctorName(currentDose.doctorName, langProvider)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
