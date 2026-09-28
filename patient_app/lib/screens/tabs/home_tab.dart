@@ -1073,13 +1073,13 @@ class HomeTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'No Upcoming Consultations',
+                  Text(
+                    langProvider.tr('no_upcoming_consultations'),
                     style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Book video consultations or hospital visits',
+                    langProvider.tr('no_upcoming_consultations_sub'),
                     style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
                   ),
                 ],
@@ -1169,13 +1169,13 @@ class HomeTab extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            nextAppt.doctorName,
+          DynamicTranslatedText(
+            text: nextAppt.doctorName,
             style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 2),
-          Text(
-            '${nextAppt.doctorSpecialty} • ${nextAppt.hospitalName}',
+          DynamicTranslatedText(
+            text: '${nextAppt.doctorSpecialty} • ${nextAppt.hospitalName}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w500),

@@ -101,6 +101,10 @@ class _DynamicTranslatedTextState extends State<DynamicTranslatedText> {
       final cached = SarvamTranslationService.getCached(widget.text, currentLang);
       if (cached != null) {
         displayText = cached;
+      } else if (_lastLangCode != currentLang || _lastText != widget.text) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _checkAndTranslate();
+        });
       }
     }
 

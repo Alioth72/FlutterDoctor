@@ -65,6 +65,8 @@ class ChatOrchestrator {
     required String text,
     required String conversationId,
     String? patientId,
+    String? languageCode,
+    String? languageName,
   }) async {
     final query = text.trim();
     if (query.isEmpty) {
@@ -108,6 +110,8 @@ class ChatOrchestrator {
       query: query,
       chunks: retrievedChunks,
       patientProfile: patientProfile,
+      languageCode: languageCode,
+      languageName: languageName,
     );
 
     // 6. Check connectivity & execute dual-branch generation

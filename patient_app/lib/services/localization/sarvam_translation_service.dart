@@ -37,7 +37,7 @@ class SarvamTranslationService {
     }
   }
 
-  /// Purges any obsolete or corrupt cache entries that contain mixed English in non-English entries
+  /// Purges any corrupt cache entries that contain solely Latin text without any translated Indic characters
   static void _sanitizeCache() {
     if (_prefs == null) return;
     try {
@@ -49,7 +49,8 @@ class SarvamTranslationService {
             final lang = parts[0];
             if (lang != 'en' && lang != 'en-IN') {
               final val = _prefs!.getString(key);
-              if (val != null && RegExp(r'[a-zA-Z]{2,}').hasMatch(val)) {
+              // Only purge if it contains solely Latin words with ZERO Indic script characters
+              if (val != null && !RegExp(r'[؀-ۿऀ-෿ꯀ-꯿᱐-᱿]').hasMatch(val)) {
                 _prefs!.remove(key);
               }
             }
@@ -61,12 +62,24 @@ class SarvamTranslationService {
 
   static String _cacheKey(String text, String targetLang) => '$targetLang:$text';
 
-  /// Validates that an Indic translation does not have mixed English words
+  /// Validates that an Indic translation is valid and contains native script characters.
+  /// Preserves standard clinical units (mg, ml, mmHg, bpm, etc.), proper names, and abbreviations.
   static bool _isPureIndic(String val, String text, String targetLang) {
-    if (val.trim().isEmpty || val.trim() == text.trim()) return false;
+    if (val.trim().isEmpty || val.trim().toLowerCase() == text.trim().toLowerCase()) {
+      return false;
+    }
     if (targetLang == 'en' || targetLang == 'en-IN') return true;
-    // For Indic languages, reject if text still contains leftover Latin words
-    return !RegExp(r'[a-zA-Z]{2,}').hasMatch(val);
+
+    // Checks for characters in Indic scripts (Devanagari, Bengali, Gurmukhi, Gujarati, Odia,
+    // Tamil, Telugu, Kannada, Malayalam, Perso-Arabic/Urdu/Kashmiri/Sindhi, Meitei Mayek, Ol Chiki)
+    final hasNonLatinScript = RegExp(
+      r'[؀-ۿऀ-෿ꯀ-꯿᱐-᱿]',
+    ).hasMatch(val);
+
+    if (hasNonLatinScript) return true;
+
+    // Fallback: If no distinct Unicode range matched but text altered significantly from English
+    return val.trim() != text.trim();
   }
 
   /// Synchronously checks if a translation is available in memory, SharedPreferences, catalog, or dictionary.
@@ -163,7 +176,7 @@ class SarvamTranslationService {
             .post(
               Uri.parse(_baseUrl),
               headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json; charset=utf-8',
                 'api-subscription-key': effectiveApiKey,
                 'User-Agent': 'AshwiniHealth/1.0',
               },

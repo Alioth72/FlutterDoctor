@@ -3,6 +3,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
+import '../localization/sarvam_translation_service.dart';
 
 /// Current state of the Text-to-Speech playback
 enum TtsState {
@@ -208,6 +209,22 @@ class SarvamTtsService {
 
     final resolvedLang = resolveLanguageCode(languageCode);
 
+    // Auto-translate to target Indic language if text contains Latin letters and target is Indic
+    String textToSpeak = cleanText;
+    if (sarvamSupportedCodes.contains(resolvedLang) &&
+        resolvedLang != 'en-IN' &&
+        RegExp(r'[a-zA-Z]{3,}').hasMatch(cleanText)) {
+      try {
+        final translated = await SarvamTranslationService.translate(
+          cleanText,
+          targetLanguageCode: resolvedLang,
+        );
+        if (translated.isNotEmpty) {
+          textToSpeak = cleanTextForSpeech(translated);
+        }
+      } catch (_) {}
+    }
+
     statusNotifier.value = TtsPlaybackStatus(
       state: TtsState.loading,
       activeMessageId: messageId,
@@ -217,7 +234,7 @@ class SarvamTtsService {
     if (sarvamSupportedCodes.contains(resolvedLang)) {
       try {
         final success = await _trySarvamSpeech(
-          text: cleanText,
+          text: textToSpeak,
           languageCode: resolvedLang,
           speaker: speaker,
           speechRate: speechRate,
@@ -234,7 +251,7 @@ class SarvamTtsService {
 
     // 2. Fallback to on-device Flutter TTS
     await _speakOnDevice(
-      text: cleanText,
+      text: textToSpeak,
       languageCode: resolvedLang,
       messageId: messageId,
       speechRate: speechRate,

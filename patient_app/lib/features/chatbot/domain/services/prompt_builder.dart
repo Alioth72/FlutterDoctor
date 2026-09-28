@@ -10,6 +10,8 @@ class PromptBuilder {
     required String query,
     required List<SearchResult> chunks,
     PatientProfile? patientProfile,
+    String? languageCode,
+    String? languageName,
   }) {
     final buffer = StringBuffer();
     buffer.writeln('You are a compassionate, clear healthcare assistant.');
@@ -99,6 +101,12 @@ class PromptBuilder {
       buffer.writeln('No specific reference chunks found in local knowledge base.\n');
     }
 
+        if (languageCode != null && languageCode != 'en' && languageCode != 'en-IN') {
+      buffer.writeln('--- LANGUAGE DIRECTIVE ---');
+      buffer.writeln('The user chosen language is ${languageName ?? languageCode} ($languageCode).');
+      buffer.writeln('You MUST answer the entire response fluently in ${languageName ?? languageCode} ($languageCode) script.');
+      buffer.writeln('Keep medicine names in standard recognizable form if needed, but explain all guidance in ${languageName ?? languageCode}.\n');
+    }
     buffer.writeln('--- User Query ---');
     buffer.writeln(query);
     buffer.writeln('\n--- Medical Disclaimer ---');

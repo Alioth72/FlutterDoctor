@@ -172,10 +172,13 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
 
     try {
+      final langProvider = Provider.of<LanguageProvider>(context, listen: false);
       await widget.orchestrator.handleUserMessage(
         text: text,
         conversationId: widget.conversationId,
         patientId: _patientProfile?.patientId,
+        languageCode: langProvider.currentLanguageCode,
+        languageName: langProvider.currentLanguage.name,
       );
     } catch (e) {
       if (mounted) {
