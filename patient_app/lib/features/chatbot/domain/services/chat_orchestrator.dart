@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import '../../../../services/localization/sarvam_translation_service.dart';
 import '../repositories/chat_storage_repository.dart';
 import '../repositories/patient_repository.dart';
 import '../repositories/vector_store_repository.dart';
@@ -141,16 +143,75 @@ class ChatOrchestrator {
       );
     }
 
-    // 7. Save Bot Message in local storage
+    // 7. Guarantee response matches the patient's chosen language
+    var finalResponseText = llmResponse.text;
+    if (languageCode != null && _needsTranslation(finalResponseText, languageCode)) {
+      try {
+        final translated = await SarvamTranslationService.translate(
+          finalResponseText,
+          targetLanguageCode: languageCode,
+        );
+        if (translated.trim().isNotEmpty && translated != finalResponseText) {
+          finalResponseText = translated;
+        }
+      } catch (e) {
+        debugPrint('[ChatOrchestrator] Post-translation note: $e');
+      }
+    }
+
+    // 8. Save Bot Message in local storage
     final botMessage = ChatMessage(
       conversationId: conversationId,
       role: MessageRole.bot,
-      text: llmResponse.text,
+      text: finalResponseText,
       timestamp: DateTime.now(),
       isSynced: llmResponse.branch == LlmBranchType.online,
     );
     await storageRepository.saveMessage(botMessage);
 
     return botMessage;
+  }
+
+  bool _needsTranslation(String text, String targetLang) {
+    if (targetLang == 'en' || targetLang == 'en-IN') return false;
+    final primary = targetLang.split('-').first.toLowerCase();
+    switch (primary) {
+      case 'hi':
+      case 'mr':
+      case 'ne':
+      case 'sa':
+      case 'mai':
+      case 'kok':
+      case 'doi':
+        return !RegExp(r'[\u0900-\u097F]').hasMatch(text);
+      case 'bn':
+      case 'as':
+        return !RegExp(r'[\u0980-\u09FF]').hasMatch(text);
+      case 'pa':
+        return !RegExp(r'[\u0A00-\u0A7F]').hasMatch(text);
+      case 'gu':
+        return !RegExp(r'[\u0A80-\u0AFF]').hasMatch(text);
+      case 'or':
+      case 'od':
+        return !RegExp(r'[\u0B00-\u0B7F]').hasMatch(text);
+      case 'ta':
+        return !RegExp(r'[\u0B80-\u0BFF]').hasMatch(text);
+      case 'te':
+        return !RegExp(r'[\u0C00-\u0C7F]').hasMatch(text);
+      case 'kn':
+        return !RegExp(r'[\u0C80-\u0CFF]').hasMatch(text);
+      case 'ml':
+        return !RegExp(r'[\u0D00-\u0D7F]').hasMatch(text);
+      case 'ur':
+      case 'ks':
+      case 'sd':
+        return !RegExp(r'[\u0600-\u06FF]').hasMatch(text);
+      case 'mni':
+        return !RegExp(r'[\uABC0-\uABFF\u0980-\u09FF]').hasMatch(text);
+      case 'sat':
+        return !RegExp(r'[\u1C50-\u1C7F\u0900-\u097F]').hasMatch(text);
+      default:
+        return !RegExp(r'[؀-ۿऀ-෿ꯀ-꯿᱐-᱿]').hasMatch(text);
+    }
   }
 }

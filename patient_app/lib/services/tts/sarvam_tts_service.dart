@@ -3,6 +3,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
+import '../../features/chatbot/data/services/env_config.dart';
 import '../localization/sarvam_translation_service.dart';
 
 /// Current state of the Text-to-Speech playback
@@ -51,6 +52,7 @@ class SarvamTtsService {
   static int _keyIndex = 0;
 
   static String getNextPoolKey() {
+    if (activeKeyPool.isEmpty) return '';
     final key = activeKeyPool[_keyIndex % activeKeyPool.length];
     _keyIndex++;
     return key;
@@ -137,8 +139,14 @@ class SarvamTtsService {
     'sindhi': 'sd-IN',
   };
 
-  String get activeApiKey =>
-      _customApiKey.isNotEmpty ? _customApiKey : getNextPoolKey();
+  String get activeApiKey {
+    if (_customApiKey.isNotEmpty) return _customApiKey;
+    final envKey = EnvConfig.sarvamApiKey;
+    if (envKey.isNotEmpty) return envKey;
+    final dartDef = const String.fromEnvironment('SARVAM_API_KEY').trim();
+    if (dartDef.isNotEmpty) return dartDef;
+    return getNextPoolKey();
+  }
 
   void setApiKey(String key) {
     _customApiKey = key.trim();
@@ -198,7 +206,7 @@ class SarvamTtsService {
     required String text,
     String? messageId,
     String? languageCode,
-    String speaker = 'meera',
+    String speaker = 'priya',
     double speechRate = 1.0,
   }) async {
     await init();
@@ -272,13 +280,13 @@ class SarvamTtsService {
     final body = jsonEncode({
       'inputs': [inputChunk],
       'target_language_code': languageCode,
-      'speaker': speaker,
+      'speaker': (speaker == 'meera' || speaker.trim().isEmpty) ? 'priya' : speaker,
       'pitch': 0,
       'pace': speechRate,
       'loudness': 1.5,
       'speech_sample_rate': 8000,
       'enable_preprocessing': true,
-      'model': 'bulbul:v1',
+      'model': 'bulbul:v3',
     });
 
     final attempts = _customApiKey.isNotEmpty ? 1 : activeKeyPool.length;
@@ -343,14 +351,21 @@ class SarvamTtsService {
         usedOnDeviceFallback: true,
       );
 
-      // Map to standard locale for FlutterTts
+      // Clean text for speech
+      final clean = cleanTextForSpeech(text);
+
+      // Map to standard locale for FlutterTts with primary language code fallback
       final ttsLocale = languageCode.replaceAll('-', '_');
-      await flutterTts.setLanguage(ttsLocale);
-      await flutterTts.setSpeechRate(speechRate * 0.5); // Normalized for mobile OS
+      final res = await flutterTts.setLanguage(ttsLocale);
+      if (res != 1) {
+        final shortCode = languageCode.split('-').first.split('_').first;
+        await flutterTts.setLanguage(shortCode);
+      }
+      await flutterTts.setSpeechRate(speechRate * 0.45);
       await flutterTts.setVolume(1.0);
       await flutterTts.setPitch(1.0);
 
-      await flutterTts.speak(text);
+      await flutterTts.speak(clean);
     } catch (e) {
       debugPrint('[SarvamTtsService] On-device TTS error: $e');
       statusNotifier.value = TtsPlaybackStatus(

@@ -41,7 +41,7 @@ class HomeTab extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFF0F766E), Color(0xFF14B8A6)],
@@ -60,20 +60,22 @@ class HomeTab extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 24),
+              child: const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 22),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     langProvider.tr('community_healthcare'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w800,
@@ -84,8 +86,10 @@ class HomeTab extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     langProvider.tr('request_asha_visit_banner_title'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
@@ -93,16 +97,19 @@ class HomeTab extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     langProvider.tr('asha_banner_sub'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 10.5,
                       color: Color(0xFFE6FFFA),
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
@@ -110,12 +117,18 @@ class HomeTab extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    langProvider.tr('request_btn'),
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F766E)),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 55),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        langProvider.tr('request_btn'),
+                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF0F766E)),
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.arrow_forward_rounded, size: 14, color: Color(0xFF0F766E)),
+                  const SizedBox(width: 3),
+                  const Icon(Icons.arrow_forward_rounded, size: 12, color: Color(0xFF0F766E)),
                 ],
               ),
             ),
@@ -1442,7 +1455,7 @@ class HomeTab extends StatelessWidget {
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        title,
+                        title.replaceAll(r'\n', '\n'),
                         maxLines: 2,
                         style: const TextStyle(
                           fontSize: 16.5,

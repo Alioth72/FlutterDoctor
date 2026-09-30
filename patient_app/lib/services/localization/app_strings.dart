@@ -81,8 +81,8 @@ class AppStrings {
       'quick_actions': 'QUICK ACTIONS',
       'records_category': 'RECORDS',
       'pharmacy_category': 'PHARMACY',
-      'medical_history_action': 'Medical\\nHistory',
-      'my_prescriptions_action': 'My\\nPrescriptions',
+      'medical_history_action': 'Medical\nHistory',
+      'my_prescriptions_action': 'My\nPrescriptions',
       'morning_dose': 'Morning Dose',
       'afternoon_dose': 'Afternoon Dose',
       'evening_dose': 'Evening Dose',
@@ -425,7 +425,7 @@ class AppStrings {
       'prescription_opened_msg': 'Prescription upload opened. Choose from Camera/Gallery.',
       'app_name': 'Ashwini',
       'ai_assistant_title': 'AI Health Assistant',
-      'ai_assistant_sub': 'RAG Preliminary Diagnosis • Multilingual',
+      'ai_assistant_sub': '24/7 Health Answers • 22 Indian Languages',
       'ai_greeting_msg': 'Namaste! Describe your symptoms or ask health questions in any Indian language. I will guide you with preliminary insights.',
       'ai_symptom_hint': 'Type your symptoms (e.g. सिरदर्द और बुखार)...',
       'ai_analysing_msg': 'AI Health Assistant analysing symptoms...',
@@ -448,6 +448,26 @@ class AppStrings {
       'activated_msg': 'activated!',
       'snooze_15m': 'Snooze 15m',
       'reminder_snoozed': 'Reminder snoozed for 15 minutes.',
+      'my_prescriptions_title': 'My Prescriptions',
+      'medical_history_title': 'Medical History',
+      'medical_history': 'Medical History',
+      'prescriptions': 'Prescriptions',
+      'doctor_not_available_date': 'is not available on selected date',
+      'checking_slots': 'Checking available slots...',
+      'slot_full': 'Full',
+      'slot_fully_booked': 'is fully booked',
+      'consultation_completed': 'Consultation Completed',
+      'fever_chills': 'Fever & Chills',
+      'cough_cold': 'Cough & Cold',
+      'chest_discomfort': 'Chest Discomfort',
+      'high_bp': 'High Blood Pressure',
+      'diabetes_check': 'Diabetes / Sugar Check',
+      'joint_pain': 'Joint Pain',
+      'dizziness_weakness': 'Dizziness / Weakness',
+      'elderly_care': 'Elderly Care',
+      'maternal_care': 'Maternal Care',
+      'other_gender': 'Other',
+      'profile_not_found_signup': 'Please complete your profile to book an appointment',
     },
 
     'hi': {
@@ -460,8 +480,8 @@ class AppStrings {
       'quick_actions': 'त्वरित सेवाएं',
       'records_category': 'रिकॉर्ड्स',
       'pharmacy_category': 'दवाखाना',
-      'medical_history_action': 'चिकित्सा\\nइतिहास',
-      'my_prescriptions_action': 'मेरे\\nपर्चे',
+      'medical_history_action': 'चिकित्सा\nइतिहास',
+      'my_prescriptions_action': 'मेरे\nपर्चे',
       'morning_dose': 'सुबह की खुराक',
       'afternoon_dose': 'दोपहर की खुराक',
       'evening_dose': 'शाम की खुराक',
@@ -804,7 +824,7 @@ class AppStrings {
       'prescription_opened_msg': 'पर्चा अपलोड खुला। कैमरा/गैलरी से चुनें।',
       'app_name': 'अश्विनी',
       'ai_assistant_title': 'एआई स्वास्थ्य सहायक',
-      'ai_assistant_sub': 'आरएजी प्रारंभिक निदान • बहुभाषी',
+      'ai_assistant_sub': 'स्वास्थ्य संबंधी सवाल • 22 भारतीय भाषाएं',
       'ai_greeting_msg': 'नमस्ते! किसी भी भारतीय भाषा में अपने लक्षण बताएं या स्वास्थ्य प्रश्न पूछें। मैं प्रारंभिक सलाह से आपका मार्गदर्शन करूंगा।',
       'ai_symptom_hint': 'अपने लक्षण लिखें (उदा. सिरदर्द और बुखार)...',
       'ai_analysing_msg': 'एआई स्वास्थ्य सहायक लक्षणों का विश्लेषण कर रहा है...',
@@ -827,6 +847,26 @@ class AppStrings {
       'activated_msg': 'सक्रिय!',
       'snooze_15m': '15 मिनट बाद',
       'reminder_snoozed': 'रिमाइंडर 15 मिनट के लिए स्थगित किया गया।',
+      'my_prescriptions_title': 'मेरे पर्चे',
+      'medical_history_title': 'चिकित्सा इतिहास',
+      'medical_history': 'चिकित्सा इतिहास',
+      'prescriptions': 'दवा पर्चे',
+      'doctor_not_available_date': 'चयनित तिथि पर उपलब्ध नहीं हैं',
+      'checking_slots': 'समय स्लॉट की जांच हो रही है...',
+      'slot_full': 'फुल',
+      'slot_fully_booked': 'पूरी तरह से बुक है',
+      'consultation_completed': 'परामर्श पूरा हुआ',
+      'fever_chills': 'बुखार और ठंड लगना',
+      'cough_cold': 'खांसी और जुकाम',
+      'chest_discomfort': 'सीने में दर्द या बेचैनी',
+      'high_bp': 'उच्च रक्तचाप (हाई बीपी)',
+      'diabetes_check': 'मधुमेह / शुगर जांच',
+      'joint_pain': 'जोड़ों का दर्द',
+      'dizziness_weakness': 'चक्कर आना / कमजोरी',
+      'elderly_care': 'बुजुर्गों की देखभाल',
+      'maternal_care': 'मातृ स्वास्थ्य देखभाल',
+      'other_gender': 'अन्य',
+      'profile_not_found_signup': 'कृपया अपॉइंटमेंट बुक करने के लिए अपनी प्रोफाइल पूरी करें',
     },
 
     'bn': {
@@ -839,8 +879,8 @@ class AppStrings {
       'quick_actions': 'দ্রুত সেবা',
       'records_category': 'রেকর্ডস',
       'pharmacy_category': 'ফার্মেসি',
-      'medical_history_action': 'চিকিৎসার\\nইতিহাস',
-      'my_prescriptions_action': 'আমার\\nপ্রেসক্রিপশন',
+      'medical_history_action': 'চিকিৎসার\nইতিহাস',
+      'my_prescriptions_action': 'আমার\nপ্রেসক্রিপশন',
       'morning_dose': 'সকালের ডোজ',
       'afternoon_dose': 'দুপুরের ডোজ',
       'evening_dose': 'সন্ধ্যার ডোজ',
@@ -1183,7 +1223,7 @@ class AppStrings {
       'prescription_opened_msg': 'প্রেসক্রিপশন আপলোড খোলা হয়েছে। ক্যামেরা/গ্যালারি থেকে বেছে নিন।',
       'app_name': 'অশ্বিনী',
       'ai_assistant_title': 'এআই স্বাস্থ্য সহকারী',
-      'ai_assistant_sub': 'RAG প্রাথমিক রোগ নির্ণয় • বহুভাষিক',
+      'ai_assistant_sub': 'স্বাস্থ্য সহায়ক • ২২টি ভারতীয় ভাষা',
       'ai_greeting_msg': 'নমস্কার! যেকোনো ভারতীয় ভাষায় আপনার লক্ষণ বর্ণনা করুন বা প্রশ্ন জিজ্ঞাসা করুন। আমি প্রাথমিক পরামর্শ দেব।',
       'ai_symptom_hint': 'আপনার লক্ষণ লিখুন (যেমন মাথাব্যথা এবং জ্বর)...',
       'ai_analysing_msg': 'এআই স্বাস্থ্য সহকারী লক্ষণগুলি বিশ্লেষণ করছে...',
@@ -1218,7 +1258,7 @@ class AppStrings {
       'quick_actions': 'శీఘ్ర చర్యలు',
       'records_category': 'రికార్డులు',
       'pharmacy_category': 'ఫార్మసీ',
-      'medical_history_action': 'వైద్య\\nచరిత్ర',
+      'medical_history_action': 'వైద్య\nచరిత్ర',
       'my_prescriptions_action': 'నా ప్రిస్క్రిప్షన్లు',
       'morning_dose': 'ఉదయం మోతాదు',
       'afternoon_dose': 'మధ్యాహ్నం మోతాదు',
@@ -1562,7 +1602,7 @@ class AppStrings {
       'prescription_opened_msg': 'ప్రిస్క్రిప్షన్ అప్‌లోడ్ తెరవబడింది. కెమెరా/గ్యాలరీ నుండి ఎంచుకోండి.',
       'app_name': 'అశ్విని',
       'ai_assistant_title': 'AI ఆరోగ్య సహాయకుడు',
-      'ai_assistant_sub': 'RAG ప్రాథమిక నిర్ధారణ • బహుభాషా',
+      'ai_assistant_sub': 'ఆరోగ్య సమాధానాలు • 22 భారతీయ భాషలు',
       'ai_greeting_msg': 'నమస్తే! మీ లక్షణాలను వివరించండి లేదా ఏదైనా భారతీయ భాషలో ప్రశ్నలు అడగండి. నేను ప్రాథమిక మార్గదర్శకత్వం ఇస్తాను.',
       'ai_symptom_hint': 'మీ లక్షణాలను టైప్ చేయండి (ఉదా. తలనొప్పి మరియు జ్వరం)...',
       'ai_analysing_msg': 'AI ఆరోగ్య సహాయకుడు లక్షణాలను విశ్లేషిస్తున్నాడు...',
@@ -1597,8 +1637,8 @@ class AppStrings {
       'quick_actions': 'त्वरित सेवा',
       'records_category': 'नोंदी',
       'pharmacy_category': 'औषधालय',
-      'medical_history_action': 'वैद्यकीय\\nइतिहास',
-      'my_prescriptions_action': 'माझी\\nऔषधपत्रे',
+      'medical_history_action': 'वैद्यकीय\nइतिहास',
+      'my_prescriptions_action': 'माझी\nऔषधपत्रे',
       'morning_dose': 'सकाळचा डोस',
       'afternoon_dose': 'दुपारचा डोस',
       'evening_dose': 'संध्याकाळचा डोस',
@@ -1941,7 +1981,7 @@ class AppStrings {
       'prescription_opened_msg': 'प्रिस्क्रिप्शन अपलोड उघडले. कॅमेरा/गॅलरीतून निवडा.',
       'app_name': 'अश्विनी',
       'ai_assistant_title': 'एआय आरोग्य सहाय्यक',
-      'ai_assistant_sub': 'RAG प्राथमिक निदान • बहुभाषिक',
+      'ai_assistant_sub': 'आरोग्य उत्तरे • २२ भारतीय भाषा',
       'ai_greeting_msg': 'नमस्ते! आपल्या लक्षणांचे वर्णन करा किंवा कोणत्याही भारतीय भाषेत आरोग्य प्रश्न विचारा.',
       'ai_symptom_hint': 'तुमची लक्षणे टाईप करा (उदा. डोकेदुखी आणि ताप)...',
       'ai_analysing_msg': 'एआय आरोग्य सहाय्यक लक्षणांचे विश्लेषण करत आहे...',
@@ -1976,8 +2016,8 @@ class AppStrings {
       'quick_actions': 'விரைவு சேவைகள்',
       'records_category': 'பதிவுகள்',
       'pharmacy_category': 'மருந்தகம்',
-      'medical_history_action': 'மருத்துவ\\nவரலாறு',
-      'my_prescriptions_action': 'எனது\\nமருந்துச் சீட்டுகள்',
+      'medical_history_action': 'மருத்துவ\nவரலாறு',
+      'my_prescriptions_action': 'எனது\nமருந்துச் சீட்டுகள்',
       'morning_dose': 'காலை வேளை மருந்து',
       'afternoon_dose': 'மதிய வேளை மருந்து',
       'evening_dose': 'மாலை வேளை மருந்து',
@@ -2320,7 +2360,7 @@ class AppStrings {
       'prescription_opened_msg': 'மருத்துவர் சீட்டு பதிவேற்றம் திறக்கப்பட்டது. கேமரா/கேலரியில் இருந்து தேர்ந்தெடுக்கவும்.',
       'app_name': 'அஸ்வினி',
       'ai_assistant_title': 'AI சுகாதார உதவியாளர்',
-      'ai_assistant_sub': 'RAG ஆரம்பக் கண்டறிதல் • பலமொழி',
+      'ai_assistant_sub': 'சுகாதார வழிகாட்டி • 22 இந்திய மொழிகள்',
       'ai_greeting_msg': 'வணக்கம்! உங்கள் அறிகுறிகளை விவரிக்கவும் அல்லது ஏதேனும் இந்திய மொழியில் கேள்விகளைக் கேட்கவும்.',
       'ai_symptom_hint': 'உங்கள் அறிகுறிகளை உள்ளிடவும் (எ.கா. தலைவலி மற்றும் காய்ச்சல்)...',
       'ai_analysing_msg': 'AI சுகாதார உதவியாளர் அறிகுறிகளை பகுப்பாய்வு செய்கிறார்...',
@@ -2355,8 +2395,8 @@ class AppStrings {
       'quick_actions': 'ઝડપી સેવાઓ',
       'records_category': 'રેકોર્ડ્સ',
       'pharmacy_category': 'ફાર્મસી',
-      'medical_history_action': 'તબીબી\\nઇતિહાસ',
-      'my_prescriptions_action': 'મારા\\nપ્રિસ્ક્રિપ્શન',
+      'medical_history_action': 'તબીબી\nઇતિહાસ',
+      'my_prescriptions_action': 'મારા\nપ્રિસ્ક્રિપ્શન',
       'morning_dose': 'સવારનો ડોઝ',
       'afternoon_dose': 'બપોરનો ડોઝ',
       'evening_dose': 'સાંજનો ડોઝ',
@@ -2699,7 +2739,7 @@ class AppStrings {
       'prescription_opened_msg': 'પ્રિસ્ક્રિપ્શન અપલોડ ખુલ્યું. કેમેરા/ગેલેરીમાંથી પસંદ કરો.',
       'app_name': 'અશ્વિની',
       'ai_assistant_title': 'AI આરોગ્ય સહાયક',
-      'ai_assistant_sub': 'RAG પ્રારંભિક નિદાન • બહુભાષી',
+      'ai_assistant_sub': 'આરોગ્ય સહાયક • 22 ભારતીય ભાષાઓ',
       'ai_greeting_msg': 'નમસ્તે! તમારા લક્ષણો જણાવો અથવા કોઈપણ ભારતીય ભાષામાં પ્રશ્નો પૂછો. હું પ્રારંભિક માર્ગદર્શન આપીશ.',
       'ai_symptom_hint': 'તમારા લક્ષણો લખો (દા.ત. માથાનો દુખાવો અને તાવ)...',
       'ai_analysing_msg': 'AI આરોગ્ય સહાયક લક્ષણોનું વિશ્લેષણ કરી રહ્યું છે...',
@@ -2734,8 +2774,8 @@ class AppStrings {
       'quick_actions': 'ತ್ವರಿತ ಕ್ರಿಯೆಗಳು',
       'records_category': 'ದಾಖಲೆಗಳು',
       'pharmacy_category': 'ಔಷಧಾಲಯ',
-      'medical_history_action': 'ವೈದ್ಯಕೀಯ\\nಇತಿಹಾಸ',
-      'my_prescriptions_action': 'ನನ್ನ\\nಪ್ರಿಸ್ಕ್ರಿಪ್ಷನ್‌ಗಳು',
+      'medical_history_action': 'ವೈದ್ಯಕೀಯ\nಇತಿಹಾಸ',
+      'my_prescriptions_action': 'ನನ್ನ\nಪ್ರಿಸ್ಕ್ರಿಪ್ಷನ್‌ಗಳು',
       'morning_dose': 'ಬೆಳಗಿನ ಡೋಸ್',
       'afternoon_dose': 'ಮಧ್ಯಾಹ್ನದ ಡೋಸ್',
       'evening_dose': 'ಸಂಜೆಯ ಡೋಸ್',
@@ -3078,7 +3118,7 @@ class AppStrings {
       'prescription_opened_msg': 'ಪ್ರಿಸ್ಕ್ರಿಪ್ಷನ್ ಅಪ್‌ಲೋಡ್ ತೆರೆಯಲಾಗಿದೆ. ಕ್ಯಾಮೆರಾ/ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ.',
       'app_name': 'ಅಶ್ವಿನಿ',
       'ai_assistant_title': 'AI ಆರೋಗ್ಯ ಸಹಾಯಕ',
-      'ai_assistant_sub': 'RAG ಪ್ರಾಥಮಿಕ ರೋಗನಿರ್ಣಯ • ಬಹುಭಾಷಾ',
+      'ai_assistant_sub': 'ಆರೋಗ್ಯ ಸಹಾಯಕ • 22 ಭಾರತೀಯ ಭಾಷೆಗಳು',
       'ai_greeting_msg': 'ನಮಸ್ತೆ! ನಿಮ್ಮ ರೋಗಲಕ್ಷಣಗಳನ್ನು ವಿವರಿಸಿ ಅಥವಾ ಯಾವುದೇ ಭಾರತೀಯ ಭಾಷೆಯಲ್ಲಿ ಆರೋಗ್ಯ ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ.',
       'ai_symptom_hint': 'ನಿಮ್ಮ ರೋಗಲಕ್ಷಣಗಳನ್ನು ಟೈಪ್ ಮಾಡಿ (ಉದಾ. ತಲೆನೋವು ಮತ್ತು ಜ್ವರ)...',
       'ai_analysing_msg': 'AI ಆರೋಗ್ಯ ಸಹಾಯಕ ರೋಗಲಕ್ಷಣಗಳನ್ನು ವಿಶ್ಲೇಷಿಸುತ್ತಿದ್ದಾನೆ...',
@@ -3113,8 +3153,8 @@ class AppStrings {
       'quick_actions': 'ദ്രുത സേവനങ്ങൾ',
       'records_category': 'രേഖകൾ',
       'pharmacy_category': 'ഫാർമസി',
-      'medical_history_action': 'ചികിത്സാ\\nചരിത്രം',
-      'my_prescriptions_action': 'എന്റെ\\nകുറിപ്പടികൾ',
+      'medical_history_action': 'ചികിത്സാ\nചരിത്രം',
+      'my_prescriptions_action': 'എന്റെ\nകുറിപ്പടികൾ',
       'morning_dose': 'രാവിലെയുള്ള ഡോസ്',
       'afternoon_dose': 'ഉച്ചയ്ക്കുള്ള ഡോസ്',
       'evening_dose': 'വൈകുന്നേരത്തെ ഡോസ്',
@@ -3457,7 +3497,7 @@ class AppStrings {
       'prescription_opened_msg': 'പ്രിസ്ക്രിപ്ഷൻ അപ്‌ലോഡ് തുറന്നു. ക്യാമറ/ഗാലറിയിൽ നിന്ന് തിരഞ്ഞെടുക്കുക.',
       'app_name': 'അശ്വിനി',
       'ai_assistant_title': 'AI ആരോഗ്യ സഹായി',
-      'ai_assistant_sub': 'RAG പ്രാഥമിക രോഗനിർണയം • ബഹുഭാഷാ',
+      'ai_assistant_sub': 'ആരോഗ്യ സഹായി • 22 ഇന്ത്യൻ ഭാഷകൾ',
       'ai_greeting_msg': 'നമസ്കാരം! നിങ്ങളുടെ ലക്ഷണങ്ങൾ വിവരിക്കുകയോ ഏത് ഇന്ത്യൻ ഭാഷയിലും ചോദ്യങ്ങൾ ചോദിക്കുകയോ ചെയ്യുക.',
       'ai_symptom_hint': 'നിങ്ങളുടെ ലക്ഷണങ്ങൾ ടൈപ്പ് ചെയ്യുക (ഉദാ: തലവേദനയും പനിയും)...',
       'ai_analysing_msg': 'AI ആരോഗ്യ സഹായി ലക്ഷണങ്ങൾ വിശകലനം ചെയ്യുന്നു...',
@@ -3492,8 +3532,8 @@ class AppStrings {
       'quick_actions': 'ਤੁਰੰਤ ਸੇਵਾਵਾਂ',
       'records_category': 'ਰਿਕਾਰਡ',
       'pharmacy_category': 'ਦਵਾਈਆਂ',
-      'medical_history_action': 'ਡਾਕਟਰੀ\\nਇਤਿਹਾਸ',
-      'my_prescriptions_action': 'ਮੇਰੇ\\nਨੁਸਖੇ',
+      'medical_history_action': 'ਡਾਕਟਰੀ\nਇਤਿਹਾਸ',
+      'my_prescriptions_action': 'ਮੇਰੇ\nਨੁਸਖੇ',
       'morning_dose': 'ਸਵੇਰ ਦੀ ਖੁਰਾਕ',
       'afternoon_dose': 'ਦੁਪਹਿਰ ਦੀ ਖੁਰਾਕ',
       'evening_dose': 'ਸ਼ਾਮ ਦੀ ਖੁਰਾਕ',
@@ -3836,7 +3876,7 @@ class AppStrings {
       'prescription_opened_msg': 'ਨੁਸਖ਼ਾ ਅੱਪਲੋਡ ਖੁੱਲ੍ਹ ਗਿਆ। ਕੈਮਰਾ/ਗੈਲਰੀ ਤੋਂ ਚੁਣੋ।',
       'app_name': 'ਅਸ਼ਵਿਨੀ',
       'ai_assistant_title': 'AI ਸਿਹਤ ਸਹਾਇਕ',
-      'ai_assistant_sub': 'RAG ਮੁੱਢਲੀ ਜਾਂਚ • ਬਹੁ-ਭਾਸ਼ਾਈ',
+      'ai_assistant_sub': 'ਸਿਹਤ ਸਹਾਇਕ • 22 ਭਾਰਤੀ ਭਾਸ਼ਾਵਾਂ',
       'ai_greeting_msg': 'ਨਮਸਤੇ! ਆਪਣੇ ਲੱਛਣ ਦੱਸੋ ਜਾਂ ਕਿਸੇ ਵੀ ਭਾਰਤੀ ਭਾਸ਼ਾ ਵਿੱਚ ਸਿਹਤ ਸੰਬੰਧੀ ਸਵਾਲ ਪੁੱਛੋ।',
       'ai_symptom_hint': 'ਆਪਣੇ ਲੱਛਣ ਟਾਈਪ ਕਰੋ (ਜਿਵੇਂ ਸਿਰ ਦਰਦ ਅਤੇ ਬੁਖਾਰ)...',
       'ai_analysing_msg': 'AI ਸਿਹਤ ਸਹਾਇਕ ਲੱਛਣਾਂ ਦਾ ਵਿਸ਼ਲੇਸ਼ਣ ਕਰ ਰਿਹਾ ਹੈ...',
@@ -3871,8 +3911,8 @@ class AppStrings {
       'quick_actions': 'ତ୍ୱରିତ ସେବା',
       'records_category': 'ରେକର୍ଡ',
       'pharmacy_category': 'ଔଷଧାଳୟ',
-      'medical_history_action': 'ଚିକିତ୍ସା\\nଇତିହାସ',
-      'my_prescriptions_action': 'ମୋର\\nପ୍ରେସକ୍ରିପସନ୍',
+      'medical_history_action': 'ଚିକିତ୍ସା\nଇତିହାସ',
+      'my_prescriptions_action': 'ମୋର\nପ୍ରେସକ୍ରିପସନ୍',
       'morning_dose': 'ସକାଳର ଡୋଜ୍',
       'afternoon_dose': 'ମଧ୍ୟାହ୍ନ ଡୋଜ୍',
       'evening_dose': 'ସନ୍ଧ୍ୟା ଡୋଜ୍',
@@ -4215,7 +4255,7 @@ class AppStrings {
       'prescription_opened_msg': 'ପ୍ରେସକ୍ରିପସନ୍ ଅପଲୋଡ୍ ଖୋଲିଲା। କ୍ୟାମେରା/ଗ୍ୟାଲେରୀରୁ ବାଛନ୍ତୁ।',
       'app_name': 'ଅଶ୍ୱିନୀ',
       'ai_assistant_title': 'AI ସ୍ୱାସ୍ଥ୍ୟ ସହାୟକ',
-      'ai_assistant_sub': 'RAG ପ୍ରାଥମିକ ନିଦାନ • ବହୁଭାଷୀ',
+      'ai_assistant_sub': 'ସ୍ୱାସ୍ଥ୍ୟ ସହାୟକ • ୨୨ଟି ଭାରତୀୟ ଭାଷା',
       'ai_greeting_msg': 'ନମସ୍କାର! ଯେକୌଣସି ଭାରତୀୟ ଭାଷାରେ ନିଜର ଲକ୍ଷଣ ବର୍ଣ୍ଣନା କରନ୍ତୁ କିମ୍ବା ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ।',
       'ai_symptom_hint': 'ଆପଣଙ୍କ ଲକ୍ଷଣ ଟାଇପ୍ କରନ୍ତୁ (ଯଥା ମୁଣ୍ଡବିନ୍ଧା ଏବଂ ଜ୍ୱର)...',
       'ai_analysing_msg': 'AI ସ୍ୱାସ୍ଥ୍ୟ ସହାୟକ ଲକ୍ଷଣ ବିଶ୍ଳେଷଣ କରୁଛି...',
@@ -4250,8 +4290,8 @@ class AppStrings {
       'quick_actions': 'দ্ৰুত সেৱাসমূহ',
       'records_category': 'নথিপত্ৰ',
       'pharmacy_category': 'ঔষধালয়',
-      'medical_history_action': 'চিকিৎসাৰ\\nইতিহাস',
-      'my_prescriptions_action': 'মোৰ\\nপ্ৰেছক্ৰিপচন',
+      'medical_history_action': 'চিকিৎসাৰ\nইতিহাস',
+      'my_prescriptions_action': 'মোৰ\nপ্ৰেছক্ৰিপচন',
       'morning_dose': 'ৰাতিপুৱাৰ মাত্ৰা',
       'afternoon_dose': 'দুপৰীয়াৰ মাত্ৰা',
       'evening_dose': 'গধূলিৰ মাত্ৰা',
@@ -4594,7 +4634,7 @@ class AppStrings {
       'prescription_opened_msg': 'প্ৰেছক্ৰিপচন আপলোড খোল খালে। কেমেৰা/গেলেৰীৰ পৰা বাছক।',
       'app_name': 'অশ্বিনী',
       'ai_assistant_title': 'AI স্বাস্থ্য সহায়ক',
-      'ai_assistant_sub': 'RAG প্ৰাৰম্ভিক নিদান • বহুভাষিক',
+      'ai_assistant_sub': 'স্বাস্থ্য সহায়ক • ২২টা ভাৰতীয় ভাষা',
       'ai_greeting_msg': 'নমস্কাৰ! যিকোনো ভাৰতীয় ভাষাত আপোনাৰ লক্ষণ বৰ্ণনা কৰক বা প্ৰশ্ন সুধক।',
       'ai_symptom_hint': 'আপোনাৰ লক্ষণ লিখক (যেনে মূৰৰ বিষ আৰু জ্বৰ)...',
       'ai_analysing_msg': 'AI স্বাস্থ্য সহায়কে লক্ষণসমূহ বিশ্লেষণ কৰি আছে...',
@@ -4629,8 +4669,8 @@ class AppStrings {
       'quick_actions': 'فوری اقدامات',
       'records_category': 'ریکارڈز',
       'pharmacy_category': 'فارمیسی',
-      'medical_history_action': 'طبی\\nتاریخ',
-      'my_prescriptions_action': 'میرے\\nنسخے',
+      'medical_history_action': 'طبی\nتاریخ',
+      'my_prescriptions_action': 'میرے\nنسخے',
       'morning_dose': 'صبح کی خوراک',
       'afternoon_dose': 'دوپہر کی خوراک',
       'evening_dose': 'شام کی خوراک',
@@ -4973,7 +5013,7 @@ class AppStrings {
       'prescription_opened_msg': 'نسخہ اپ لوڈ کھل گیا۔ کیمرہ/گیلری سے منتخب کریں۔',
       'app_name': 'اشونی',
       'ai_assistant_title': 'AI ہیلتھ اسسٹنٹ',
-      'ai_assistant_sub': 'RAG ابتدائی تشخیص • کثیر لسانی',
+      'ai_assistant_sub': 'صحت کا معاون • 22 ہندوستانی زبانیں',
       'ai_greeting_msg': 'نمستے! اپنی علامات بیان کریں یا کسی بھی ہندوستانی زبان میں صحت کے سوالات پوچھیں۔',
       'ai_symptom_hint': 'اپنی علامات لکھیں (مثلاً سر درد اور بخار)...',
       'ai_analysing_msg': 'AI ہیلتھ اسسٹنٹ علامات کا تجزیہ کر رہا ہے...',
@@ -5008,8 +5048,8 @@ class AppStrings {
       'quick_actions': 'शीघ्र-सेवाः',
       'records_category': 'अभिलेखानि',
       'pharmacy_category': 'औषधालयः',
-      'medical_history_action': 'चिकित्सा\\nइतिहासः',
-      'my_prescriptions_action': 'मम\\nऔषधपत्राणि',
+      'medical_history_action': 'चिकित्सा\nइतिहासः',
+      'my_prescriptions_action': 'मम\nऔषधपत्राणि',
       'morning_dose': 'प्रातः कालीन मात्रा',
       'afternoon_dose': 'मध्याह्न कालीन मात्रा',
       'evening_dose': 'सायङ्कालीन मात्रा',
@@ -5352,7 +5392,7 @@ class AppStrings {
       'prescription_opened_msg': 'परामर्शपत्रस्य अपलोड उद्घाटितम्। कॅमेरा/गैलरीतः चिनुत।',
       'app_name': 'अश्विनी',
       'ai_assistant_title': 'AI स्वास्थ्य सहायकः',
-      'ai_assistant_sub': 'RAG प्रारम्भिकनिदानम् • बहुभाषीयम्',
+      'ai_assistant_sub': 'स्वास्थ्य सहायकः • द्वाविंशतिभाषासु',
       'ai_greeting_msg': 'नमस्ते! स्वलक्षणानि वर्णयन्तु कस्यामपि भारतीयभाषायाम्। अहं मार्गदर्शनं करिष्यामि।',
       'ai_symptom_hint': 'स्वलक्षणं लिखतु (यथा शिरोवेदना ज्वरश्च)...',
       'ai_analysing_msg': 'AI स्वास्थ्य सहायकः लक्षणं परीक्षते...',
@@ -5387,8 +5427,8 @@ class AppStrings {
       'quick_actions': 'त्वरित सेवा',
       'records_category': 'अभिलेख',
       'pharmacy_category': 'औषधालय',
-      'medical_history_action': 'चिकित्सा\\nइतिहास',
-      'my_prescriptions_action': 'हमर\\nपर्चा',
+      'medical_history_action': 'चिकित्सा\nइतिहास',
+      'my_prescriptions_action': 'हमर\nपर्चा',
       'morning_dose': 'भोरक खुराक',
       'afternoon_dose': 'दोपहरक खुराक',
       'evening_dose': 'सांझक खुराक',
@@ -5731,7 +5771,7 @@ class AppStrings {
       'prescription_opened_msg': 'पर्चा अपलोड खुलल। कैमरा/गैलरी सँ चुनू।',
       'app_name': 'अश्विनी',
       'ai_assistant_title': 'AI स्वास्थ्य सहायक',
-      'ai_assistant_sub': 'RAG प्रारंभिक निदान • बहुभाषी',
+      'ai_assistant_sub': 'स्वास्थ्य सहायक • २२ भारतीय भाषाहरू',
       'ai_greeting_msg': 'प्रणाम! कोनो भारतीय भाषामे अपन लक्षण बताउ वा स्वास्थ्य संबंधी प्रश्न पुछु।',
       'ai_symptom_hint': 'अपन लक्षण लिखू (उदा. कपार दर्द आ बुखार)...',
       'ai_analysing_msg': 'AI स्वास्थ्य सहायक लक्षणक विश्लेषण क रहल अछि...',
@@ -5766,8 +5806,8 @@ class AppStrings {
       'quick_actions': 'रोकड्यो सेवा',
       'records_category': 'नोंदी',
       'pharmacy_category': 'वखदांचे दुकान',
-      'medical_history_action': 'वैजकी\\nइतिहास',
-      'my_prescriptions_action': 'म्हजीं\\nवखतपत्रां',
+      'medical_history_action': 'वैजकी\nइतिहास',
+      'my_prescriptions_action': 'म्हजीं\nवखतपत्रां',
       'morning_dose': 'सकाळचो डोस',
       'afternoon_dose': 'दोनपारचो डोस',
       'evening_dose': 'सांजेचो डोस',
@@ -6110,7 +6150,7 @@ class AppStrings {
       'prescription_opened_msg': 'प्रिस्क्रिप्शन अपलोड उगडलें. कॅमेरा/गॅलरींतल्यान वेंचून काडात.',
       'app_name': 'अश्विनी',
       'ai_assistant_title': 'AI भलायकी मजतनीस',
-      'ai_assistant_sub': 'RAG प्राथमिक निदान • जायत्यो भासो',
+      'ai_assistant_sub': 'भलायकी मजतनीस • २२ भारतीय भासो',
       'ai_greeting_msg': 'नमस्कार! खंयचेय भारतीय भाशेंत तुमचीं लक्षणां सांगात वा भलायकेचे प्रस्न विचारात.',
       'ai_symptom_hint': 'तुमचीं लक्षणां बरयात (उदा. तकलीदुखी आनी जोर)...',
       'ai_analysing_msg': 'AI भलायकी मजतनीस लक्षणां तपासता...',
@@ -6145,8 +6185,8 @@ class AppStrings {
       'quick_actions': 'द्रुत सेवाहरू',
       'records_category': 'अभिलेखहरू',
       'pharmacy_category': 'औषधालय',
-      'medical_history_action': 'चिकित्सा\\nइतिहास',
-      'my_prescriptions_action': 'मेरो\\nप्रेस्क्रिप्सन',
+      'medical_history_action': 'चिकित्सा\nइतिहास',
+      'my_prescriptions_action': 'मेरो\nप्रेस्क्रिप्सन',
       'morning_dose': 'बिहानको खुराक',
       'afternoon_dose': 'दिउँसोको खुराक',
       'evening_dose': 'बेलुकाको खुराक',
@@ -6489,7 +6529,7 @@ class AppStrings {
       'prescription_opened_msg': 'प्रेस्क्रिप्सन अपलोड खुल्यो। क्यामेरा/ग्यालरीबाट छान्नुहोस्।',
       'app_name': 'अश्विनी',
       'ai_assistant_title': 'AI स्वास्थ्य सहायक',
-      'ai_assistant_sub': 'RAG प्रारम्भिक निदान • बहुभाषी',
+      'ai_assistant_sub': 'स्वास्थ्य सहायक • २२ भारतीय भाषा',
       'ai_greeting_msg': 'नमस्ते! कुनै पनि भारतीय भाषामा आफ्ना लक्षणहरू बताउनुहोस् वा स्वास्थ्य प्रश्नहरू सोध्नुहोस्।',
       'ai_symptom_hint': 'आफ्नो लक्षणहरू टाइप गर्नुहोस् (जस्तै टाउको दुखाइ र ज्वरो)...',
       'ai_analysing_msg': 'AI स्वास्थ्य सहायकले लक्षणहरू विश्लेषण गर्दैछ...',
@@ -6524,8 +6564,8 @@ class AppStrings {
       'quick_actions': 'تِکھ قَدَم',
       'records_category': 'ریکارڈ',
       'pharmacy_category': 'دَواخانہٕ',
-      'medical_history_action': 'طبی\\nتوٲریخ',
-      'my_prescriptions_action': 'میٲنی\\nنُسخہٕ',
+      'medical_history_action': 'طبی\nتوٲریخ',
+      'my_prescriptions_action': 'میٲنی\nنُسخہٕ',
       'morning_dose': 'صُبحٕچ خوراک',
       'afternoon_dose': 'دۄپہرٕچ خوراک',
       'evening_dose': 'شامٕچ خوراک',
@@ -6868,7 +6908,7 @@ class AppStrings {
       'prescription_opened_msg': 'نسخہٕ اپلوڈ گوو مُکمل۔ کیمرہٕ/گیلری منٛزٕ کٔرِو انتخاب۔',
       'app_name': 'اشونی',
       'ai_assistant_title': 'AI ہیلتھ اسسٹنٹ',
-      'ai_assistant_sub': 'RAG ابتدائی تشخیص • کثیر لسانی',
+      'ai_assistant_sub': 'صحت اسسٹنٹ • 22 ہِندوستٲنؠ زبانن مَنٛز',
       'ai_greeting_msg': 'نمستے! پننہٕ علامت بیان کٔرِو یا کانٛہہ تہِ ہِندوستٲنؠ زبانہِ منٛز صِحَتٕک سوال پرٕژھِو۔',
       'ai_symptom_hint': 'پننہٕ علامت لؠکھِو (مثلاً کلہٕ دود تہٕ تب)...',
       'ai_analysing_msg': 'AI ہیلتھ اسسٹنٹ چھُ علامتن ہُنٛد تجزِیہ کران...',
@@ -6903,8 +6943,8 @@ class AppStrings {
       'quick_actions': 'جلدي خدمتون',
       'records_category': 'رڪارڊ',
       'pharmacy_category': 'دواسازي',
-      'medical_history_action': 'طبي\\nتاريخ',
-      'my_prescriptions_action': 'منهنجا\\nنسخا',
+      'medical_history_action': 'طبي\nتاريخ',
+      'my_prescriptions_action': 'منهنجا\nنسخا',
       'morning_dose': 'صبح جو دوز',
       'afternoon_dose': 'منجهند جو دوز',
       'evening_dose': 'شام جو دوز',
@@ -7247,7 +7287,7 @@ class AppStrings {
       'prescription_opened_msg': 'نسخو اپلوڊ کُلي ويو. ڪيمرا/گيلري مان چونڊيو.',
       'app_name': 'اشوني',
       'ai_assistant_title': 'AI صحت اسسٽنٽ',
-      'ai_assistant_sub': 'RAG شروعاتي سڃاڻپ • گھڻ لساني',
+      'ai_assistant_sub': 'صحت اسسٽنٽ • 22 هندستاني ٻوليون',
       'ai_greeting_msg': 'نمستي! پنهنجي علامتن کي بيان ڪريو يا ڪنهن به هندستاني ٻوليءَ ۾ صحت جا سوال پڇو.',
       'ai_symptom_hint': 'پنهنجون علامتون ٽائپ ڪريو (مثال طور مٿي جو سور ۽ بخار)...',
       'ai_analysing_msg': 'AI صحت اسسٽنٽ علامتن جو تجزيو ڪري رهيو آهي...',
@@ -7282,8 +7322,8 @@ class AppStrings {
       'quick_actions': 'झटपट सेवा',
       'records_category': 'रिकॉर्ड',
       'pharmacy_category': 'दवाई खाना',
-      'medical_history_action': 'डाक्टरी\\nइतिहास',
-      'my_prescriptions_action': 'मेरे\\nनुस्खे',
+      'medical_history_action': 'डाक्टरी\nइतिहास',
+      'my_prescriptions_action': 'मेरे\nनुस्खे',
       'morning_dose': 'सैल दी खुराक',
       'afternoon_dose': 'दपैह्रै दी खुराक',
       'evening_dose': 'संजै दी खुराक',
@@ -7626,7 +7666,7 @@ class AppStrings {
       'prescription_opened_msg': 'पर्चा अपलोड खुली गेआ। कैमरा/गैलरी चा चुनो।',
       'app_name': 'अश्विनी',
       'ai_assistant_title': 'AI सेहत सहायक',
-      'ai_assistant_sub': 'RAG शुरूआती निदान • बहुभाषी',
+      'ai_assistant_sub': 'सेहत सहायक • २२ भारतीय भाषा',
       'ai_greeting_msg': 'नमस्ते! कुसै बी भारती भाशा च अपने लक्षण दस्सो जां सेहत दे सवाल पुच्छो।',
       'ai_symptom_hint': 'अपने लक्षण लिक्खो (मसलन सिर पीड़क ते बुखार)...',
       'ai_analysing_msg': 'AI सेहत सहायक लक्षणां दा विशलेषण करा करदा ऐ...',
@@ -7661,8 +7701,8 @@ class AppStrings {
       'quick_actions': 'ꯌꯥꯝꯅ ꯊꯨꯅ ꯇꯧꯕ',
       'records_category': 'ꯅꯣꯠ ꯇꯧꯔꯕꯁꯤꯡ',
       'pharmacy_category': 'ꯍꯤꯗꯥꯛ ꯐꯪꯐꯝ',
-      'medical_history_action': 'ꯂꯥꯌꯦꯡꯕꯒꯤ\\nꯋꯥꯔꯤ',
-      'my_prescriptions_action': 'ꯑꯩꯒꯤ\\nꯍꯤꯗꯥꯛ ꯆꯦ',
+      'medical_history_action': 'ꯂꯥꯌꯦꯡꯕꯒꯤ\nꯋꯥꯔꯤ',
+      'my_prescriptions_action': 'ꯑꯩꯒꯤ\nꯍꯤꯗꯥꯛ ꯆꯦ',
       'morning_dose': 'ꯑꯌꯨꯛꯀꯤ ꯍꯤꯗꯥꯛ',
       'afternoon_dose': 'ꯅꯨꯡꯊꯤꯜꯒꯤ ꯍꯤꯗꯥꯛ',
       'evening_dose': 'ꯅꯨꯃꯤꯗꯥꯡꯋꯥꯏꯒꯤ ꯍꯤꯗꯥꯛ',
@@ -8005,7 +8045,7 @@ class AppStrings {
       'prescription_opened_msg': 'প্রেসক্রিপশন অপলোড হাংলে। ক্যামেরা/গেলরিদগী খনবীয়ু।',
       'app_name': 'অশ্বিনী',
       'ai_assistant_title': 'AI হকশেল মতেং পাংবা',
-      'ai_assistant_sub': 'RAG অহানবা লায়য়েং • তোঙানবা লোল',
+      'ai_assistant_sub': 'হকশেল মতেং পাংবা • ২২ লোল',
       'ai_greeting_msg': 'খুরুমজরি! মশক তাকউ নত্রগা ভারতকী লোল অমদা হকশেলগী ৱাহং হংবীয়ু।',
       'ai_symptom_hint': 'নহাক্কী লোলদা ইবীয়ু (লৈহৌবা অমসুং কোকচিকপা)...',
       'ai_analysing_msg': 'AI হকশেল মতেং পাংবনা য়েংশিল্লি...',
@@ -8040,8 +8080,8 @@ class AppStrings {
       'quick_actions': 'गोख्रों खामानि',
       'records_category': 'रेकर्ड',
       'pharmacy_category': 'मुलि दखान',
-      'medical_history_action': 'देहानि\\nजारिमिन',
-      'my_prescriptions_action': 'आंनि\\nमुलि बिलाइ',
+      'medical_history_action': 'देहानि\nजारिमिन',
+      'my_prescriptions_action': 'आंनि\nमुलि बिलाइ',
       'morning_dose': 'फुंनि मुलिनि बिबां',
       'afternoon_dose': 'सानजौफुनि मुलिनि बिबां',
       'evening_dose': 'बेलासेनि मुलिनि बिबां',
@@ -8384,7 +8424,7 @@ class AppStrings {
       'prescription_opened_msg': 'प्रेसक्रिपसन आपलोड खुलिबाय। केमेरा/गेलारिनिफ्राय सायख।',
       'app_name': 'अश्विनी',
       'ai_assistant_title': 'AI साहाइया',
-      'ai_assistant_sub': 'RAG गुदि नायबिजिरनाय • गोबां राव',
+      'ai_assistant_sub': 'साहाइया • 22 रावफोराव',
       'ai_greeting_msg': 'खुलुमबाय! गावनि लखोनफोरखौ खोनथा हर एबा सोंथि सोंहर।',
       'ai_symptom_hint': 'नोंथांनि लखोनफोरखौ लिर (जेरै खोरफोर सानाय आरो जोम)...',
       'ai_analysing_msg': 'AI साहाइया लखोनफोरखौ नायबिजिरगासिनो दं...',
@@ -8419,8 +8459,8 @@ class AppStrings {
       'quick_actions': 'ᱞᱚᱜᱚᱱ ᱠᱟᱹᱢᱤᱦᱚᱨᱟ',
       'records_category': 'ᱨᱮᱠᱚᱨᱰ',
       'pharmacy_category': 'ᱨᱟᱱ ᱫᱩᱠᱟᱱ',
-      'medical_history_action': 'ᱨᱟᱱ ᱢᱩᱨᱜᱟᱹᱱ\\nᱱᱟᱜᱟᱢ',
-      'my_prescriptions_action': 'ᱤᱧᱟᱜ\\nᱨᱟᱱ ᱥᱟᱠᱟᱢ',
+      'medical_history_action': 'ᱨᱟᱱ ᱢᱩᱨᱜᱟᱹᱱ\nᱱᱟᱜᱟᱢ',
+      'my_prescriptions_action': 'ᱤᱧᱟᱜ\nᱨᱟᱱ ᱥᱟᱠᱟᱢ',
       'morning_dose': 'ᱥᱮᱛᱟᱜ ᱨᱟᱱ ᱡᱚᱢ',
       'afternoon_dose': 'ᱛᱤᱠᱤᱱ ᱨᱟᱱ ᱡᱚᱢ',
       'evening_dose': 'ᱟᱹᱭᱩᱵ ᱨᱟᱱ ᱡᱚᱢ',
@@ -8763,7 +8803,7 @@ class AppStrings {
       'prescription_opened_msg': 'ᱯᱨᱮᱥᱠᱨᱤᱯᱥᱚᱱ ᱟᱯᱞᱳᱰ ᱠᱷᱩᱞᱟᱹᱣ ᱮᱱᱟ᱾ ᱠᱮᱢᱮᱨᱟ/ᱜᱮᱞᱟᱨᱤ ᱠᱷᱚᱱ ᱵᱟᱪᱷᱟᱣ ᱢᱮ᱾',
       'app_name': 'ᱚᱥᱣᱤᱱᱤ',
       'ai_assistant_title': 'AI ᱦᱚᱲᱢᱳ ᱜᱚᱲᱚᱭᱤᱡ',
-      'ai_assistant_sub': 'RAG ᱮᱛᱚᱦᱚᱵ ᱪᱤᱱᱦᱟᱹᱣ • ᱟᱭᱢᱟ ᱯᱟᱹᱨᱥᱤ',
+      'ai_assistant_sub': 'ᱦᱚᱲᱢᱳ ᱜᱚᱲᱚᱭᱤᱡ • 22 ᱯᱟᱹᱨᱥᱤ',
       'ai_greeting_msg': 'ᱡᱚᱦᱟᱨ! ᱡᱟᱦᱟᱸᱱ ᱥᱤᱧᱚᱛᱤᱭᱟᱹ ᱯᱟᱹᱨᱥᱤ ᱛᱮ ᱟᱢᱟᱜ ᱞᱚᱠᱷᱚᱱ ᱞᱟᱹᱭ ᱢᱮ ᱟᱨ ᱠᱩᱠᱞᱤ ᱠᱩᱞᱤ ᱢᱮ᱾',
       'ai_symptom_hint': 'ᱟᱢᱟᱜ ᱞᱚᱠᱷᱚᱱ ᱚᱞ ᱢᱮ (ᱡᱮᱞᱮᱠᱟ ᱵᱚᱦᱚᱜ ᱦᱟᱹᱥᱩ ᱟᱨ ᱨᱩᱣᱟᱹ)...',
       'ai_analysing_msg': 'AI ᱦᱚᱲᱢᱳ ᱜᱚᱲᱚᱭᱤᱡ ᱞᱚᱠᱷᱚᱱ ᱠᱚ ᱯᱟᱨᱠᱷᱟᱣ ᱮᱫᱟᱭ...',
@@ -8790,10 +8830,34 @@ class AppStrings {
 
   };
 
+  static String _humanizeKey(String key) {
+    var cleaned = key;
+    if (cleaned.endsWith('_title')) {
+      cleaned = cleaned.substring(0, cleaned.length - '_title'.length);
+    } else if (cleaned.endsWith('_action')) {
+      cleaned = cleaned.substring(0, cleaned.length - '_action'.length);
+    } else if (cleaned.endsWith('_label')) {
+      cleaned = cleaned.substring(0, cleaned.length - '_label'.length);
+    } else if (cleaned.endsWith('_btn')) {
+      cleaned = cleaned.substring(0, cleaned.length - '_btn'.length);
+    } else if (cleaned.endsWith('_sub')) {
+      cleaned = cleaned.substring(0, cleaned.length - '_sub'.length);
+    } else if (cleaned.endsWith('_hint')) {
+      cleaned = cleaned.substring(0, cleaned.length - '_hint'.length);
+    } else if (cleaned.endsWith('_q')) {
+      cleaned = cleaned.substring(0, cleaned.length - '_q'.length);
+    }
+    return cleaned.split('_').where((w) => w.isNotEmpty).map((w) {
+      return w[0].toUpperCase() + w.substring(1);
+    }).join(' ');
+  }
+
   static String get(String key, String languageCode) {
     if (key.trim().isEmpty) return key;
     if (languageCode == 'en' || languageCode == 'en-IN') {
-      return localizedValues['en']?[key] ?? key;
+      final directEn = localizedValues['en']?[key];
+      if (directEn != null && directEn.isNotEmpty) return directEn;
+      return key;
     }
 
     final lang = languageCode.split('-')[0].toLowerCase();
@@ -8805,34 +8869,41 @@ class AppStrings {
       return directVal;
     }
 
-    // 2. Query Healthcare Catalog with the key directly
-    final catalogMatch = HealthcareCatalog.lookup(key, lang);
-    if (catalogMatch != null && catalogMatch.trim().isNotEmpty && catalogMatch != key) {
-      return catalogMatch;
-    }
-
-    // 3. If key is in English dictionary, translate that English phrase
+    // 2. If key is defined in the English dictionary, translate that English phrase
     final enVal = localizedValues['en']?[key];
     if (enVal != null && enVal.isNotEmpty) {
       final catalogEnMatch = HealthcareCatalog.lookup(enVal, lang);
       if (catalogEnMatch != null && catalogEnMatch.trim().isNotEmpty && catalogEnMatch != enVal) {
         return catalogEnMatch;
       }
+      final phraseLookup = OfflinePhraseEngine.lookupPhrase(enVal, lang);
+      if (phraseLookup != null && phraseLookup.trim().isNotEmpty) {
+        return phraseLookup;
+      }
       final phraseEnMatch = OfflinePhraseEngine.translate(enVal, lang);
       if (phraseEnMatch.isNotEmpty && phraseEnMatch != enVal) {
         return phraseEnMatch;
       }
+      return enVal;
     }
 
-    // 4. Query OfflinePhraseEngine directly ONLY if key is a human phrase (no underscores)
+    // 3. For natural language phrases passed directly (without underscores), check catalog & phrases
     if (!key.contains('_')) {
+      final catalogMatch = HealthcareCatalog.lookup(key, lang);
+      if (catalogMatch != null && catalogMatch.trim().isNotEmpty && catalogMatch != key) {
+        return catalogMatch;
+      }
+      final phraseLookup = OfflinePhraseEngine.lookupPhrase(key, lang);
+      if (phraseLookup != null && phraseLookup.trim().isNotEmpty) {
+        return phraseLookup;
+      }
       final phraseMatch = OfflinePhraseEngine.translate(key, lang);
       if (phraseMatch.isNotEmpty && phraseMatch != key) {
         return phraseMatch;
       }
     }
 
-    // 5. Fallback to English value or key
-    return enVal ?? key;
+    // 4. Fallback: undefined key is returned as-is
+    return key;
   }
 }

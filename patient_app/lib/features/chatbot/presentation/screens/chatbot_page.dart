@@ -16,7 +16,6 @@ import '../../domain/services/chat_orchestrator.dart';
 import '../../domain/services/connectivity_service.dart';
 import '../../domain/services/embedding_service.dart';
 import '../../domain/services/llm_client.dart';
-import '../widgets/api_key_dialog.dart';
 import 'chat_screen.dart';
 
 /// Single-line plug-and-play entry point for the Healthcare Chatbot in Patient App.
@@ -53,7 +52,7 @@ class ChatbotPage extends StatefulWidget {
 class _ChatbotPageState extends State<ChatbotPage> {
   bool _isReady = false;
   String? _errorMessage;
-  String _statusMessage = 'Connecting to Medical Knowledge & AI Services...';
+  String _statusMessage = 'Connecting to Medical Assistant...';
 
   late ChatStorageRepository _storage;
   late ConnectivityService _connectivity;
@@ -90,7 +89,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
       // 2. Initialize knowledge vector store
       setState(() {
-        _statusMessage = 'Loading clinical knowledge base...';
+        _statusMessage = 'Preparing medical database...';
       });
       final vectorStore =
           widget.vectorStoreRepository ?? LocalVectorStoreRepository();
@@ -99,7 +98,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
       // 3. Initialize embedding engine
       setState(() {
-        _statusMessage = 'Initializing medical language models...';
+        _statusMessage = 'Setting up health assistant...';
       });
       final embedding = widget.embeddingService ?? OnnxEmbeddingService();
       await embedding.init();
@@ -110,11 +109,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
       // 5. Initialize generation engines with multi-key Gemini cloud client
       await EnvConfig.init();
-      final savedApiKey = await ApiKeyDialog.loadPersistedApiKey();
       final cloudLlm = widget.cloudLlmClient ??
           GeminiCloudLlmClient(
-            apiKey: savedApiKey,
-            model: 'gemini-2.5-flash',
+            model: 'gemini-1.5-flash',
           );
       final offlineLlm =
           widget.offlineLlmClient ?? const ExtractiveOfflineLlmClient();
@@ -172,7 +169,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
     if (_errorMessage != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('MediAssist AI')),
+        appBar: AppBar(title: const Text('Ashwini AI')),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -220,7 +217,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('MediAssist AI'),
+        title: const Text('Ashwini AI'),
         backgroundColor: Colors.white,
         elevation: 0.5,
       ),

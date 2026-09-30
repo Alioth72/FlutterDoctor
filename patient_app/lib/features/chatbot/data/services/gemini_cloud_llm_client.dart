@@ -27,10 +27,10 @@ class GeminiCloudLlmClient implements LlmClient {
                 : (const String.fromEnvironment('GEMINI_API_KEY').isNotEmpty
                     ? const String.fromEnvironment('GEMINI_API_KEY').trim()
                     : '')),
-        _activeModel = model ?? 'gemini-2.5-flash',
+        _activeModel = model ?? 'gemini-1.5-flash',
         _httpHandler = httpHandler ?? _defaultHttpPostHandler;
 
-  /// Verified pool of 18 active Gemini keys
+  /// Active Gemini keys pool
   static const List<String> activeKeyPool = [
     'AIzaSyAC-zy6AEUPU2f9RLh1ZJy4u8-InVZRTuk',
     'AIzaSyCr-9Ji7m0OJPD8c8sukxG6h4mIJnZJmqs',
@@ -55,17 +55,16 @@ class GeminiCloudLlmClient implements LlmClient {
   static int _keyIndex = 0;
 
   static String getNextPoolKey() {
+    if (activeKeyPool.isEmpty) return '';
     final key = activeKeyPool[_keyIndex % activeKeyPool.length];
     _keyIndex++;
     return key;
   }
 
   static const List<String> candidateModels = [
-    'gemini-2.5-flash',
-    'gemini-flash-latest',
+    'gemini-1.5-flash',
     'gemini-2.0-flash',
-    'gemini-flash-lite-latest',
-    'gemini-3.5-flash',
+    'gemini-1.5-pro',
   ];
 
   String _apiKey;
@@ -74,13 +73,20 @@ class GeminiCloudLlmClient implements LlmClient {
   final HttpPostHandler _httpHandler;
 
   String get model => _activeModel;
-  String get apiKey => _apiKey.isNotEmpty ? _apiKey : activeKeyPool[_keyIndex % activeKeyPool.length];
+  String get apiKey {
+    if (_apiKey.isNotEmpty) return _apiKey;
+    final envKey = EnvConfig.geminiApiKey;
+    if (envKey.isNotEmpty) return envKey;
+    final dartDefKey = const String.fromEnvironment('GEMINI_API_KEY').trim();
+    if (dartDefKey.isNotEmpty) return dartDefKey;
+    return activeKeyPool.isNotEmpty ? activeKeyPool[_keyIndex % activeKeyPool.length] : '';
+  }
 
   void setApiKey(String key) {
     _apiKey = key.trim();
   }
 
-  bool get hasApiKey => _apiKey.isNotEmpty || activeKeyPool.isNotEmpty;
+  bool get hasApiKey => apiKey.isNotEmpty;
 
   /// Validates the API key against Google Gemini REST API
   Future<String?> validateApiKey([String? testKey]) async {
@@ -195,12 +201,18 @@ class GeminiCloudLlmClient implements LlmClient {
           lastException = e;
           final str = e.toString().toLowerCase();
 
-          // If rate limit (429) or quota error or high demand (503), break model loop and retry with next key in pool
+          // If rate limit (429), quota error, high demand (503), or invalid key (400/403), break and retry with next pool key
           if (str.contains('429') ||
               str.contains('quota') ||
               str.contains('resource_exhausted') ||
               str.contains('limit') ||
-              str.contains('503')) {
+              str.contains('503') ||
+              str.contains('key') ||
+              str.contains('400') ||
+              str.contains('403')) {
+            if (str.contains('key') || str.contains('400') || str.contains('403')) {
+              _apiKey = '';
+            }
             break;
           }
         }

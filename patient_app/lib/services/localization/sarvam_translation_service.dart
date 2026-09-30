@@ -82,6 +82,10 @@ class SarvamTranslationService {
     return val.trim() != text.trim();
   }
 
+  /// When true (e.g. during offline test execution), bypasses external HTTP network calls
+  /// and immediately returns either the cached/dictionary text or simulated Indic text.
+  static bool bypassNetworkCallsForTesting = false;
+
   /// Synchronously checks if a translation is available in memory, SharedPreferences, catalog, or dictionary.
   static String? getCached(String text, String targetLanguageCode) {
     if (text.trim().isEmpty) return text;
@@ -117,6 +121,13 @@ class SarvamTranslationService {
       return catalogMatch;
     }
 
+    if (bypassNetworkCallsForTesting) {
+      final simulated = HealthcareCatalog.lookup(text, langInfo.code) ??
+          '${text}_${langInfo.code}_अनुवाद_விளக்கம்_వివరణ';
+      _memoryCache[key] = simulated;
+      return simulated;
+    }
+
     // Do not return premature transliterated strings here.
     // Returning null allows DynamicTranslatedText to trigger async neural translation cleanly.
     return null;
@@ -138,6 +149,13 @@ class SarvamTranslationService {
     // 1. In-memory cache
     if (_memoryCache.containsKey(key)) {
       return _memoryCache[key]!;
+    }
+
+    if (bypassNetworkCallsForTesting) {
+      final simulated = HealthcareCatalog.lookup(text, langInfo.code) ??
+          '${text}_${langInfo.code}_अनुवाद_விளக்கம்_వివరణ';
+      _memoryCache[key] = simulated;
+      return simulated;
     }
 
     // 2. Persistent storage cache

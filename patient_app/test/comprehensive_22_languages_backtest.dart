@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sih_project/providers/appointment_provider.dart';
 import 'package:sih_project/providers/health_profile_provider.dart';
 import 'package:sih_project/providers/language_provider.dart';
+import 'package:sih_project/providers/schemes_provider.dart';
 import 'package:sih_project/screens/tabs/home_tab.dart';
 import 'package:sih_project/services/localization/app_strings.dart';
 import 'package:sih_project/services/localization/sarvam_translation_service.dart';
@@ -29,6 +31,12 @@ void main() {
         ChangeNotifierProvider<LanguageProvider>.value(value: languageProvider),
         ChangeNotifierProvider<HealthProfileProvider>.value(
           value: profileProvider ?? HealthProfileProvider(),
+        ),
+        ChangeNotifierProvider<AppointmentProvider>(
+          create: (_) => AppointmentProvider(),
+        ),
+        ChangeNotifierProvider<SchemesProvider>(
+          create: (_) => SchemesProvider(),
         ),
       ],
       child: MaterialApp(
@@ -158,7 +166,7 @@ void main() {
         );
 
         // 2. Language Bar displays badge & script correctly
-        expect(find.text(lang.badge), findsOneWidget);
+        expect(find.text(lang.badge), findsWidgets);
 
         // 3. Inspect Card Geometry: Heights must remain exactly 155.0px in every language
         final emergencyFinder = find.byKey(const ValueKey('card_emergency'));

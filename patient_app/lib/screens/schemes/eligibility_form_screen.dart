@@ -371,12 +371,14 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
           ),
         ),
         const SizedBox(width: 6),
-        Text(
-          langProvider.tr('health_matcher_title'),
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF0F172A),
+        Flexible(
+          child: Text(
+            langProvider.tr('health_matcher_title'),
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+            ),
           ),
         ),
       ],
@@ -527,12 +529,14 @@ class _EligibilityFormScreenState extends State<EligibilityFormScreen> {
               ),
             ),
             const SizedBox(width: 14),
-            Text(
-              langProvider.tr('years_old'),
-              style: const TextStyle(
-                fontSize: 16.5,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF334155),
+            Expanded(
+              child: Text(
+                langProvider.tr('years_old'),
+                style: const TextStyle(
+                  fontSize: 16.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF334155),
+                ),
               ),
             ),
           ],

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import '../services/permissions/app_permission_service.dart';
 
 /// Screen hosting the client-side rPPG (photoplethysmography) heart-rate
 /// detection web engine served over a local HTTP server.
@@ -40,6 +41,11 @@ class _RppgScreenState extends State<RppgScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _startLocalServer() async {
+    await AppPermissionService.requestCameraPermission(
+      context: context,
+      featureName: 'Face Vitals (Heart Rate & Pulse)',
+    );
+
     for (int port = 8080; port <= 8085; port++) {
       try {
         final server = InAppLocalhostServer(

@@ -693,7 +693,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(
+                          Flexible(
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               alignment: Alignment.centerLeft,
@@ -708,20 +708,26 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF3E8FF),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _isLoadingSlots
-                                  ? lang.tr('checking_slots')
-                                  : '${_availableSlots.where((s) => s.isBookable).length} ${lang.tr('slots_free')}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF7C3AED),
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF3E8FF),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  _isLoadingSlots
+                                      ? lang.tr('checking_slots')
+                                      : '${_availableSlots.where((s) => s.isBookable).length} ${lang.tr('slots_free')}',
+                                  maxLines: 1,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF7C3AED),
+                                  ),
+                                ),
                               ),
                             ),
                           ),

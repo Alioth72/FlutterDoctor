@@ -67,7 +67,14 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(langProvider.tr('upcoming'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Flexible(
+                      child: Text(
+                        langProvider.tr('upcoming'),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     if (upcomingAppointments.isNotEmpty) ...[
                       const SizedBox(width: 6),
                       Container(
@@ -89,7 +96,14 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(langProvider.tr('history'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Flexible(
+                      child: Text(
+                        langProvider.tr('history'),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     if (pastAppointments.isNotEmpty) ...[
                       const SizedBox(width: 6),
                       Container(
@@ -265,59 +279,66 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${langProvider.tr('token_prefix')} ${apt.tokenNumber.replaceAll('Token #', '').trim()}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onPrimaryContainer,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: apt.isOnline ? const Color(0xFFFAF5FF) : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: apt.isOnline ? const Color(0xFFDDD6FE) : const Color(0xFFE2E8F0),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                apt.isOnline ? Icons.videocam_rounded : Icons.local_hospital_rounded,
-                                size: 13,
-                                color: apt.isOnline ? const Color(0xFF7C3AED) : const Color(0xFF64748B),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                apt.isOnline
-                                    ? (apt.appointmentType.toLowerCase() == 'telehealth'
-                                        ? langProvider.tr('telehealth_badge')
-                                        : langProvider.tr('online_badge'))
-                                    : langProvider.tr('offline_badge'),
+                              child: Text(
+                                '${langProvider.tr('token_prefix')} ${apt.tokenNumber.replaceAll('Token #', '').trim()}',
                                 style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: apt.isOnline ? const Color(0xFF7C3AED) : const Color(0xFF475569),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.onPrimaryContainer,
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: apt.isOnline ? const Color(0xFFFAF5FF) : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: apt.isOnline ? const Color(0xFFDDD6FE) : const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    apt.isOnline ? Icons.videocam_rounded : Icons.local_hospital_rounded,
+                                    size: 13,
+                                    color: apt.isOnline ? const Color(0xFF7C3AED) : const Color(0xFF64748B),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    apt.isOnline
+                                        ? (apt.appointmentType.toLowerCase() == 'telehealth'
+                                            ? langProvider.tr('telehealth_badge')
+                                            : langProvider.tr('online_badge'))
+                                        : langProvider.tr('offline_badge'),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      color: apt.isOnline ? const Color(0xFF7C3AED) : const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
@@ -387,9 +408,13 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
                   children: [
                     const Icon(Icons.access_time_rounded, size: 16, color: Color(0xFF7C3AED)),
                     const SizedBox(width: 6),
-                    Text(
-                      '${apt.appointmentDate} • ${apt.timeSlot}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    Expanded(
+                      child: Text(
+                        '${apt.appointmentDate} • ${apt.timeSlot}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),

@@ -726,15 +726,23 @@ class _ChatScreenState extends State<ChatScreen> {
           if (!isUser) ...[
             Container(
               margin: const EdgeInsets.only(top: 4, right: 10),
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(2),
               decoration: const BoxDecoration(
                 color: Color(0xFFE0F2F1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.medical_services_rounded,
-                color: Color(0xFF006A6A),
-                size: 18,
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/ashwini_logo.png',
+                  width: 28,
+                  height: 28,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.health_and_safety_rounded,
+                    color: Color(0xFF006A6A),
+                    size: 18,
+                  ),
+                ),
               ),
             ),
           ],
@@ -836,15 +844,23 @@ class _ChatScreenState extends State<ChatScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(2),
             decoration: const BoxDecoration(
               color: Color(0xFFE0F2F1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.medical_services_rounded,
-              color: Color(0xFF006A6A),
-              size: 18,
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/ashwini_logo.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.health_and_safety_rounded,
+                  color: Color(0xFF006A6A),
+                  size: 18,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 12),

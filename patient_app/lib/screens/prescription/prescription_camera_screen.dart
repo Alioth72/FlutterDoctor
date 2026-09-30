@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../services/permissions/app_permission_service.dart';
 
 /// Live Hardware Camera Screen for capturing doctor prescriptions.
 /// Connects directly to device camera hardware via WebRTC video renderer.
@@ -103,6 +104,21 @@ class _PrescriptionCameraScreenState extends State<PrescriptionCameraScreen>
 
   Future<void> _startCameraStream() async {
     try {
+      final hasPermission = await AppPermissionService.requestCameraPermission(
+        context: context,
+        featureName: 'Prescription Scanner',
+      );
+      if (!hasPermission) {
+        if (mounted) {
+          setState(() {
+            _cameraError = true;
+            _cameraErrorMessage =
+                'Camera permission is required to scan doctor prescriptions. Please allow camera access.';
+          });
+        }
+        return;
+      }
+
       if (_cameraStream != null) {
         for (final track in _cameraStream!.getTracks()) {
           await track.stop();

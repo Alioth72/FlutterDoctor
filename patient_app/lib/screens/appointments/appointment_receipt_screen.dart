@@ -181,26 +181,31 @@ class AppointmentReceiptScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'BOOKING REFERENCE',
-                              style: TextStyle(
-                                fontSize: 11,
-                                letterSpacing: 1.1,
-                                fontWeight: FontWeight.w600,
-                                color: colorScheme.outline,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'BOOKING REFERENCE',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  letterSpacing: 1.1,
+                                  fontWeight: FontWeight.w600,
+                                  color: colorScheme.outline,
+                                ),
                               ),
-                            ),
-                            Text(
-                              appointment.id,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
+                              Text(
+                                appointment.id,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -277,23 +282,32 @@ class AppointmentReceiptScreen extends StatelessWidget {
 
                     // Fee breakdown
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Consultation Fee',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
+                        const Expanded(
+                          child: Text(
+                            'Consultation Fee',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Text(
-                          appointment.consultationFee == 0
-                              ? '₹0 (Free Consultation)'
-                              : '₹${appointment.consultationFee}',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              appointment.consultationFee == 0
+                                  ? '₹0 (Free Consultation)'
+                                  : '₹${appointment.consultationFee}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -327,13 +341,16 @@ class AppointmentReceiptScreen extends StatelessWidget {
                     shadowColor: Colors.transparent,
                   ),
                   icon: const Icon(Icons.videocam_rounded, size: 22, color: Colors.white),
-                  label: const Text(
-                    'Connect with Doctor (Video Call)',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.2,
-                      color: Colors.white,
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Connect with Doctor (Video Call)',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.2,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),

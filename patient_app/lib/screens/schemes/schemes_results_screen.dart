@@ -51,13 +51,15 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
                 s.tags.any((t) => t.toLowerCase().contains(_searchQuery.toLowerCase()));
           }).toList();
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        if (profile != null) {
-          await provider.evaluateEligibility(profile);
-        }
-      },
-      child: ListView.builder(
+    return Material(
+      color: Colors.transparent,
+      child: RefreshIndicator(
+        onRefresh: () async {
+          if (profile != null) {
+            await provider.evaluateEligibility(profile);
+          }
+        },
+        child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 32.0),
         itemCount: displayedSchemes.isEmpty ? 2 : displayedSchemes.length + 1,
@@ -239,8 +241,9 @@ class _SchemesResultsScreenState extends State<SchemesResultsScreen> {
           );
         },
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildFilterChip({
     required String label,

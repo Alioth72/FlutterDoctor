@@ -11,6 +11,7 @@ import '../../models/appointment.dart';
 import '../../models/teleconsult_models.dart';
 import '../../services/teleconsult/call_service.dart';
 import '../../services/teleconsult/teleconsult_sync_service.dart';
+import '../../services/permissions/app_permission_service.dart';
 
 /// Teleconsultation Video Call Screen (Video Call Only).
 ///
@@ -133,6 +134,21 @@ class _VideoConsultationScreenState extends State<VideoConsultationScreen> {
       );
 
       _callService = service;
+
+      final hasPerms = await AppPermissionService.requestCameraAndMicPermissions(
+        context: context,
+      );
+      if (!hasPerms) {
+        if (mounted) {
+          setState(() {
+            _status = 'Permissions required';
+            _error =
+                'Camera and Microphone access are required for Video Consultations. Please allow permissions in device settings.';
+          });
+        }
+        return;
+      }
+
       await service.start();
 
       if (mounted) {

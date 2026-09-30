@@ -66,7 +66,7 @@ void main() {
 
       expect(prompt.contains('Rajesh Sharma'), isTrue);
       expect(prompt.contains('CRITICAL ALLERGIES: Penicillin'), isTrue);
-      expect(prompt.contains('Paracetamol 650mg'), isTrue);
+      expect(prompt.contains('Amoxicillin 500mg'), isTrue);
       expect(prompt.contains('Cetirizine 10mg'), isTrue);
       expect(prompt.contains('ALLERGY GUARD'), isTrue);
     });

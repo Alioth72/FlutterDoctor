@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../providers/language_provider.dart';
+import '../../../../widgets/patient_action_sheets.dart';
+import '../../../../services/permissions/app_permission_service.dart';
 import '../../../../services/stt/sarvam_stt_service.dart';
 import '../../../../services/tts/sarvam_tts_service.dart';
 import '../../domain/models/patient_profile.dart';
@@ -10,7 +12,6 @@ import '../../domain/repositories/chat_storage_repository.dart';
 import '../../domain/repositories/patient_repository.dart';
 import '../../domain/services/chat_orchestrator.dart';
 import '../../domain/services/connectivity_service.dart';
-import '../widgets/api_key_dialog.dart';
 import '../widgets/formatted_message_view.dart';
 
 /// Primary conversational screen for the Healthcare Chatbot with 22-language Sarvam TTS.
@@ -47,6 +48,48 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _showPatientDetails = false;
   PatientProfile? _patientProfile;
   StreamSubscription<bool>? _connectivitySub;
+  ChatMessage? _lastAssistantMessage;
+
+  void _handleTopSpeakerPressed() {
+    final tts = SarvamTtsService.instance;
+    final ttsStatus = tts.statusNotifier.value;
+
+    if (ttsStatus.isPlaying || ttsStatus.isLoading) {
+      tts.stop();
+      return;
+    }
+
+    final latestMsg = _lastAssistantMessage;
+    if (latestMsg != null && latestMsg.text.trim().isNotEmpty) {
+      final langProvider = Provider.of<LanguageProvider>(context, listen: false);
+      tts.speak(
+        text: latestMsg.text,
+        messageId: latestMsg.id.toString(),
+        languageCode: langProvider.currentLanguageCode,
+      );
+    } else {
+      final langProvider = Provider.of<LanguageProvider>(context, listen: false);
+      final msg = langProvider.currentLanguageCode == 'hi'
+          ? 'बोलने के लिए अभी कोई उत्तर नहीं है।'
+          : langProvider.currentLanguageCode == 'pa'
+              ? 'ਸੁਣਨ ਲਈ ਅਜੇ ਕੋਈ ਜਵਾਬ ਨਹੀਂ ਹੈ।'
+              : 'No response to read aloud yet. Ask a question first!';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.volume_up_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Expanded(child: Text(msg)),
+            ],
+          ),
+          backgroundColor: const Color(0xFF006A6A),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   static const List<String> _suggestions = [
     'Can I take Amoxicillin for my cold?',
@@ -56,6 +99,272 @@ class _ChatScreenState extends State<ChatScreen> {
     'What happens when I press the red Emergency SOS button?',
     'How do I switch the app to Hindi or other languages?',
   ];
+
+  List<String> _getLocalizedSuggestions(String languageCode) {
+    final code = languageCode.toLowerCase().split('-').first.split('_').first;
+    switch (code) {
+      case 'hi':
+        return [
+          'क्या मैं सर्दी-जुकाम में Amoxicillin ले सकता हूँ?',
+          'सस्ती दवाइयों (Jan Aushadhi) के लिए पर्चा कैसे स्कैन करें?',
+          'Face Vitals से दिल की धड़कन (Heart Rate) कैसे नापें?',
+          'आशा कार्यकर्ता (ASHA Worker) से घर पर जांच के लिए कैसे कहें?',
+          'आपातकालीन लाल SOS बटन दबाने पर क्या होता है?',
+          'ऐप की भाषा कैसे बदलें?',
+        ];
+      case 'bn':
+        return [
+          'আমার সর্দির জন্য কি Amoxicillin খেতে পারি?',
+          'জন ঔষধি থেকে কম খরচে ওষুধ পেতে প্রেসক্রিপশন কীভাবে স্ক্যান করব?',
+          'Face Vitals দিয়ে হার্ট রেট কীভাবে মাপব?',
+          'আশা দিদিকে বাড়ি পরিদর্শনের জন্য কীভাবে অনুরোধ করব?',
+          'জরুরি লাল SOS বোতাম টিপলে কী হবে?',
+          'অ্যাপের ভাষা কীভাবে পরিবর্তন করব?',
+        ];
+      case 'ta':
+        return [
+          'சளிக்கு Amoxicillin மாத்திரை சாப்பிடலாமா?',
+          'மலிவு விலை மக்கள் மருந்தக மருந்துகளுக்கு மருந்து சீட்டை ஸ்கேன் செய்வது எப்படி?',
+          'Face Vitals மூலம் இதய துடிப்பை அளவிடுவது எப்படி?',
+          'ஆஷா பணியாளர் வீட்டிற்கு வர எப்படி கோரிக்கை விடுப்பது?',
+          'அவசர சிவப்பு SOS பட்டனை அழுத்தினால் என்ன நடக்கும்?',
+          'பயன்பாட்டின் மொழியை மாற்றுவது எப்படி?',
+        ];
+      case 'te':
+        return [
+          'జలుబుకు Amoxicillin వేసుకోవచ్చా?',
+          'జన్ ఔషధి తక్కువ ధర మందుల కోసం ప్రిస్క్రిప్షన్ ఎలా స్కాన్ చేయాలి?',
+          'Face Vitals తో గుండె కొట్టుకునే వేగం ఎలా కొలవాలి?',
+          'ఆశా కార్యకర్త ఇంటి సందర్శన కోసం ఎలా అడగాలి?',
+          'ఎరుపు రంగు SOS బటన్ నొక్కితే ఏం జరుగుతుంది?',
+          'యాప్ భాషను ఎలా మార్చాలి?',
+        ];
+      case 'mr':
+        return [
+          'मला सर्दीसाठी Amoxicillin घेता येईल का?',
+          'जन औषधी स्वस्त औषधांसाठी प्रिस्क्रिप्शन कसे स्कॅन करावे?',
+          'Face Vitals द्वारे हृदयाचे ठोके कसे मोजावे?',
+          'आशा सेविकेला घरी तपासणीसाठी कशी विनंती करावी?',
+          'लाल आपत्कालीन SOS बटण दाबल्यावर काय होते?',
+          'अ‍ॅपची भाषा कशी बदलावी?',
+        ];
+      case 'gu':
+        return [
+          'શું શરદી માટે Amoxicillin લઈ શકાય?',
+          'જન ઔષધિ સસ્તી દવાઓ માટે પ્રિસ્ક્રિપ્શન કેવી રીતે સ્કેન કરવું?',
+          'Face Vitals થી હૃદયના ધબકારા કેવી રીતે માપવા?',
+          'આશા કાર્યકરને ઘરે તપાસ માટે કેવી રીતે બોલાવવા?',
+          'લાલ ઈમરજન્સી SOS બટન દબાવવાથી શું થાય?',
+          'એપ્લિકેશનની ભાષા કેવી રીતે બદલવી?',
+        ];
+      case 'kn':
+        return [
+          'ಶೀತಕ್ಕೆ Amoxicillin ತೆಗೆದುಕೊಳ್ಳಬಹುದೇ?',
+          'ಜನ ಔಷಧಿ ಕಡಿಮೆ ದರದ ಔಷಧಿಗಳಿಗಾಗಿ ಚೀಟಿ ಸ್ಕ್ಯಾನ್ ಮಾಡುವುದು ಹೇಗೆ?',
+          'Face Vitals ಮೂಲಕ ಹೃದಯ ಬಡಿತ ಅಳೆಯುವುದು ಹೇಗೆ?',
+          'ಆಶಾ ಕಾರ್ಯಕರ್ತೆಯರ ಮನೆ ಭೇಟಿಗೆ ಹೇಗೆ ವಿನಂತಿಸುವುದು?',
+          'ಕೆಂಪು SOS ಬಟನ್ ಒತ್ತಿದರೆ ಏನಾಗುತ್ತದೆ?',
+          'ಅಪ್ಲಿಕೇಶನ್ ಭಾಷೆಯನ್ನು ಹೇಗೆ ಬದಲಾಯಿಸುವುದು?',
+        ];
+      case 'ml':
+        return [
+          'ജലദോഷത്തിന് Amoxicillin കഴിക്കാമോ?',
+          'ജൻ ഔഷധി കുറഞ്ഞ നിരക്കിലുള്ള മരുന്നുകൾക്ക് കുറിപ്പടി എങ്ങനെ സ്കാൻ ചെയ്യാം?',
+          'Face Vitals ഉപയോഗിച്ച് ഹൃദയമിടിപ്പ് എങ്ങനെ അളക്കാം?',
+          'ആശ വർക്കറുടെ ഭവന സന്ദർശനത്തിന് എങ്ങനെ അപേക്ഷിക്കാം?',
+          'ചുവന്ന SOS ബട്ടൺ അമർത്തിയാൽ എന്ത് സംഭവിക്കും?',
+          'ആപ്പിന്റെ ഭാഷ എങ്ങനെ മാറ്റാം?',
+        ];
+      case 'pa':
+        return [
+          'ਕੀ ਮੈਂ ਜ਼ੁਕਾਮ ਲਈ Amoxicillin ਲੈ ਸਕਦਾ ਹਾਂ?',
+          'ਜਨ ਔਸ਼ਧੀ ਸਸਤੀਆਂ ਦਵਾਈਆਂ ਲਈ ਪਰਚੀ ਕਿਵੇਂ ਸਕੈਨ ਕਰੀਏ?',
+          'Face Vitals ਨਾਲ ਦਿਲ ਦੀ ਧੜਕਣ ਕਿਵੇਂ ਮਾਪੀਏ?',
+          'ਆਸ਼ਾ ਵਰਕਰ ਨੂੰ ਘਰ ਦੇ ਦੌਰੇ ਲਈ ਕਿਵੇਂ ਕਹੀਏ?',
+          'ਐਮਰਜੈਂਸੀ ਲਾਲ SOS ਬਟਨ ਦਬਾਉਣ \'ਤੇ ਕੀ ਹੁੰਦਾ ਹੈ?',
+          'ਐਪ ਦੀ ਭਾਸ਼ਾ ਕਿਵੇਂ ਬਦਲੀਏ?',
+        ];
+      case 'ur':
+        return [
+          'کیا میں زکام کے لیے Amoxicillin لے سکتا ہوں؟',
+          'جن اوشدھی سستی ادویات کے لیے نسخہ کیسے اسکین کریں؟',
+          'Face Vitals سے نبض کی رفتار کیسے چیک کریں؟',
+          'آشا ورکر کو گھر کے معائنے کے لیے کیسے بلائیں؟',
+          'ایمرجنسی لال SOS بٹن دبانے سے کیا ہوتا ہے؟',
+          'ایپ کی زبان کیسے تبدیل کریں؟',
+        ];
+      case 'or':
+      case 'od':
+        return [
+          'ଥଣ୍ଡା ପାଇଁ Amoxicillin ଔଷଧ ନେଇପାରିବି କି?',
+          'ଜନ ଔଷଧି କମ ମୂଲ୍ୟର ଔଷଧ ପାଇଁ ପ୍ରେସକ୍ରିପସନ କିପରି ସ୍କାନ କରିବେ?',
+          'Face Vitals ସାହାଯ୍ୟରେ ହୃଦସ୍ପନ୍ଦନ କିପରି ମାପିବେ?',
+          'ଆଶା କର୍ମୀଙ୍କୁ ଘର ପରିଦର୍ଶନ ପାଇଁ କିପରି କହିବେ?',
+          'ଲାଲ ଜରୁରୀକାଳୀନ SOS ବଟନ ଦବାଇଲେ କ\'ଣ ହୁଏ?',
+          'ଆପର ଭାଷା କିପରି ବଦଳାଇବେ?',
+        ];
+      default:
+        return _suggestions;
+    }
+  }
+
+  String _getLocalizedGreeting(String langCode) {
+    final code = langCode.toLowerCase().split('-').first.split('_').first;
+    switch (code) {
+      case 'hi':
+        return 'मैं आज आपकी क्या मदद कर सकता हूँ?';
+      case 'bn':
+        return 'আজ আপনাকে কীভাবে সাহায্য করতে পারি?';
+      case 'ta':
+        return 'இன்று உங்களுக்கு நான் எவ்வாறு உதவ முடியும்?';
+      case 'te':
+        return 'నేను మీకు ఎలా సహాయపడగలను?';
+      case 'mr':
+        return 'मी आज तुम्हाला कशी मदत करू शकतो?';
+      case 'gu':
+        return 'હું આજે તમને કેવી રીતે મદદ કરી શકું?';
+      case 'kn':
+        return 'ಇಂದು ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?';
+      case 'ml':
+        return 'ഇന്ന് ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കണം?';
+      case 'pa':
+        return 'ਮੈਂ ਅੱਜ ਤੁਹਾਡੀ ਕੀ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ?';
+      case 'ur':
+        return 'آج میں آپ کی کیا مدد کر سکتا ہوں؟';
+      case 'or':
+      case 'od':
+        return 'ମୁଁ ଆଜି ଆପଣଙ୍କୁ କିପରି ସାହାଯ୍ୟ କରିପାରିବି?';
+      default:
+        return 'How can I help you today?';
+    }
+  }
+
+  String _getLocalizedSubtitle(String langCode) {
+    final code = langCode.toLowerCase().split('-').first.split('_').first;
+    switch (code) {
+      case 'hi':
+        return 'अपनी सेहत, दवाइयों या लक्षणों के बारे में पूछें। किसी भी जवाब को सुनने के लिए स्पीकर बटन दबाएं।';
+      case 'bn':
+        return 'আপনার স্বাস্থ্য, ওষুধ বা লক্ষণ সম্পর্কে প্রশ্ন জিজ্ঞাসা করুন। উত্তর শোনার জন্য স্পিকার বোতাম টিপুন।';
+      case 'ta':
+        return 'உங்கள் உடல்நலம், மருந்துகள் அல்லது அறிகுறிகள் பற்றி கேளுங்கள். பதிலைக் கேட்க ஸ்பீக்கர் பட்டனை அழுத்தவும்.';
+      case 'te':
+        return 'మీ ఆరోగ్యం, మందులు లేదా లక్షణాల గురించి అడగండి. సమాధానం వినడానికి స్పీకర్ బటన్‌ను నొక్కండి.';
+      case 'mr':
+        return 'आपल्या आरोग्याविषयी, औषधांविषयी किंवा लक्षणांविषयी विचारा. उत्तर ऐकण्यासाठी स्पीकर बटण दाबा.';
+      case 'gu':
+        return 'તમારા સ્વાસ્થ્ય, દવાઓ અથવા લક્ષણો વિશે પૂછો. જવાબ સાંભળવા માટે સ્પીકર બટન દબાવો.';
+      case 'kn':
+        return 'ನಿಮ್ಮ ಆರೋಗ್ಯ, ಔಷಧಿಗಳು ಅಥವಾ ರೋಗಲಕ್ಷಣಗಳ ಬಗ್ಗೆ ಕೇಳಿ. ಉತ್ತರವನ್ನು ಕೇಳಲು ಸ್ಪೀಕರ್ ಬಟನ್ ಒತ್ತಿರಿ.';
+      case 'ml':
+        return 'നിങ്ങളുടെ ആരോഗ്യം, മരുന്നുകൾ, ലക്ഷണങ്ങൾ എന്നിവയെക്കുറിച്ച് ചോദിക്കുക. ഉത്തരം കേൾക്കാൻ സ്പീക്കർ ബട്ടൺ അമർത്തുക.';
+      case 'pa':
+        return 'ਆਪਣੀ ਸਿਹਤ, ਦਵਾਈਆਂ ਜਾਂ ਲੱਛਣਾਂ ਬਾਰੇ ਪੁੱਛੋ। ਜਵਾਬ ਸੁਣਨ ਲਈ ਸਪੀਕਰ ਬਟਨ ਦਬਾਓ।';
+      case 'ur':
+        return 'अपनी सेहत، ادویات یا علامات کے بارے میں پوچھیں۔ جواب سننے کے لیے اسپیکر کا بٹن دبائیں۔';
+      case 'or':
+      case 'od':
+        return 'ଆପଣଙ୍କ ସ୍ୱାସ୍ଥ୍ୟ, ଔଷଧ କିମ୍ବା ଲକ୍ଷଣ ବିଷୟରେ ପଚାରନ୍ତୁ। ଉତ୍ତର ଶୁଣିବା ପାଇଁ ସ୍ପିକର ବଟନ ଦବାନ୍ତୁ।';
+      default:
+        return 'Ask questions about your health, medicines, symptoms, or hospital visits. Tap the speaker button on any answer to listen to it.';
+    }
+  }
+
+  String _getLocalizedSuggestedQuestionsHeader(String langCode) {
+    final code = langCode.toLowerCase().split('-').first.split('_').first;
+    switch (code) {
+      case 'hi':
+        return 'सुझाए गए प्रश्न';
+      case 'bn':
+        return 'প্রস্তাবিত প্রশ্নাবলী';
+      case 'ta':
+        return 'பரிந்துரைக்கப்பட்ட கேள்விகள்';
+      case 'te':
+        return 'సూచించిన ప్రశ్నలు';
+      case 'mr':
+        return 'सुचवलेले प्रश्न';
+      case 'gu':
+        return 'સૂચવેલા પ્રશ્નો';
+      case 'kn':
+        return 'ಶಿಫಾರಸು ಮಾಡಿದ ಪ್ರಶ್ನೆಗಳು';
+      case 'ml':
+        return 'നിർദ്ദേശിച്ച ചോദ്യങ്ങൾ';
+      case 'pa':
+        return 'ਸੁਝਾਏ ਗਏ ਸਵਾਲ';
+      case 'ur':
+        return 'تجویز کردہ سوالات';
+      case 'or':
+      case 'od':
+        return 'ପ୍ରସ୍ତାବିତ ପ୍ରଶ୍ନଗୁଡ଼ିକ';
+      default:
+        return 'SUGGESTED QUESTIONS';
+    }
+  }
+
+  String _getLocalizedGeneratingText(String langCode) {
+    final code = langCode.toLowerCase().split('-').first.split('_').first;
+    switch (code) {
+      case 'hi':
+        return 'चिकित्सा जानकारी तैयार की जा रही है...';
+      case 'bn':
+        return 'চিকিৎসা নির্দেশিকা প্রস্তুত করা হচ্ছে...';
+      case 'ta':
+        return 'மருத்துவ வழிகாட்டுதல் தயாரிக்கப்படுகிறது...';
+      case 'te':
+        return 'వైద్య సమాచారం సిద్ధం చేయబడుతోంది...';
+      case 'mr':
+        return 'वैद्यकीय माहिती तयार केली जात आहे...';
+      case 'gu':
+        return 'તબીબી માહિતી તૈયાર થઈ રહી છે...';
+      case 'kn':
+        return 'ವೈದ್ಯಕೀಯ ಮಾರ್ಗದರ್ಶನ ಸಿದ್ಧಪಡಿಸಲಾಗುತ್ತಿದೆ...';
+      case 'ml':
+        return 'വൈദ്യോപദേശം തയ്യാറാക്കുന്നു...';
+      case 'pa':
+        return 'ਡਾਕਟਰੀ ਸਲਾਹ ਤਿਆਰ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ...';
+      case 'ur':
+        return 'طبی معلومات تیار کی جا رہی ہیں...';
+      case 'or':
+      case 'od':
+        return 'ଡାକ୍ତରୀ ମାର୍ଗଦର୍ଶନ ପ୍ରସ୍ତୁତ କରାଯାଉଛି...';
+      default:
+        return 'Preparing medical guidance...';
+    }
+  }
+
+  String _getLocalizedInputHint(String langCode, bool isListening, String languageName) {
+    if (isListening) {
+      return 'Speak now in $languageName...';
+    }
+    final code = langCode.toLowerCase().split('-').first.split('_').first;
+    switch (code) {
+      case 'hi':
+        return 'स्वास्थ्य संबंधी सवाल पूछें...';
+      case 'bn':
+        return 'স্বাস্থ্য সংক্রান্ত প্রশ্ন জিজ্ঞাসা করুন...';
+      case 'ta':
+        return 'உடல்நலக் கேள்விகளைக் கேளுங்கள்...';
+      case 'te':
+        return 'ఆరోగ్య ప్రశ్న అడగండి...';
+      case 'mr':
+        return 'आरोग्याविषयी प्रश्न विचारा...';
+      case 'gu':
+        return 'સ્વાસ્થ્ય સંબંધિત પ્રશ્ન પૂછો...';
+      case 'kn':
+        return 'ಆರೋಗ್ಯ ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ...';
+      case 'ml':
+        return 'ആരോഗ്യപരമായ ചോദ്യങ്ങൾ ചോദിക്കുക...';
+      case 'pa':
+        return 'ਸਿਹਤ ਸੰਬੰਧੀ ਸਵਾਲ ਪੁੱਛੋ...';
+      case 'ur':
+        return 'صحت کا کوئی سوال پوچھیں...';
+      case 'or':
+      case 'od':
+        return 'ସ୍ୱାସ୍ଥ୍ୟ ବିଷୟରେ ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ...';
+      default:
+        return 'Ask a health question or doubt...';
+    }
+  }
 
   @override
   void initState() {
@@ -123,11 +432,38 @@ class _ChatScreenState extends State<ChatScreen> {
       final transcribedText = await stt.stopAndTranscribe(
         languageCode: langProvider.currentLanguageCode,
       );
-      if (mounted && transcribedText != null && transcribedText.trim().isNotEmpty) {
-        setState(() {
-          _textController.text = transcribedText.trim();
-        });
-        _sendMessage();
+      final candidateText = (transcribedText != null && transcribedText.trim().isNotEmpty)
+          ? transcribedText.trim()
+          : _textController.text.trim();
+
+      if (mounted) {
+        if (candidateText.isNotEmpty) {
+          _textController.clear();
+          _sendMessage(candidateText);
+        } else {
+          final err = stt.statusNotifier.value.errorMessage ??
+              (langProvider.currentLanguageCode == 'hi'
+                  ? 'आवाज़ पहचान नहीं सकी। कृपया दोबारा स्पष्ट बोलें।'
+                  : langProvider.currentLanguageCode == 'pa'
+                      ? 'ਆਵਾਜ਼ ਪਛਾਣੀ ਨਹੀਂ ਜਾ ਸਕੀ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਬੋਲੋ।'
+                      : langProvider.currentLanguageCode == 'bn'
+                          ? 'ভয়েস সনাক্ত করা যায়নি। অনুগ্রহ করে আবার স্পষ্ট করে বলুন।'
+                          : 'Could not detect speech. Please speak clearly into the mic and try again.');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.mic_off_rounded, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(err)),
+                ],
+              ),
+              backgroundColor: const Color(0xFFC2410C),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
     } else if (currentStatus.isTranscribing) {
       return;
@@ -135,13 +471,27 @@ class _ChatScreenState extends State<ChatScreen> {
       // Stop any audio readout before listening to the patient
       SarvamTtsService.instance.stop();
 
+      // Explicitly request OS microphone permission if not already granted.
+      // Once granted, Android OS retains this permission until app data is cleared.
+      final hasPermission = await AppPermissionService.requestMicrophonePermission(
+        context: context,
+      );
+      if (!hasPermission) {
+        return;
+      }
+
       final started = await stt.startListening(
         languageCode: langProvider.currentLanguageCode,
         onPartialResult: (partialText) {
-          if (mounted) {
+          if (mounted && partialText.trim().isNotEmpty) {
             setState(() {
-              _textController.text = partialText;
+              _textController.text = partialText.trim();
             });
+          }
+        },
+        onAutoStop: () {
+          if (mounted && stt.statusNotifier.value.isListening) {
+            _handleMicPressed();
           }
         },
       );
@@ -160,11 +510,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _sendMessage([String? presetText]) async {
     final text = (presetText ?? _textController.text).trim();
-    if (text.isEmpty || _isGenerating) return;
+    if (text.isEmpty) return;
 
-    if (presetText == null) {
-      _textController.clear();
-    }
+    // Always clear the text bar immediately upon sending
+    _textController.clear();
+    _focusNode.unfocus();
+
+    if (_isGenerating) return;
 
     setState(() {
       _isGenerating = true;
@@ -205,7 +557,7 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Clear Conversation?'),
         content: const Text(
-          'Are you sure you want to clear your chat history with MediAssist AI?',
+          'Are you sure you want to clear your conversation?',
         ),
         actions: [
           TextButton(
@@ -239,77 +591,177 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF006A6A).withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.health_and_safety_rounded,
-                color: Color(0xFF006A6A),
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        titleSpacing: 0,
+        title: InkWell(
+          onTap: () => PatientActionSheets.showLanguageSelector(context),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
               children: [
-                Text(
-                  langProvider.tr('ai_assistant'),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
+                Container(
+                  width: 34,
+                  height: 34,
+                  margin: const EdgeInsets.only(right: 6),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: _isOnline ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
-                        shape: BoxShape.circle,
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/ashwini_logo.png',
+                      width: 34,
+                      height: 34,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF006A6A).withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.health_and_safety_rounded,
+                          color: Color(0xFF006A6A),
+                          size: 20,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 5),
-                    Text(
-                      _isOnline
-                          ? 'Online • ${langProvider.currentLanguage.name}'
-                          : 'Offline Knowledge Mode',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                    ),
-                  ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        langProvider.tr('ai_assistant'),
+                        style: const TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Row(
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: _isOnline ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              _isOnline
+                                  ? 'Ashwini AI • ${langProvider.currentLanguage.name}'
+                                  : 'Ashwini AI (Offline) • ${langProvider.currentLanguage.name}',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const Icon(Icons.arrow_drop_down_rounded, size: 16, color: Color(0xFF64748B)),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
         backgroundColor: Colors.white,
         elevation: 0.5,
         actions: [
-          IconButton(
-            tooltip: 'Audio Stop',
-            icon: const Icon(Icons.volume_off_rounded, color: Color(0xFF475569)),
-            onPressed: () => SarvamTtsService.instance.stop(),
-          ),
-          IconButton(
-            tooltip: 'Cloud Settings',
-            icon: const Icon(Icons.vpn_key_outlined, color: Color(0xFF475569)),
-            onPressed: () => ApiKeyDialog.show(
-              context,
-              cloudClient: widget.cloudLlmClient,
+          // Quick Language Switcher Button (e.g. [BN] বাংলা ▾)
+          GestureDetector(
+            onTap: () => PatientActionSheets.showLanguageSelector(context),
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF7C3AED).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.translate_rounded, size: 14, color: Color(0xFF7C3AED)),
+                  const SizedBox(width: 4),
+                  Text(
+                    langProvider.currentLanguage.badge.isNotEmpty
+                        ? langProvider.currentLanguage.badge
+                        : langProvider.currentLanguageCode.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF7C3AED),
+                    ),
+                  ),
+                  const Icon(Icons.arrow_drop_down, size: 14, color: Color(0xFF7C3AED)),
+                ],
+              ),
             ),
+          ),
+          // Top-right Speaker Button (Tts Readout of Latest AI Response)
+          ValueListenableBuilder<TtsPlaybackStatus>(
+            valueListenable: SarvamTtsService.instance.statusNotifier,
+            builder: (context, ttsStatus, _) {
+              final isPlaying = ttsStatus.isPlaying;
+              final isLoading = ttsStatus.isLoading;
+
+              return IconButton(
+                tooltip: isPlaying ? 'Stop Audio' : 'Read Aloud Response',
+                icon: isLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF006A6A)),
+                        ),
+                      )
+                    : Icon(
+                        isPlaying ? Icons.volume_up_rounded : Icons.volume_up_outlined,
+                        color: isPlaying ? const Color(0xFF006A6A) : const Color(0xFF475569),
+                        size: 22,
+                      ),
+                onPressed: _handleTopSpeakerPressed,
+              );
+            },
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Color(0xFF475569)),
             onSelected: (val) {
-              if (val == 'clear') _clearChat();
+              if (val == 'language') {
+                PatientActionSheets.showLanguageSelector(context);
+              } else if (val == 'clear') {
+                _clearChat();
+              }
             },
             itemBuilder: (ctx) => [
+              PopupMenuItem(
+                value: 'language',
+                child: Row(
+                  children: [
+                    const Icon(Icons.translate_rounded, size: 18, color: Color(0xFF7C3AED)),
+                    const SizedBox(width: 8),
+                    Text(langProvider.tr('choose_language')),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'clear',
                 child: Row(
@@ -326,16 +778,20 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
-          if (_showEmergencyBanner) _buildEmergencyBanner(),
+          if (_showEmergencyBanner) _buildEmergencyBanner(langProvider.currentLanguageCode),
           if (_patientProfile != null) _buildPatientHeaderCard(_patientProfile!),
           Expanded(
             child: StreamBuilder<List<ChatMessage>>(
               stream: widget.storageRepository.watchMessagesForConversation(widget.conversationId),
               builder: (context, snapshot) {
                 final messages = snapshot.data ?? [];
+                final assistantMsgs = messages.where((m) => m.role != MessageRole.user).toList();
+                if (assistantMsgs.isNotEmpty) {
+                  _lastAssistantMessage = assistantMsgs.last;
+                }
 
                 if (messages.isEmpty && !_isGenerating) {
-                  return _buildEmptyState();
+                  return _buildEmptyState(langProvider);
                 }
 
                 return ListView.builder(
@@ -346,7 +802,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     if (index < messages.length) {
                       return _buildMessageBubble(messages[index]);
                     } else {
-                      return _buildGeneratingIndicator();
+                      return _buildGeneratingIndicator(langProvider.currentLanguageCode);
                     }
                   },
                 );
@@ -359,7 +815,19 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildEmergencyBanner() {
+  Widget _buildEmergencyBanner(String langCode) {
+    final code = langCode.toLowerCase().split('-').first.split('_').first;
+    String bannerText = 'For severe chest pain or breathing issues, call 112 / 108 immediately.';
+    if (code == 'hi') {
+      bannerText = 'गंभीर सीने में दर्द या सांस लेने में तकलीफ के लिए तुरंत 112 / 108 पर कॉल करें।';
+    } else if (code == 'bn') {
+      bannerText = 'বুকে প্রচণ্ড ব্যথা বা শ্বাসকষ্টের জন্য অবিলম্বে ১১২ / ১০৮ নম্বরে কল করুন।';
+    } else if (code == 'ta') {
+      bannerText = 'கடுமையான மார்பு வலி அல்லது மூச்சுத் திணறலுக்கு உடனடியாக 112 / 108 ஐ அழைக்கவும்.';
+    } else if (code == 'te') {
+      bannerText = 'తీవ్రమైన ఛాతీ నొప్పి లేదా శ్వాస తీసుకోవడంలో ఇబ్బంది ఉంటే వెంటనే 112 / 108 కి కాల్ చేయండి.';
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       color: const Color(0xFFFEF2F2),
@@ -367,10 +835,10 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           const Icon(Icons.emergency_rounded, color: Color(0xFFDC2626), size: 18),
           const SizedBox(width: 8),
-          const Expanded(
+          Expanded(
             child: Text(
-              'For severe chest pain or breathing issues, call 112 / 108 immediately.',
-              style: TextStyle(
+              bannerText,
+              style: const TextStyle(
                 fontSize: 11.5,
                 color: Color(0xFF991B1B),
                 fontWeight: FontWeight.w600,
@@ -476,7 +944,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         ],
                       ),
                       Text(
-                        '${p.room ?? "IPD Ward 304"} • ${p.doctorName ?? "Dr. Rajesh V. Sharma"}',
+                        '${p.room ?? "General Ward"} • ${p.doctorName ?? "Dr. Rajesh V. Sharma"}',
                         style: const TextStyle(
                           fontSize: 11.5,
                           color: Color(0xFF64748B),
@@ -591,7 +1059,9 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(LanguageProvider langProvider) {
+    final localizedSuggestions = _getLocalizedSuggestions(langProvider.currentLanguageCode);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -611,19 +1081,19 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          const Text(
-            'How can I help you today?',
-            style: TextStyle(
+          Text(
+            _getLocalizedGreeting(langProvider.currentLanguageCode),
+            style: const TextStyle(
               fontSize: 19,
               fontWeight: FontWeight.bold,
               color: Color(0xFF0F172A),
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Ask clinical questions with built-in Allergy Protection & Prescription Guidance. Tap the speaker on any answer to listen with Sarvam Voice.',
+          Text(
+            _getLocalizedSubtitle(langProvider.currentLanguageCode),
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13,
               color: Color(0xFF64748B),
               height: 1.4,
@@ -633,7 +1103,7 @@ class _ChatScreenState extends State<ChatScreen> {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'SUGGESTED QUESTIONS',
+              _getLocalizedSuggestedQuestionsHeader(langProvider.currentLanguageCode),
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -643,7 +1113,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          ..._suggestions.map((suggestion) {
+          ...localizedSuggestions.map((suggestion) {
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
               width: double.infinity,
@@ -705,15 +1175,38 @@ class _ChatScreenState extends State<ChatScreen> {
           if (!isUser) ...[
             Container(
               margin: const EdgeInsets.only(top: 4, right: 8),
-              padding: const EdgeInsets.all(5),
-              decoration: const BoxDecoration(
-                color: Color(0xFFE0F2F1),
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
               ),
-              child: const Icon(
-                Icons.medical_services_rounded,
-                color: Color(0xFF006A6A),
-                size: 16,
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/ashwini_logo.png',
+                  width: 28,
+                  height: 28,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF006A6A),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.health_and_safety_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -763,19 +1256,15 @@ class _ChatScreenState extends State<ChatScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                           decoration: BoxDecoration(
-                            color: msg.isSynced
-                                ? const Color(0xFFE0F2F1)
-                                : const Color(0xFFFEF3C7),
+                            color: const Color(0xFFE0F2F1),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text(
-                            msg.isSynced ? 'Ashwini AI' : 'Offline Assistant',
+                          child: const Text(
+                            'Ashwini AI',
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w600,
-                              color: msg.isSynced
-                                  ? const Color(0xFF006A6A)
-                                  : const Color(0xFFB45309),
+                              color: Color(0xFF006A6A),
                             ),
                           ),
                         ),
@@ -825,7 +1314,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 4),
-                                      const Text('Loading voice...', style: TextStyle(fontSize: 9, color: Color(0xFF006A6A))),
+                                      const Text('Loading audio...', style: TextStyle(fontSize: 9, color: Color(0xFF006A6A))),
                                     ] else if (isThisPlaying) ...[
                                       const Icon(Icons.stop_circle_rounded, size: 13, color: Color(0xFF006A6A)),
                                       const SizedBox(width: 3),
@@ -868,22 +1357,39 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildGeneratingIndicator() {
+  Widget _buildGeneratingIndicator(String langCode) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
-            decoration: const BoxDecoration(
-              color: Color(0xFFE0F2F1),
+            margin: const EdgeInsets.only(right: 8),
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 3,
+                  offset: const Offset(0, 1),
+                ),
+              ],
             ),
-            child: const Icon(
-              Icons.medical_services_rounded,
-              color: Color(0xFF006A6A),
-              size: 16,
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/ashwini_logo.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.health_and_safety_rounded,
+                  color: Color(0xFF006A6A),
+                  size: 16,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -900,10 +1406,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ],
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 14,
                   height: 14,
                   child: CircularProgressIndicator(
@@ -911,10 +1417,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF006A6A)),
                   ),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 Text(
-                  'Reviewing medical records & guidelines...',
-                  style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
+                  _getLocalizedGeneratingText(langCode),
+                  style: const TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
                 ),
               ],
             ),
@@ -1003,7 +1509,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                         SizedBox(width: 8),
                         Text(
-                          'Transcribing speech with Sarvam AI...',
+                          'Processing your voice...',
                           style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w500,
@@ -1032,9 +1538,11 @@ class _ChatScreenState extends State<ChatScreen> {
                           onSubmitted: (_) => _sendMessage(),
                           maxLines: null,
                           decoration: InputDecoration(
-                            hintText: isListening
-                                ? 'Speak now in ${langProvider.currentLanguage.name}...'
-                                : 'Ask MediAssist (e.g. Can I take Amoxicillin?)...',
+                            hintText: _getLocalizedInputHint(
+                              langProvider.currentLanguageCode,
+                              isListening,
+                              langProvider.currentLanguage.name,
+                            ),
                             hintStyle: TextStyle(
                               fontSize: 13,
                               color: isListening ? Colors.red.shade400 : const Color(0xFF94A3B8),
@@ -1070,7 +1578,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 color: isListening ? Colors.white : const Color(0xFF006A6A),
                                 size: 20,
                               ),
-                        tooltip: isListening ? 'Finish speaking' : 'Speak to MediAssist',
+                        tooltip: isListening ? 'Finish speaking' : 'Speak your question',
                         onPressed: _isGenerating || isTranscribing ? null : _handleMicPressed,
                       ),
                     ),
@@ -1092,7 +1600,15 @@ class _ChatScreenState extends State<ChatScreen> {
                                 ),
                               )
                             : const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                        onPressed: _isGenerating || isListening ? null : () => _sendMessage(),
+                        onPressed: _isGenerating
+                            ? null
+                            : () {
+                                if (isListening) {
+                                  _handleMicPressed();
+                                } else {
+                                  _sendMessage();
+                                }
+                              },
                       ),
                     ),
                   ],

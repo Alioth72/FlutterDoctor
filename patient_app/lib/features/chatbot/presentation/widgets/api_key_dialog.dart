@@ -39,15 +39,8 @@ class ApiKeyDialog extends StatefulWidget {
     required dynamic cloudClient,
     VoidCallback? onKeySaved,
   }) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => ApiKeyDialog(
-        cloudClient: cloudClient,
-        onKeySaved: onKeySaved,
-      ),
-    );
+    // Disabled: API keys are strictly configured in backend/.env, not by app users.
+    return Future.value();
   }
 
   @override

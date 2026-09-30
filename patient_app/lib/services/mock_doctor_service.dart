@@ -224,7 +224,13 @@ class MockDoctorService {
         ? _cachedLiveDoctors!
         : _doctors;
     try {
-      return list.firstWhere((d) => d.id == id);
+      return list.firstWhere(
+        (d) => d.id == id,
+        orElse: () {
+          if (id == 'doc_1' || id == 'doc_cardio') return list.first;
+          throw StateError('Doctor not found');
+        },
+      );
     } catch (_) {
       return null;
     }

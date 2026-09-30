@@ -61,17 +61,17 @@ class PromptBuilder {
     buffer.writeln('• App Name: Ashwini Patient Healthcare & Teleconsultation Portal.');
     buffer.writeln('• AI Assistant (This Chatbot):');
     buffer.writeln('  - Medical guidance, allergy warnings, prescription explanations, and answers to all app questions.');
-    buffer.writeln('  - Voice Output (Sarvam TTS): Tap the speaker ("Listen") button on any bot bubble to hear the answer in the active language.');
-    buffer.writeln('  - Voice Input (Sarvam STT): Tap the microphone button in the chat input bar to speak queries in Hindi, Bengali, Tamil, Telugu, English, or any of 22 Indian languages.');
+    buffer.writeln('  - Voice Output: Tap the speaker ("Listen") button on any bot bubble to hear the answer in the active language.');
+    buffer.writeln('  - Voice Input: Tap the microphone button in the chat input bar to speak queries in Hindi, Bengali, Tamil, Telugu, English, or any of 22 Indian languages.');
     buffer.writeln('• Prescription Scanner & Jan Aushadhi Savings (Pharmacy Tab):');
     buffer.writeln('  - How to scan: Tap "Scan Prescription" on Home Tab or open Pharmacy Tab. Take a camera photo, upload from gallery, or choose a sample.');
-    buffer.writeln('  - Multimodal Vision OCR: Extracts medicine names, strengths, timings, and schedules.');
+    buffer.writeln('  - Smart prescription scanning: Extracts medicine names, strengths, timings, and schedules.');
     buffer.writeln('  - Jan Aushadhi generic matching: Automatically substitutes expensive branded medicines with certified government Jan Aushadhi generic drugs, providing 60% to 80% cost savings.');
     buffer.writeln('  - Ordering: Add prescribed generic medicines to your cart for doorstep delivery or Jan Aushadhi Kendra pickup.');
     buffer.writeln('• Video Teleconsultation & Appointments (Appointments Tab):');
     buffer.writeln('  - How to book: Tap "Book Teleconsultation" on Home or open Appointments Tab. Select doctor specialty (General Medicine, Pediatrics, Cardiology, Ayush, etc.) and time slot.');
-    buffer.writeln('  - WebRTC Video Calls: Secure online video call with attending doctors with live vitals display and digital prescriptions.');
-    buffer.writeln('• Contactless Face Vitals Scanner (rPPG Camera Scan):');
+    buffer.writeln('  - Doctor Video Calls: Secure online video call with attending doctors with live vitals display and digital prescriptions.');
+    buffer.writeln('• Contactless Face Vitals Scanner:');
     buffer.writeln('  - How to use: Tap "Face Vitals" on Home Tab. Align face in the circle for 30-45 seconds in well-lit surroundings.');
     buffer.writeln('  - Measured vitals: Measures Heart Rate (BPM), SpO2 (Oxygen Saturation), Heart Rate Variability (HRV), and Respiration Rate without needing any physical sensor or smart watch.');
     buffer.writeln('• Request ASHA Worker Home Visit (Home Tab):');
@@ -86,7 +86,7 @@ class PromptBuilder {
     buffer.writeln('  - How to switch: Tap the Globe icon at the top right of the Home Tab.');
     buffer.writeln('  - Instantly switches the entire app into Hindi, Bengali, Telugu, Marathi, Tamil, Urdu, Gujarati, Kannada, Malayalam, Odia, Punjabi, Assamese, Maithili, Santali, Kashmiri, Nepali, Konkani, Dogri, Sindhi, Bodo, Manipuri, Sanskrit, or English.');
     buffer.writeln('• Health Records & Family Vault (Medical History):');
-    buffer.writeln('  - ABHA ID integration, offline encrypted records (HRX protocol), and QR code scanner to link family health profiles.\n');
+    buffer.writeln('  - ABHA ID integration, offline health records with QR code, and ability to link family health profiles.\n');
 
     // 2. Inject Verified Medical Context Chunks
     if (chunks.isNotEmpty) {
@@ -101,11 +101,16 @@ class PromptBuilder {
       buffer.writeln('No specific reference chunks found in local knowledge base.\n');
     }
 
-        if (languageCode != null && languageCode != 'en' && languageCode != 'en-IN') {
-      buffer.writeln('--- LANGUAGE DIRECTIVE ---');
-      buffer.writeln('The user chosen language is ${languageName ?? languageCode} ($languageCode).');
-      buffer.writeln('You MUST answer the entire response fluently in ${languageName ?? languageCode} ($languageCode) script.');
-      buffer.writeln('Keep medicine names in standard recognizable form if needed, but explain all guidance in ${languageName ?? languageCode}.\n');
+        final activeCode = (languageCode == null || languageCode.isEmpty) ? 'en' : languageCode;
+    final activeName = languageName ?? (activeCode.startsWith('en') ? 'English' : activeCode);
+    buffer.writeln('--- LANGUAGE DIRECTIVE ---');
+    buffer.writeln('SELECTED_LANGUAGE_CODE: $activeCode');
+    buffer.writeln('The user chosen language is $activeName ($activeCode).');
+    if (activeCode.startsWith('en')) {
+      buffer.writeln('You MUST answer the entire response fluently in English (en).\n');
+    } else {
+      buffer.writeln('You MUST answer the entire response fluently in $activeName ($activeCode) script.');
+      buffer.writeln('Keep medicine names in standard recognizable form if needed, but explain all guidance in $activeName.\n');
     }
     buffer.writeln('--- User Query ---');
     buffer.writeln(query);

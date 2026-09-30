@@ -378,15 +378,20 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'YOUR PATIENT ID',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                          color: Color(0xFFDDD6FE),
+                      const Expanded(
+                        child: Text(
+                          'YOUR PATIENT ID',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.2,
+                            color: Color(0xFFDDD6FE),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
@@ -407,13 +412,17 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text(
-                        myPatientId,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.5,
-                          color: Colors.white,
+                      Expanded(
+                        child: Text(
+                          myPatientId,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -449,23 +458,28 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Synced Family Members',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Synced Family Members',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    Text(
-                      '${familyList.length} member${familyList.length == 1 ? "" : "s"} linked',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                    ),
-                  ],
+                      Text(
+                        '${familyList.length} member${familyList.length == 1 ? "" : "s"} linked',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 ElevatedButton.icon(
                   onPressed: _showAddMemberModal,
                   icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
@@ -597,12 +611,16 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
                                 children: [
                                   const Icon(Icons.badge_outlined, size: 13, color: Color(0xFF64748B)),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    'ID: ${member.patientId}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF334155),
+                                  Flexible(
+                                    child: Text(
+                                      'ID: ${member.patientId}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF334155),
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 10),

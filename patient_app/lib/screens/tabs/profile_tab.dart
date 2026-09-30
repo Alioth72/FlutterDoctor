@@ -454,13 +454,17 @@ class _ProfileTabState extends State<ProfileTab> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              patientId,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.6,
+                            Flexible(
+                              child: Text(
+                                patientId,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.6,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 5),
@@ -806,23 +810,31 @@ class _ProfileTabState extends State<ProfileTab> {
             child: Icon(icon, size: 18, color: iconColor),
           ),
           const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF0F172A),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF0F172A),
+              ),
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF64748B),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF64748B),
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -999,13 +1011,13 @@ class _ProfileTabState extends State<ProfileTab> {
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
+                    flex: 4,
                     child: Row(
                       children: [
                         const Icon(Icons.location_on_outlined, size: 18, color: Color(0xFF64748B)),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         Flexible(
                           child: Text(
                             lang.tr('city_location_label'),
@@ -1018,25 +1030,28 @@ class _ProfileTabState extends State<ProfileTab> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 160),
-                        child: DynamicTranslatedText(
-                          text: profileProvider.currentLocation,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
-                            color: Color(0xFF7C3AED),
+                  Expanded(
+                    flex: 5,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Flexible(
+                          child: DynamicTranslatedText(
+                            text: profileProvider.currentLocation,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.end,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: Color(0xFF7C3AED),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.edit_location_alt_rounded, size: 15, color: Color(0xFF7C3AED)),
-                    ],
+                        const SizedBox(width: 4),
+                        const Icon(Icons.edit_location_alt_rounded, size: 15, color: Color(0xFF7C3AED)),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -1053,13 +1068,13 @@ class _ProfileTabState extends State<ProfileTab> {
     required String value,
   }) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
+          flex: 5,
           child: Row(
             children: [
               Icon(icon, size: 18, color: const Color(0xFF64748B)),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Flexible(
                 child: Text(
                   label,
@@ -1076,12 +1091,21 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
         ),
         const SizedBox(width: 8),
-        DynamicTranslatedText(
-          text: value,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 13.5,
-            color: Color(0xFF0F172A),
+        Expanded(
+          flex: 5,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: DynamicTranslatedText(
+              text: value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
+                color: Color(0xFF0F172A),
+              ),
+            ),
           ),
         ),
       ],
@@ -1270,16 +1294,22 @@ class _ProfileTabState extends State<ProfileTab> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        lang.currentLanguage.nativeName,
-                        style: const TextStyle(fontSize: 13, color: Color(0xFF7C3AED), fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF7C3AED)),
-                    ],
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            lang.currentLanguage.nativeName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13, color: Color(0xFF7C3AED), fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF7C3AED)),
+                      ],
+                    ),
                   ),
                 ],
               ),

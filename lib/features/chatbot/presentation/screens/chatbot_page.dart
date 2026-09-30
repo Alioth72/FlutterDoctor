@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../../chatbot_embedding.dart';
-import '../../../chatbot_llm.dart';
-import '../../../chatbot_orchestrator.dart';
-import '../../../chatbot_retrieval.dart';
-import '../../../chatbot_storage.dart';
-import '../../../data/repositories/mock_patient_repository.dart';
-import '../../../domain/repositories/patient_repository.dart';
-import '../../widgets/api_key_dialog.dart';
+import '../../chatbot_embedding.dart';
+import '../../chatbot_llm.dart';
+import '../../chatbot_orchestrator.dart';
+import '../../chatbot_retrieval.dart';
+import '../../chatbot_storage.dart';
+import '../widgets/api_key_dialog.dart';
 import 'chat_screen.dart';
 
 /// Single-line plug-and-play entry point for the Healthcare Chatbot.

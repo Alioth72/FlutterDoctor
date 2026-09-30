@@ -6,8 +6,6 @@ import 'features/chatbot/chatbot_orchestrator.dart';
 import 'features/chatbot/chatbot_retrieval.dart';
 import 'features/chatbot/chatbot_storage.dart';
 import 'features/chatbot/chatbot_ui.dart';
-import 'features/chatbot/data/repositories/mock_patient_repository.dart';
-import 'features/chatbot/domain/repositories/patient_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

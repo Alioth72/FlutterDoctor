@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
 
 /// Runtime environment configuration service that parses `.env` files from assets
@@ -15,7 +16,13 @@ class EnvConfig {
       final content = await rootBundle.loadString('.env');
       _parseEnv(content);
     } catch (_) {
-      // Gracefully continue if .env is missing (e.g., CI/CD or fresh clone)
+      try {
+        final file = File('.env');
+        if (file.existsSync()) {
+          final content = file.readAsStringSync();
+          _parseEnv(content);
+        }
+      } catch (_) {}
     } finally {
       _initialized = true;
     }

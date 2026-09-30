@@ -97,7 +97,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
                         TextField(
                           onChanged: (val) => setState(() => _searchQuery = val.trim()),
                           decoration: InputDecoration(
-                            hintText: 'Search medicines, doctors...',
+                            hintText: lang.tr('search_medicine_hint'),
                             hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
                             prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF7C3AED)),
                             filled: true,
@@ -264,7 +264,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  'Instructions: $instructionsText',
+                  '${lang.tr('instructions_label')}: $instructionsText',
                   style: const TextStyle(fontSize: 12, color: Color(0xFF334155), fontStyle: FontStyle.italic),
                 ),
               ),
@@ -276,7 +276,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Prescribed by $doctorName',
+                    '${lang.tr('prescribed_by')} $doctorName',
                     style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
                     overflow: TextOverflow.ellipsis,
                   ),
