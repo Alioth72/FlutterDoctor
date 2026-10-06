@@ -260,6 +260,176 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
+  void _showAddHealthIdModal(BuildContext context) {
+    final formKey = GlobalKey<FormState>();
+    final controller = TextEditingController();
+    bool isSubmitting = false;
+    String? localError;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setModalState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(sheetCtx).viewInsets.bottom),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4.5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F3FF),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.badge_rounded, color: Color(0xFF7C3AED), size: 22),
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Add Digital Health ID',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Link your 14-digit government-recognized Health ID to your account. Format: XX-XXXX-XXXX-XXXX. Once verified, this ID cannot be changed.',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      height: 1.4,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  TextFormField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    autofocus: true,
+                    inputFormatters: [
+                      _HealthIdInputFormatter(),
+                    ],
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      letterSpacing: 1.2,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: '14-Digit Health ID',
+                      hintText: '14-2026-8821-3309',
+                      prefixIcon: const Icon(Icons.credit_card_rounded, color: Color(0xFF7C3AED)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Please enter your 14-digit Health ID';
+                      }
+                      final digits = val.replaceAll(RegExp(r'\D'), '');
+                      if (digits.length != 14) {
+                        return 'Health ID must contain exactly 14 digits';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  if (localError != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      localError!,
+                      style: const TextStyle(color: Color(0xFFDC2626), fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  FilledButton(
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            if (!formKey.currentState!.validate()) return;
+                            setModalState(() {
+                              isSubmitting = true;
+                              localError = null;
+                            });
+
+                            final provider = Provider.of<HealthProfileProvider>(context, listen: false);
+                            final success = await provider.linkHealthId(controller.text.trim());
+
+                            if (!sheetCtx.mounted) return;
+
+                            if (success) {
+                              Navigator.pop(sheetCtx);
+                              HapticFeedback.heavyImpact();
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Digital Health ID successfully linked!'),
+                                    backgroundColor: Color(0xFF10B981),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            } else {
+                              setModalState(() {
+                                isSubmitting = false;
+                                localError = 'Failed to link Health ID. Please verify the 14 digits and try again.';
+                              });
+                            }
+                          },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF7C3AED),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Text(
+                            'Save & Link Health ID',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showDigitalQrPassModal(BuildContext context, HealthProfile? profile) {
     PatientQrSheets.showPatientIdentityQrModal(context, profile);
   }
@@ -279,8 +449,7 @@ class _ProfileTabState extends State<ProfileTab> {
     final age = profile?.age ?? 28;
     final gender = profile?.gender ?? 'Other';
     final phone = profile?.phoneNumber ?? '';
-    final mrn = profile?.tier2Data?['medical_record_number'] as String? ?? profile?.patientId ?? '14-8832-4512-9018';
-    final patientId = mrn;
+    final patientId = (profile?.hasHealthId == true) ? profile!.patientId : '';
     final residence = profile?.residenceType ?? 'Rural';
 
     return SingleChildScrollView(
@@ -440,39 +609,69 @@ class _ProfileTabState extends State<ProfileTab> {
                     ),
                     const SizedBox(height: 8),
 
-                    // Patient ID Chip with Copy button
-                    InkWell(
-                      onTap: () => _copyToClipboard(patientId, 'Health ID'),
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.22),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1),
+                    // Patient ID Chip with Copy button (or + Add Health ID button if not present)
+                    if (profile?.hasHealthId == true)
+                      InkWell(
+                        onTap: () => _copyToClipboard(patientId, 'Health ID'),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.22),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  patientId,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              const Icon(Icons.copy_rounded, size: 12, color: Colors.white),
+                            ],
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                patientId,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                      )
+                    else
+                      InkWell(
+                        onTap: () => _showAddHealthIdModal(context),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.45), width: 1),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.add_circle_outline_rounded, size: 13, color: Colors.white),
+                              SizedBox(width: 5),
+                              Text(
+                                '+ Add Health ID',
+                                style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.6,
+                                  letterSpacing: 0.3,
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 5),
-                            const Icon(Icons.copy_rounded, size: 12, color: Colors.white),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -621,99 +820,183 @@ class _ProfileTabState extends State<ProfileTab> {
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF10B981), width: 1),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.check_circle_rounded, size: 11, color: Color(0xFF10B981)),
-                    const SizedBox(width: 3),
-                    Text(
-                      Provider.of<LanguageProvider>(context, listen: false).tr('active_status'),
-                      style: const TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF10B981),
-                        letterSpacing: 0.5,
+              if (profile?.hasHealthId == true)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF10B981), width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle_rounded, size: 11, color: Color(0xFF10B981)),
+                      const SizedBox(width: 3),
+                      Text(
+                        Provider.of<LanguageProvider>(context, listen: false).tr('active_status'),
+                        style: const TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF10B981),
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.link_off_rounded, size: 11, color: Color(0xFFE2E8F0)),
+                      SizedBox(width: 3),
+                      Text(
+                        'NOT LINKED',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFFE2E8F0),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 14),
 
           // Microchip & Health ID number
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      Provider.of<LanguageProvider>(context, listen: false).tr('abha_id_label'),
-                      style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8)),
-                    ),
-                    const SizedBox(height: 3),
-                    InkWell(
-                      onTap: () => _copyToClipboard(patientId, 'Health ID'),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                patientId,
-                                style: const TextStyle(
-                                  fontSize: 16.5,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: 1.2,
+          if (profile?.hasHealthId == true)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        Provider.of<LanguageProvider>(context, listen: false).tr('abha_id_label'),
+                        style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8)),
+                      ),
+                      const SizedBox(height: 3),
+                      InkWell(
+                        onTap: () => _copyToClipboard(patientId, 'Health ID'),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  patientId,
+                                  style: const TextStyle(
+                                    fontSize: 16.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: 1.2,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          const Icon(Icons.copy_rounded, size: 13, color: Color(0xFFA78BFA)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: () => _showDigitalQrPassModal(context, profile),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7C3AED),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.qr_code_2_rounded, size: 16, color: Colors.white),
-                      const SizedBox(width: 4),
-                      Text(
-                        Provider.of<LanguageProvider>(context, listen: false).tr('view_qr'),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.copy_rounded, size: 13, color: Color(0xFFA78BFA)),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () => _showDigitalQrPassModal(context, profile),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C3AED),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.qr_code_2_rounded, size: 16, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(
+                          Provider.of<LanguageProvider>(context, listen: false).tr('view_qr'),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        Provider.of<LanguageProvider>(context, listen: false).tr('abha_id_label'),
+                        style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8)),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        '— —  — — — —  — — — —  — — — —',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF94A3B8),
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () => _showAddHealthIdModal(context),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C3AED),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                        SizedBox(width: 4),
+                        Text(
+                          'Add Health ID',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -941,6 +1224,72 @@ class _ProfileTabState extends State<ProfileTab> {
             value: '+91 $phone',
           ),
           const SizedBox(height: 12),
+
+          // Digital Health ID Row (Verified or Add ID if not present)
+          if (profile?.hasHealthId == true) ...[
+            _buildDetailRow(
+              icon: Icons.credit_card_rounded,
+              label: 'Digital Health ID',
+              value: profile!.patientId,
+            ),
+            const SizedBox(height: 12),
+          ] else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Expanded(
+                  flex: 5,
+                  child: Row(
+                    children: [
+                      Icon(Icons.credit_card_outlined, size: 18, color: Color(0xFF64748B)),
+                      SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'Digital Health ID',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () => _showAddHealthIdModal(context),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F3FF),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF7C3AED)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_rounded, size: 14, color: Color(0xFF7C3AED)),
+                        SizedBox(width: 4),
+                        Text(
+                          'Add ID',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF7C3AED),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
 
           // Interactive Area / Residence Row with 1-tap toggle
           InkWell(
@@ -1388,6 +1737,32 @@ class _ProfileTabState extends State<ProfileTab> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Automatically formats numerical input into XX-XXXX-XXXX-XXXX (14 digits)
+class _HealthIdInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final trimmed = digits.length > 14 ? digits.substring(0, 14) : digits;
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < trimmed.length; i++) {
+      if (i == 2 || i == 6 || i == 10) {
+        buffer.write('-');
+      }
+      buffer.write(trimmed[i]);
+    }
+
+    final formatted = buffer.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

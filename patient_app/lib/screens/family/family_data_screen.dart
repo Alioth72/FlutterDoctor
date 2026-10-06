@@ -335,7 +335,7 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
     final provider = Provider.of<HealthProfileProvider>(context);
     final lang = Provider.of<LanguageProvider>(context);
     final profile = provider.profile;
-    final myPatientId = profile?.patientId ?? '14-8832-4512-9018';
+    final myPatientId = (profile?.hasHealthId == true) ? profile!.patientId : '';
     final familyList = provider.familyMembers;
 
     return Scaffold(
@@ -343,7 +343,7 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
       appBar: AppBar(
         title: Text(
           lang.tr('sync_family_member'),
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         elevation: 0,
         backgroundColor: Colors.white,
@@ -354,9 +354,10 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Your Patient ID Card (For sharing with family)
-            Container(
-              padding: const EdgeInsets.all(18),
+            // Your Patient ID Card (Shown if present, blank space if unavailable)
+            if (profile?.hasHealthId == true) ...[
+              Container(
+                padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFF4C1D95), Color(0xFF7C3AED)],
@@ -453,6 +454,9 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
               ),
             ),
             const SizedBox(height: 24),
+          ] else ...[
+            const SizedBox(height: 8), // Clean blank space when ID is unavailable
+          ],
 
             // Synced Family Members Header + Add CTA
             Row(

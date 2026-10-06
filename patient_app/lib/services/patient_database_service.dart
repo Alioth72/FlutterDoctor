@@ -267,6 +267,33 @@ class PatientDatabaseService {
     }
   }
 
+  /// Update authenticated patient's 14-digit Health ID in backend database
+  /// PATCH /me/health-id
+  Future<bool> updateMedicalRecordNumber(String mrn) async {
+    final token = await _storageService.getAuthToken();
+    if (token == null || token.isEmpty) return false;
+
+    try {
+      final url = Uri.parse('$apiBaseUrl/me/health-id');
+      final response = await _httpClient
+          .patch(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({'medical_record_number': mrn}),
+          )
+          .timeout(requestTimeout);
+
+      debugPrint('[PatientDatabaseService] PATCH /me/health-id status: ${response.statusCode}');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[PatientDatabaseService] updateMedicalRecordNumber error: $e');
+      return false;
+    }
+  }
+
   /// Read-only endpoint: Fetch authenticated patient's live profile
   /// GET /me (requires Bearer token)
   Future<HealthProfile?> fetchMyProfile() async {

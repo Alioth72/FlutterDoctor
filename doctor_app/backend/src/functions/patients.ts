@@ -539,7 +539,54 @@ export async function createPatientRecord(request: HttpRequest, context: Invocat
     }
 }
 
+// PATCH /api/me/health-id (Updates authenticated patient's 14-digit Health ID)
+export async function updateMyHealthId(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    const authResult = authenticate(request);
+    if ("status" in authResult) {
+        return authResult;
+    }
+    const auth = authResult;
+    if (auth.role !== "patient") {
+        return errorResponse(403, "Forbidden. Only patients can update their Health ID.");
+    }
+
+    try {
+        const body: any = await request.json();
+        const healthId = (body?.medical_record_number || body?.health_id)?.toString().trim();
+        if (!healthId || !/^\d{2}-\d{4}-\d{4}-\d{4}$/.test(healthId)) {
+            return errorResponse(400, "Valid 14-digit Health ID (XX-XXXX-XXXX-XXXX) is required.");
+        }
+
+        const updateSql = `
+            UPDATE health.patients
+            SET medical_record_number = $1, updated_at = NOW()
+            WHERE user_id = $2::uuid OR patient_id = $3::uuid
+            RETURNING patient_id, medical_record_number;
+        `;
+        const result = await query(updateSql, [healthId, auth.user_id, auth.patient_id || auth.user_id]);
+        if (result.rows.length === 0) {
+            return errorResponse(404, "Patient record not found.");
+        }
+
+        return jsonResponse(200, {
+            success: true,
+            message: "Health ID updated successfully.",
+            data: result.rows[0],
+        });
+    } catch (err: any) {
+        context.error("Error in updateMyHealthId:", err);
+        return errorResponse(500, "Internal server error updating Health ID.");
+    }
+}
+
 // Patient-scoped self-service routes
+app.http("updateMyHealthId", {
+    methods: ["PATCH", "POST"],
+    authLevel: "anonymous",
+    route: "me/health-id",
+    handler: updateMyHealthId,
+});
+
 app.http("getMe", {
     methods: ["GET"],
     authLevel: "anonymous",

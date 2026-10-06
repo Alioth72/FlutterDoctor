@@ -14,7 +14,7 @@ class PatientQrSheets {
       patientRef: profile?.patientId != null && profile!.patientId.isNotEmpty
           ? 'P-${profile.patientId.replaceAll(RegExp(r'[^A-Za-z0-9]'), '')}'
           : 'P-7A92F81C',
-      patientId: profile?.patientId ?? '14-8832-4512-9018',
+      patientId: (profile?.hasHealthId == true) ? profile!.patientId : '',
       name: profile?.name ?? 'Vikram Malhotra',
       phone: profile?.phoneNumber ?? '9876501234',
       bloodGroup: profile?.bloodGroup ?? 'B+',
@@ -101,7 +101,9 @@ class PatientQrSheets {
                       showFullscreenQrDialog(
                         context,
                         title: 'Patient Health Identity QR',
-                        subtitle: '${patientRecord.name} • ${patientRecord.patientId}',
+                        subtitle: patientRecord.patientId.isNotEmpty
+                            ? '${patientRecord.name} • ${patientRecord.patientId}'
+                            : patientRecord.name,
                         qrData: qrPayload,
                       );
                     },
@@ -156,28 +158,31 @@ class PatientQrSheets {
                   ),
                   const SizedBox(height: 6),
 
-                  // Patient ID Chip
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF7C3AED),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'ID: ${patientRecord.patientId}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                  // Patient ID Chip (shown if present, blank space if unavailable)
+                  if (patientRecord.patientId.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7C3AED),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ),
-                  ),
+                      child: Text(
+                        'ID: ${patientRecord.patientId}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    )
+                  else
+                    const SizedBox(height: 4),
                   const SizedBox(height: 8),
 
                   // Status and Health ID
                   Text(
-                    '+91 ${patientRecord.phone} • Health ID Verified • ${patientRecord.bloodGroup}',
+                    '+91 ${patientRecord.phone}${patientRecord.patientId.isNotEmpty ? ' • Health ID Verified' : ''} • ${patientRecord.bloodGroup}',
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

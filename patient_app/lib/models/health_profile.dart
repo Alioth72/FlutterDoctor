@@ -65,12 +65,17 @@ class HealthProfile {
     final fromRaw = tryFormat(raw);
     if (fromRaw != null) return fromRaw;
 
-    return formatDeterministicHealthId(phone);
+    // When unavailable, return empty string so UI shows nothing and a blank space
+    return '';
   }
 
-  /// True if patientId follows the standard 14-digit format: XX-XXXX-XXXX-XXXX
+  /// True if patient has a linked standard 14-digit Health ID: XX-XXXX-XXXX-XXXX
+  bool get hasHealthId =>
+      patientId.isNotEmpty && RegExp(r'^\d{2}-\d{4}-\d{4}-\d{4}$').hasMatch(patientId);
+
+  /// True if patientId is either cleanly empty (unlinked) or a valid 14-digit Health ID
   bool get isStandardHealthId =>
-      RegExp(r'^\d{2}-\d{4}-\d{4}-\d{4}$').hasMatch(patientId);
+      patientId.isEmpty || hasHealthId;
 
   HealthProfile({
     required this.name,

@@ -135,6 +135,33 @@ class HealthProfileProvider with ChangeNotifier {
     return false;
   }
 
+  /// Link a 14-digit Health ID to the profile if not already present
+  Future<bool> linkHealthId(String newHealthId) async {
+    if (_profile == null) return false;
+    final formatted = HealthProfile.resolveHealthId(raw: newHealthId);
+    if (formatted.isEmpty) return false;
+
+    final updatedTier2 = Map<String, dynamic>.from(_profile!.tier2Data ?? {});
+    updatedTier2['medical_record_number'] = formatted;
+
+    final updated = _profile!.copyWith(
+      patientId: formatted,
+      tier2Data: updatedTier2,
+    );
+
+    _profile = updated;
+    await _storageService.saveProfile(updated);
+    notifyListeners();
+
+    // Async sync to database backend
+    try {
+      await _dbService.updateMedicalRecordNumber(formatted);
+    } catch (e) {
+      debugPrint('[HealthProfileProvider] linkHealthId sync error: $e');
+    }
+    return true;
+  }
+
   /// Link & Sync a Family Member via Patient ID and Name
   /// Open Database Endpoint integration with fallback local storage
   Future<bool> syncFamilyMember({
@@ -145,7 +172,9 @@ class HealthProfileProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final currentId = _profile?.patientId ?? '14-8832-4512-9018';
+    final currentId = _profile?.patientId.isNotEmpty == true
+        ? _profile!.patientId
+        : (_profile?.backendPatientId ?? '');
     final syncedMember = await _dbService.syncFamilyMember(
       currentPatientId: currentId,
       name: name.trim(),
@@ -167,7 +196,9 @@ class HealthProfileProvider with ChangeNotifier {
 
   /// Remove / Unlink Family Member
   Future<bool> removeFamilyMember(String memberId) async {
-    final currentId = _profile?.patientId ?? '14-8832-4512-9018';
+    final currentId = _profile?.patientId.isNotEmpty == true
+        ? _profile!.patientId
+        : (_profile?.backendPatientId ?? '');
     _familyMembers.removeWhere((m) => m.id == memberId);
     await _storageService.saveFamilyMembers(_familyMembers);
     notifyListeners();

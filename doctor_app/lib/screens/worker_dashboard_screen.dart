@@ -176,7 +176,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             assignedDoctor: row['assigned_doctor_name']?.toString() ?? 'Unassigned',
             assignedDoctorUserId: row['assigned_doctor_user_id']?.toString(),
             admissionDate: (row['created_at']?.toString() ?? '').split('T').first,
-            medicalRecordNumber: row['medical_record_number']?.toString() ?? '14-8832-4512-9018',
+            medicalRecordNumber: row['medical_record_number']?.toString() ?? '',
             bloodGroup: row['blood_group']?.toString() ?? 'N/A',
           );
         }).toList();
@@ -296,7 +296,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             isAdmitted: false,
             assignedDoctor: 'ASHA Worker Unit',
             admissionDate: DateTime.now().toIso8601String().split('T').first,
-            medicalRecordNumber: req.medicalRecordNumber ?? '14-8832-4512-9018',
+            medicalRecordNumber: req.medicalRecordNumber ?? '',
             bloodGroup: req.bloodGroup ?? 'N/A',
           );
 
