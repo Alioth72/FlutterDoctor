@@ -190,10 +190,14 @@ class AppointmentProvider with ChangeNotifier {
       notifyListeners();
       rethrow;
     } catch (e) {
+      debugPrint('[AppointmentProvider] Live booking failed: $e (saved locally)');
+      _appointments.removeWhere((a) => a.id == newAppointment.id);
+      _appointments.insert(0, newAppointment);
+      _appointments.sort(_sortAppointments);
+      await _persist();
       _isLoading = false;
       notifyListeners();
-      debugPrint('[AppointmentProvider] Live booking failed: $e');
-      rethrow;
+      return newAppointment;
     }
   }
 

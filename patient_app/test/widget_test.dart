@@ -13,6 +13,7 @@ import 'package:sih_project/models/scheme_eligibility_profile.dart';
 import 'package:sih_project/providers/appointment_provider.dart';
 import 'package:sih_project/providers/health_profile_provider.dart';
 import 'package:sih_project/providers/schemes_provider.dart';
+import 'package:sih_project/providers/language_provider.dart';
 import 'package:sih_project/services/mock_doctor_service.dart';
 import 'package:sih_project/screens/appointments/appointment_receipt_screen.dart';
 import 'package:sih_project/screens/appointments/book_appointment_screen.dart';
@@ -638,6 +639,7 @@ void main() {
         MultiProvider(
           providers: [
             ChangeNotifierProvider.value(value: appointmentProvider),
+            ChangeNotifierProvider(create: (_) => LanguageProvider()),
           ],
           child: const MaterialApp(
             home: AppointmentsTab(),
@@ -675,6 +677,7 @@ void main() {
         MultiProvider(
           providers: [
             ChangeNotifierProvider.value(value: appointmentProvider),
+            ChangeNotifierProvider(create: (_) => LanguageProvider()),
           ],
           child: MaterialApp(
             home: AppointmentReceiptScreen(appointment: appt),
