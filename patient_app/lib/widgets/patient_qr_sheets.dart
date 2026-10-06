@@ -909,33 +909,6 @@ class PatientQrSheets {
                         ),
                       ),
                     ),
-                            const SizedBox(height: 10),
-
-                            // Offline Notice
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF0FDF4),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFFBBF7D0)),
-                              ),
-                              child: const Row(
-                                children: [
-                                  Icon(Icons.shield_outlined, color: Color(0xFF16A34A), size: 16),
-                                  SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'Your doctor can scan this QR code to view this visit record without internet.',
-                                      style: TextStyle(fontSize: 11, color: Color(0xFF15803D), fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                     const SizedBox(height: 12),
 
                     // Bottom Action Buttons
