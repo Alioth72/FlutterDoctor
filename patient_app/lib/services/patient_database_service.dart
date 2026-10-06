@@ -126,12 +126,14 @@ class PatientDatabaseService {
           age: 28,
           gender: 'Other',
           phoneNumber: phoneNumber.trim(),
-          patientId: patientId,
+          patientId: mrn,
+          backendPatientId: patientId,
           password: password,
           location: availableLocations.first,
           tier2Data: {
             if (mrn != null) 'medical_record_number': mrn,
             if (bloodGroup != null) 'blood_group': bloodGroup,
+            if (patientId != null) 'patient_uuid': patientId,
           },
         );
       } else {
@@ -201,10 +203,12 @@ class PatientDatabaseService {
         }
 
         return profile.copyWith(
-          patientId: patientId,
+          patientId: userData['medical_record_number'] as String?,
+          backendPatientId: patientId,
           tier2Data: {
             if (userData['medical_record_number'] != null)
               'medical_record_number': userData['medical_record_number'],
+            if (patientId != null) 'patient_uuid': patientId,
           },
         );
       } else if (response.statusCode == 409) {
@@ -307,7 +311,8 @@ class PatientDatabaseService {
           age: calculatedAge,
           gender: gender,
           phoneNumber: phone,
-          patientId: patientId,
+          patientId: mrn,
+          backendPatientId: patientId,
           location: availableLocations.first,
           tier2Data: {
             if (mrn != null) 'medical_record_number': mrn,
@@ -315,6 +320,7 @@ class PatientDatabaseService {
             if (allergies.isNotEmpty) 'allergies': allergies,
             if (dobStr != null) 'date_of_birth': dobStr,
             if (data['emergency_contact'] != null) 'emergency_contact': data['emergency_contact'],
+            if (patientId != null) 'patient_uuid': patientId,
           },
         );
       }
@@ -793,7 +799,7 @@ class PatientDatabaseService {
     if (patientId == null || patientId.isEmpty) {
       try {
         final profile = await fetchMyProfile();
-        patientId = profile?.patientId;
+        patientId = profile?.backendPatientId ?? profile?.patientId;
         if (patientId != null && patientId.isNotEmpty) {
           await _storageService.savePatientId(patientId);
         }
@@ -882,7 +888,7 @@ class PatientDatabaseService {
     if (patientId == null || patientId.length < 32) {
       try {
         final profile = await fetchMyProfile();
-        patientId = profile?.patientId;
+        patientId = profile?.backendPatientId ?? (profile?.patientId != null && profile!.patientId.length >= 32 ? profile.patientId : null);
         if (patientId != null && patientId.length >= 32) {
           await _storageService.savePatientId(patientId);
         }

@@ -37,6 +37,10 @@ class HealthProfileProvider with ChangeNotifier {
     notifyListeners();
 
     _profile = await _storageService.getProfile();
+    if (_profile != null && !_profile!.isStandardHealthId) {
+      _profile = _profile!.copyWith();
+      await _storageService.saveProfile(_profile!);
+    }
     _familyMembers = await _storageService.getFamilyMembers();
 
     _isInitialized = true;

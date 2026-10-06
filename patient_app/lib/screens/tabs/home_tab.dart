@@ -466,12 +466,16 @@ class HomeTab extends StatelessWidget {
                   children: [
                     const Icon(Icons.badge_outlined, size: 14, color: Color(0xFF7C3AED)),
                     const SizedBox(width: 5),
-                    Text(
-                      profileProvider.profile?.patientId ?? '14-8832-4512-9018',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF7C3AED),
+                    Flexible(
+                      child: Text(
+                        profileProvider.profile?.patientId ?? '14-8832-4512-9018',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF7C3AED),
+                        ),
                       ),
                     ),
                   ],

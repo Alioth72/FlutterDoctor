@@ -177,17 +177,25 @@ class PatientDrawer extends StatelessWidget {
                 const SizedBox(height: 3),
 
                 // Patient Phone
-                Text(
-                  '+91 ${profile?.phoneNumber ?? "9876501234"}',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w500,
-                  ),
+                Builder(
+                  builder: (_) {
+                    final rawPhone = profile?.phoneNumber ?? '9876501234';
+                    final displayPhone = rawPhone.startsWith('+91')
+                        ? rawPhone
+                        : (rawPhone.startsWith('+') ? rawPhone : '+91 $rawPhone');
+                    return Text(
+                      displayPhone,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 10),
 
-                // Enlarged Patient ID Chip (Patient Profile pill removed)
+                // Enlarged Patient ID Chip
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
@@ -200,13 +208,17 @@ class PatientDrawer extends StatelessWidget {
                     children: [
                       const Icon(Icons.badge_outlined, color: Colors.white, size: 16),
                       const SizedBox(width: 6),
-                      Text(
-                        'ID: ${profile?.patientId ?? "14-8832-4512-9018"}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
+                      Flexible(
+                        child: Text(
+                          'ID: ${profile?.patientId ?? "14-8832-4512-9018"}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
                         ),
                       ),
                     ],
