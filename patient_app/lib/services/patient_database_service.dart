@@ -10,7 +10,7 @@ import 'storage_service.dart';
 /// Database integration service for patient authentication,
 /// registration, and read-only medical data fetching.
 ///
-/// Connects to Azure Functions backend (https://fn-rural-healthcare-3357.azurewebsites.net/api)
+/// Connects to Azure Functions backend (https://fn-ashwini-health-b5246f.azurewebsites.net/api)
 /// and falls back gracefully to deterministic local models when offline.
 class PatientDatabaseService {
   /// Base URL for backend database API.
@@ -25,7 +25,7 @@ class PatientDatabaseService {
   })  : apiBaseUrl = baseUrl ??
             const String.fromEnvironment(
               'PATIENT_API_BASE_URL',
-              defaultValue: 'https://fn-rural-healthcare-3357.azurewebsites.net/api',
+              defaultValue: 'https://fn-ashwini-health-b5246f.azurewebsites.net/api',
             ),
         _httpClient = httpClient ?? http.Client(),
         _storageService = storageService ?? StorageService();
