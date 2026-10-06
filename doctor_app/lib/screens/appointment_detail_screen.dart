@@ -1709,7 +1709,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                     ),
                                   ),
                                   child: Text(
-                                    'MRN: ${appt.medicalRecordNumber}',
+                                    'Health ID: ${appt.medicalRecordNumber}',
                                     style: const TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,

@@ -14,7 +14,7 @@ class LocalPatientRepository implements PatientRepository {
   final Map<String, PatientRecord> _patients = {
     'P-7A92F81C': const PatientRecord(
       patientRef: 'P-7A92F81C',
-      patientId: 'ASH-PT-1234',
+      patientId: '14-1234-5678-9012',
       name: 'Vikram Malhotra',
       dateOfBirth: '1984-06-15',
       gender: 'Male',
@@ -24,7 +24,7 @@ class LocalPatientRepository implements PatientRepository {
       extra: {
         'location': 'New Delhi, Delhi',
         'emergency_contact': '+91 9811223344',
-        'abha_id': 'vikram.malhotra@abdm',
+        'health_id': '14-1234-5678-9012',
       },
     ),
   };
@@ -55,7 +55,7 @@ class LocalPatientRepository implements PatientRepository {
   /// Default demo patient record
   static const PatientRecord defaultPatient = PatientRecord(
     patientRef: 'P-7A92F81C',
-    patientId: 'ASH-PT-1234',
+    patientId: '14-1234-5678-9012',
     name: 'Vikram Malhotra',
     dateOfBirth: '1984-06-15',
     gender: 'Male',
@@ -65,7 +65,7 @@ class LocalPatientRepository implements PatientRepository {
     extra: {
       'location': 'New Delhi, Delhi',
       'emergency_contact': '+91 9811223344',
-      'abha_id': 'vikram.malhotra@abdm',
+      'health_id': '14-1234-5678-9012',
     },
   );
 }

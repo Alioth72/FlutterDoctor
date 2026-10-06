@@ -396,7 +396,7 @@ class SchemeApiService {
       eligibilityText:
           'Beneficiaries identified through SECC 2011 deprivation criteria, NFSA Ration card holders, and low-income families verified by state health agencies.',
       applicationProcess:
-          'Step 1: Check your eligibility on the official Mera PM-JAY portal or visit your nearest Common Service Centre (CSC).\nStep 2: Carry your Aadhaar Card and Ration Card to the Ayushman Mitra desk at any empaneled hospital.\nStep 3: Complete biometric authentication (e-KYC).\nStep 4: Receive your Ayushman Card (PVC/e-Card) with unique 14-digit ABHA ID.\nStep 5: Present the card during hospital admission for instant 100% cashless treatment.',
+          'Step 1: Check your eligibility on the official Mera PM-JAY portal or visit your nearest Common Service Centre (CSC).\nStep 2: Carry your Aadhaar Card and Ration Card to the Ayushman Mitra desk at any empaneled hospital.\nStep 3: Complete biometric authentication (e-KYC).\nStep 4: Receive your Ayushman Card (PVC/e-Card) with unique 14-digit Health ID.\nStep 5: Present the card during hospital admission for instant 100% cashless treatment.',
       applicationSteps: [
         'Check eligibility with Aadhaar or Ration Card number.',
         'Visit nearest Government Hospital or CSC Kiosk.',

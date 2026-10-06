@@ -201,7 +201,7 @@ class PatientDrawer extends StatelessWidget {
                       const Icon(Icons.badge_outlined, color: Colors.white, size: 16),
                       const SizedBox(width: 6),
                       Text(
-                        'ID: ${profile?.patientId ?? "ASH-PT-1234"}',
+                        'ID: ${profile?.patientId ?? "14-8832-4512-9018"}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 13.5,

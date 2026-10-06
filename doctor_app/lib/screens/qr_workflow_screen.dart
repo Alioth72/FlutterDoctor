@@ -45,6 +45,10 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
       id: '1',
       appointmentNo: 'APT-101',
       patientName: 'Rajesh Sharma',
+      patientId: '14-2026-4512-8821',
+      medicalRecordNumber: '14-2026-4512-8821',
+      bloodGroup: 'B+',
+      patientPhone: '9876543210',
       age: 45,
       gender: 'Male',
       timing: '10:30 AM - Today',
@@ -78,6 +82,10 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
       id: '2',
       appointmentNo: 'APT-102',
       patientName: 'Priya Verma',
+      patientId: '14-2026-8821-3309',
+      medicalRecordNumber: '14-2026-8821-3309',
+      bloodGroup: 'O+',
+      patientPhone: '9811223344',
       age: 32,
       gender: 'Female',
       timing: '11:15 AM - Today',
@@ -292,15 +300,36 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
     }
 
     final upperKey = searchKey.toUpperCase();
+    final cleanDigits = searchKey.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+
+    bool matchesAppointment(AppointmentItem p) {
+      if (p.appointmentNo.toUpperCase() == upperKey ||
+          p.id == searchKey ||
+          p.patientName.toUpperCase().contains(upperKey) ||
+          upperKey.contains(p.appointmentNo.toUpperCase())) {
+        return true;
+      }
+      final pMrn = p.medicalRecordNumber?.toUpperCase() ?? '';
+      final pMrnClean = pMrn.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+      final pId = (p.patientId ?? '').toUpperCase();
+      final pIdClean = pId.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+
+      if (cleanDigits.length >= 6) {
+        if (pMrnClean.isNotEmpty && (pMrnClean == cleanDigits || pMrnClean.contains(cleanDigits) || cleanDigits.contains(pMrnClean))) {
+          return true;
+        }
+        if (pIdClean.isNotEmpty && (pIdClean == cleanDigits || pIdClean.contains(cleanDigits) || cleanDigits.contains(pIdClean))) {
+          return true;
+        }
+      }
+      return false;
+    }
 
     // 3. Search existing appointments pool
     if (matched == null) {
       final pool = widget.existingAppointments ?? _databasePatients;
       for (final p in pool) {
-        if (p.appointmentNo.toUpperCase() == upperKey ||
-            p.id == searchKey ||
-            p.patientName.toUpperCase().contains(upperKey) ||
-            upperKey.contains(p.appointmentNo.toUpperCase())) {
+        if (matchesAppointment(p)) {
           matched = p;
           break;
         }
@@ -310,9 +339,7 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
     // 4. Search local database patients pool
     if (matched == null) {
       for (final p in _databasePatients) {
-        if (p.appointmentNo.toUpperCase() == upperKey ||
-            p.id == searchKey ||
-            upperKey.contains(p.appointmentNo.toUpperCase())) {
+        if (matchesAppointment(p)) {
           matched = p;
           break;
         }
@@ -325,10 +352,7 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
         final liveAppointments = await ApiClient.getAppointments();
         if (liveAppointments != null && liveAppointments.isNotEmpty) {
           for (final a in liveAppointments) {
-            if (a.appointmentNo.toUpperCase() == upperKey ||
-                a.id == searchKey ||
-                a.patientName.toUpperCase().contains(upperKey) ||
-                upperKey.contains(a.appointmentNo.toUpperCase())) {
+            if (matchesAppointment(a)) {
               matched = a;
               break;
             }
@@ -340,9 +364,18 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
     }
 
     // 6. Graceful verified fallback preserving scanned identifier
+    final is14DigitHealthId = RegExp(r'^\d{2}-?\d{4}-?\d{4}-?\d{4}$').hasMatch(searchKey);
+    final formattedHealthId = is14DigitHealthId
+        ? (searchKey.contains('-')
+            ? searchKey
+            : '${searchKey.substring(0, 2)}-${searchKey.substring(2, 6)}-${searchKey.substring(6, 10)}-${searchKey.substring(10, 14)}')
+        : null;
+
     matched ??= AppointmentItem(
       id: 'QR-${DateTime.now().millisecondsSinceEpoch % 10000}',
       appointmentNo: upperKey.startsWith('APT-') ? upperKey : 'APT-$upperKey',
+      patientId: formattedHealthId,
+      medicalRecordNumber: formattedHealthId,
       patientName: searchKey.length < 30 ? 'Patient ($searchKey)' : 'Online Verified Patient',
       age: 42,
       gender: 'Male',
@@ -456,7 +489,7 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
                         style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold, color: Color(0xFF1E1B4B)),
                       ),
                       Text(
-                        'Verified Offline Check-in • ABHA Linked',
+                        'Verified Offline Check-in • Health ID Linked',
                         style: TextStyle(fontSize: 11.5, color: Color(0xFF059669), fontWeight: FontWeight.w600),
                       ),
                     ],
@@ -1115,6 +1148,13 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
                       '${patient.age} yrs • ${patient.gender} • ${patient.timing}',
                       style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                     ),
+                    if (patient.medicalRecordNumber != null && patient.medicalRecordNumber!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Health ID: ${patient.medicalRecordNumber}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F766E)),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1166,14 +1206,14 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Enter Patient Reference or paste full HRX payload:',
+              'Enter Health ID, Patient Reference or paste full HRX payload:',
               style: TextStyle(fontSize: 12.5, color: Colors.grey),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _manualIdController,
               decoration: InputDecoration(
-                hintText: 'e.g. P-7A92F81C or HRX:...',
+                hintText: 'e.g. 14-2026-4512-8821 or P-7A92F81C...',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 filled: true,
                 fillColor: Colors.grey[100],

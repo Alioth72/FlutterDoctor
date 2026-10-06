@@ -8,7 +8,7 @@ class LocalPatientRepository {
 
   static final PatientRecord defaultPatient = PatientRecord(
     patientRef: 'P-7A92F81C',
-    patientId: 'ASH-PT-1234',
+    patientId: '14-1234-5678-9012',
     name: 'Vikram Malhotra',
     phone: '9876501234',
     bloodGroup: 'B+',

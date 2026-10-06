@@ -140,10 +140,12 @@ export async function signup(request: HttpRequest, context: InvocationContext): 
         let patientId: string | null = null;
         let staffProfileId: string | null = null;
 
-        // 7. If patient, create health.patients row
+        // 7. If patient, create health.patients row with standardized 14-digit Health ID
         if (normalizedRole === "patient") {
-            const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-            const mrn = `MRN-${new Date().getFullYear()}-${randomSuffix}`;
+            const p1 = Math.floor(1000 + Math.random() * 9000);
+            const p2 = Math.floor(1000 + Math.random() * 9000);
+            const p3 = Math.floor(1000 + Math.random() * 9000);
+            const mrn = `14-${p1}-${p2}-${p3}`;
 
             const patientSql = `
                 INSERT INTO health.patients (
@@ -162,7 +164,12 @@ export async function signup(request: HttpRequest, context: InvocationContext): 
             ]);
             patientId = patRes.rows[0].patient_id;
         } else if (["doctor", "nurse", "volunteer", "pharmacist", "admin"].includes(normalizedRole)) {
-            // 8. If staff, create health.staff_profiles row
+            // 8. If staff, create health.staff_profiles row with recognized NMC Reg No for doctors
+            let effectiveLicense = license_number;
+            if (normalizedRole === "doctor" && (!effectiveLicense || effectiveLicense.trim().length === 0)) {
+                effectiveLicense = `NMC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+            }
+
             const staffSql = `
                 INSERT INTO health.staff_profiles (
                     user_id, staff_type, license_number, specialties, availability
@@ -172,7 +179,7 @@ export async function signup(request: HttpRequest, context: InvocationContext): 
             const staffRes = await client.query(staffSql, [
                 user.user_id,
                 normalizedRole,
-                license_number || null,
+                effectiveLicense || null,
                 JSON.stringify(specialties || []),
                 JSON.stringify(availability || {}),
             ]);

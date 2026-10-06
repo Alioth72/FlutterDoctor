@@ -86,7 +86,7 @@ class PromptBuilder {
     buffer.writeln('  - How to switch: Tap the Globe icon at the top right of the Home Tab.');
     buffer.writeln('  - Instantly switches the entire app into Hindi, Bengali, Telugu, Marathi, Tamil, Urdu, Gujarati, Kannada, Malayalam, Odia, Punjabi, Assamese, Maithili, Santali, Kashmiri, Nepali, Konkani, Dogri, Sindhi, Bodo, Manipuri, Sanskrit, or English.');
     buffer.writeln('• Health Records & Family Vault (Medical History):');
-    buffer.writeln('  - ABHA ID integration, offline health records with QR code, and ability to link family health profiles.\n');
+    buffer.writeln('  - Digital Health ID integration, offline health records with QR code, and ability to link family health profiles.\n');
 
     // 2. Inject Verified Medical Context Chunks
     if (chunks.isNotEmpty) {

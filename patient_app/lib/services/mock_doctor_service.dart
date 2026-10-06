@@ -29,6 +29,7 @@ class MockDoctorService {
         '01:00 PM',
         '01:30 PM',
       ],
+      registrationNumber: 'NMC-2008-048291',
     ),
     const Doctor(
       id: 'd73f9fb2-c526-4134-ade9-370cd844310c',
@@ -56,6 +57,7 @@ class MockDoctorService {
         '02:00 PM',
         '02:30 PM',
       ],
+      registrationNumber: 'NMC-2016-083912',
     ),
     const Doctor(
       id: '27e15e98-c7a1-4314-ae7b-bce893daa826',
@@ -81,6 +83,7 @@ class MockDoctorService {
         '01:00 PM',
         '01:30 PM',
       ],
+      registrationNumber: 'NMC-2016-074921',
     ),
     const Doctor(
       id: '21072aa5-91a2-489d-a1fd-f6a2910e31cf',
@@ -106,6 +109,7 @@ class MockDoctorService {
         '01:00 PM',
         '01:30 PM',
       ],
+      registrationNumber: 'NMC-2016-092814',
     ),
     const Doctor(
       id: 'acceab8c-e033-4e7b-b3dc-d1399a912730',
@@ -131,6 +135,7 @@ class MockDoctorService {
         '04:00 PM',
         '04:30 PM',
       ],
+      registrationNumber: 'NMC-2010-051829',
     ),
     const Doctor(
       id: '3d0c6879-9155-4bd6-8576-57a64db702a3',
@@ -156,6 +161,7 @@ class MockDoctorService {
         '03:00 PM',
         '03:30 PM',
       ],
+      registrationNumber: 'NMC-2012-067823',
     ),
     const Doctor(
       id: 'd7b4e3f1-2856-4c91-9e8a-729938b81002',
@@ -179,6 +185,7 @@ class MockDoctorService {
         '02:00 PM',
         '02:30 PM',
       ],
+      registrationNumber: 'NMC-2014-062819',
     ),
   ];
 

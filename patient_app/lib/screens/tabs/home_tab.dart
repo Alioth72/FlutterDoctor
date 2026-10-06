@@ -467,7 +467,7 @@ class HomeTab extends StatelessWidget {
                     const Icon(Icons.badge_outlined, size: 14, color: Color(0xFF7C3AED)),
                     const SizedBox(width: 5),
                     Text(
-                      profileProvider.profile?.patientId ?? 'ASH-PT-8832',
+                      profileProvider.profile?.patientId ?? '14-8832-4512-9018',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,

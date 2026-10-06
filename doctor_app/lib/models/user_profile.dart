@@ -121,7 +121,7 @@ class UserProfile {
       img = AppAssets.logo;
     } else if (role == UserRole.patient) {
       qual = 'Registered Patient';
-      desig = 'Patient (MRN: ${json['medical_record_number'] ?? 'New'})';
+      desig = 'Patient (ID: ${json['medical_record_number'] ?? 'New'})';
       img = AppAssets.logo;
     }
 
@@ -191,6 +191,7 @@ class UserProfile {
       hospitalId: 'hosp_1',
       hospitalName: 'Ashwini Central Hospital',
       password: '1',
+      licenseNumber: 'NMC-2008-048291',
     ),
     '2345678901': UserProfile(
       phone: '2345678901',

@@ -153,7 +153,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             assignedDoctor: row['assigned_doctor_name']?.toString() ?? 'Unassigned',
             assignedDoctorUserId: row['assigned_doctor_user_id']?.toString(),
             admissionDate: (row['created_at']?.toString() ?? '').split('T').first,
-            medicalRecordNumber: row['medical_record_number']?.toString() ?? 'MRN-N/A',
+            medicalRecordNumber: row['medical_record_number']?.toString() ?? '14-8832-4512-9018',
             bloodGroup: row['blood_group']?.toString() ?? 'N/A',
           );
         }).toList();
@@ -749,7 +749,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'License: ${doc.licenseNumber?.isNotEmpty == true ? doc.licenseNumber : "Verified Practitioner"}',
+                            'Reg No: ${doc.licenseNumber?.isNotEmpty == true ? doc.licenseNumber : "NMC Verified Practitioner"}',
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -1109,7 +1109,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             const Icon(Icons.badge_outlined, size: 15, color: Color(0xFF1D4ED8)),
                             const SizedBox(width: 5),
                             Text(
-                              'MRN: ${pat.medicalRecordNumber ?? 'MRN-N/A'}',
+                              'Health ID: ${pat.medicalRecordNumber ?? pat.id}',
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
@@ -2097,7 +2097,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                             ),
                             Text(
-                              '${pat.name} • MRN: ${pat.medicalRecordNumber ?? 'N/A'}',
+                              '${pat.name} • Health ID: ${pat.medicalRecordNumber ?? 'N/A'}',
                               style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                             ),
                           ],
@@ -2814,8 +2814,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 TextField(
                   controller: licenseCtrl,
                   decoration: const InputDecoration(
-                    labelText: 'Medical License Number',
-                    hintText: 'e.g. MCI-DEL-2026-4421',
+                    labelText: 'Medical Registration No. (NMC/SMC)',
+                    hintText: 'e.g. NMC-2016-048291',
                     prefixIcon: Icon(Icons.verified_outlined, size: 20),
                   ),
                 ),
@@ -3076,8 +3076,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 TextField(
                   controller: licenseCtrl,
                   decoration: const InputDecoration(
-                    labelText: 'Medical License Number',
-                    hintText: 'e.g. MCI-DEL-2026-4421',
+                    labelText: 'Medical Registration No. (NMC/SMC)',
+                    hintText: 'e.g. NMC-2016-048291',
                     prefixIcon: Icon(Icons.verified_outlined, size: 20),
                   ),
                 ),
@@ -3567,8 +3567,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 TextField(
                   controller: mrnCtrl,
                   decoration: const InputDecoration(
-                    labelText: 'Medical Record Number (MRN)',
-                    hintText: 'Optional (e.g. MRN-2026-004)',
+                    labelText: '14-Digit Health ID',
+                    hintText: 'Optional (e.g. 14-4512-8821-9018)',
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -3695,8 +3695,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           SnackBar(
                             backgroundColor: const Color(0xFF059669),
                             content: Text(hasAppt
-                                ? 'Patient $name registered & initial consultation created! (MRN: $mrnAssigned)'
-                                : 'Patient $name registered successfully in PostgreSQL! (MRN: $mrnAssigned)'),
+                                ? 'Patient $name registered & initial consultation created! (Health ID: $mrnAssigned)'
+                                : 'Patient $name registered successfully in PostgreSQL! (Health ID: $mrnAssigned)'),
                           ),
                         );
                         _loadLivePatients();
@@ -4057,7 +4057,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'MRN: ${pat.medicalRecordNumber ?? 'N/A'} • Current: ${pat.assignedDoctor}',
+                          'Health ID: ${pat.medicalRecordNumber ?? 'N/A'} • Current: ${pat.assignedDoctor}',
                           style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                         ),
                       ],

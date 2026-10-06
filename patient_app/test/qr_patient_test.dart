@@ -9,7 +9,7 @@ void main() {
     test('Compact Patient Identity QR encoding and round-trip decoding', () {
       const patient = PatientRecord(
         patientRef: 'P-9B21C4D8',
-        patientId: 'ASH-PT-1042',
+        patientId: '14-1042-8821-9012',
         name: 'Pooja Sharma',
         gender: 'Female',
         bloodGroup: 'B+',
@@ -21,12 +21,12 @@ void main() {
       // Verify compact format: HRX:P|1|<ref>|<id>|<name>|<gender>|<blood>|<phone>
       expect(qrString.startsWith('HRX:P|1|'), isTrue);
       expect(qrString, contains('P-9B21C4D8'));
-      expect(qrString, contains('ASH-PT-1042'));
+      expect(qrString, contains('14-1042-8821-9012'));
       expect(qrString, contains('Pooja Sharma'));
       expect(qrString, contains('Female'));
       expect(qrString, contains('B+'));
       expect(qrString, contains('+919876543210'));
-      expect(qrString.length, lessThan(80)); // Highly scannable, QR Version 3
+      expect(qrString.length, lessThan(90)); // Highly scannable, QR Version 3
 
       // Verify decoding
       final decoder = HrxDecoder();
@@ -37,7 +37,7 @@ void main() {
       expect(result.patient, isNotNull);
       expect(result.patient!.name, equals('Pooja Sharma'));
       expect(result.patient!.patientRef, equals('P-9B21C4D8'));
-      expect(result.patient!.patientId, equals('ASH-PT-1042'));
+      expect(result.patient!.patientId, equals('14-1042-8821-9012'));
       expect(result.patient!.gender, equals('Female'));
       expect(result.patient!.bloodGroup, equals('B+'));
       expect(result.patient!.phone, equals('+919876543210'));
@@ -133,25 +133,25 @@ void main() {
 
   group('Family Scanner QR Parser Tests', () {
     test('Decodes compact HRX pipe-delimited string', () {
-      const compactCode = 'HRX:P|1|P-1234|ASH-PT-7788|Aarav Gupta|Male|O+|9876543210';
+      const compactCode = 'HRX:P|1|P-1234|14-7788-4512-9012|Aarav Gupta|Male|O+|9876543210';
       final decoder = HrxDecoder();
       final result = decoder.decode(compactCode);
 
       expect(result.success, isTrue);
       expect(result.patient, isNotNull);
       expect(result.patient!.name, equals('Aarav Gupta'));
-      expect(result.patient!.patientId, equals('ASH-PT-7788'));
+      expect(result.patient!.patientId, equals('14-7788-4512-9012'));
       expect(result.patient!.gender, equals('Male'));
       expect(result.patient!.bloodGroup, equals('O+'));
       expect(result.patient!.phone, equals('9876543210'));
     });
 
     test('Decodes raw JSON patient string fallback', () {
-      const rawJson = '{"name":"Sunita Gupta","patientId":"ASH-PT-3321","gender":"Female","bloodGroup":"AB+","phone":"9811223344"}';
+      const rawJson = '{"name":"Sunita Gupta","patientId":"14-3321-4512-9012","gender":"Female","bloodGroup":"AB+","phone":"9811223344"}';
       final map = jsonDecode(rawJson) as Map<String, dynamic>;
 
       expect(map['name'], equals('Sunita Gupta'));
-      expect(map['patientId'], equals('ASH-PT-3321'));
+      expect(map['patientId'], equals('14-3321-4512-9012'));
       expect(map['gender'], equals('Female'));
       expect(map['bloodGroup'], equals('AB+'));
     });

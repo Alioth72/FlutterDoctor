@@ -765,7 +765,10 @@ export async function createAppointment(request: HttpRequest, context: Invocatio
             if (patCheck.rows.length > 0) {
                 effectivePatientId = patCheck.rows[0].patient_id;
             } else {
-                const mrn = `MRN-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+                const p1 = Math.floor(1000 + Math.random() * 9000);
+                const p2 = Math.floor(1000 + Math.random() * 9000);
+                const p3 = Math.floor(1000 + Math.random() * 9000);
+                const mrn = `14-${p1}-${p2}-${p3}`;
                 const newPat = await query(
                     `INSERT INTO health.patients (user_id, medical_record_number) VALUES ($1::uuid, $2) RETURNING patient_id;`,
                     [authPayload.user_id, mrn]

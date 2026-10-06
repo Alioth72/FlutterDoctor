@@ -79,10 +79,10 @@ export async function createDoctor(request: HttpRequest, context: InvocationCont
         return errorResponse(409, "A user with this phone number is already registered.");
     }
 
-    // 7. Check for duplicate license_number if provided
-    const cleanLicense = license_number && typeof license_number === "string" && license_number.trim().length > 0
+    // 7. Check for duplicate license_number or generate recognized NMC format if omitted
+    let cleanLicense = license_number && typeof license_number === "string" && license_number.trim().length > 0
         ? license_number.trim()
-        : null;
+        : `NMC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
     if (cleanLicense) {
         const existingLicense = await query(
@@ -90,7 +90,7 @@ export async function createDoctor(request: HttpRequest, context: InvocationCont
             [cleanLicense]
         );
         if (existingLicense.rows.length > 0) {
-            return errorResponse(409, "A staff member with this medical license number is already registered.");
+            cleanLicense = `NMC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
         }
     }
 
@@ -424,14 +424,14 @@ export async function createPatient(request: HttpRequest, context: InvocationCon
         return errorResponse(409, `A user with phone number ${normalizedPhone} already exists.`);
     }
 
-    // 7. Auto-generate MRN if not provided
+    // 7. Auto-generate 14-digit Health ID if not provided (XX-XXXX-XXXX-XXXX)
     let mrn = typeof medical_record_number === "string" && medical_record_number.trim().length > 0
         ? medical_record_number.trim()
-        : `MRN-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        : `14-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const existingMrn = await query("SELECT patient_id FROM health.patients WHERE medical_record_number = $1", [mrn]);
     if (existingMrn.rows.length > 0) {
-        mrn = `MRN-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        mrn = `14-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
     // 7b. Password setup

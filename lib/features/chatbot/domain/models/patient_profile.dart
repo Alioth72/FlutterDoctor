@@ -180,15 +180,15 @@ class PatientProfile {
   /// Default mock profile modeled directly from the user's hospital database schema.
   static PatientProfile demoRajeshSharma() {
     return const PatientProfile(
-      patientId: 'b0843210-91ab-4ef1-bb74-001928475001',
+      patientId: '14-2026-4512-8821',
       userId: 'd7b4e3f1-2856-4c91-9e8a-729938b84001',
-      medicalRecordNumber: 'MRN-2026-001',
+      medicalRecordNumber: '14-2026-4512-8821',
       name: 'Rajesh Sharma',
       bloodGroup: 'B+',
       allergies: ['Penicillin'],
       emergencyContact: 'Sita Sharma (Spouse) - +919988776650',
       activeAppointment:
-          'In-Clinic with Dr. Rajesh V. Sharma | Status: queued | Room: IPD Ward 304 - Bed 12',
+          'In-Clinic with Dr. Rajesh V. Sharma (NMC-2008-048291) | Status: queued | Room: IPD Ward 304 - Bed 12',
       doctorName: 'Dr. Rajesh V. Sharma',
       room: 'IPD Ward 304 - Bed 12',
       appointmentStatus: 'queued',

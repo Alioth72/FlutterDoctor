@@ -141,7 +141,7 @@ class HealthProfileProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final currentId = _profile?.patientId ?? 'ASH-PT-1001';
+    final currentId = _profile?.patientId ?? '14-8832-4512-9018';
     final syncedMember = await _dbService.syncFamilyMember(
       currentPatientId: currentId,
       name: name.trim(),
@@ -163,7 +163,7 @@ class HealthProfileProvider with ChangeNotifier {
 
   /// Remove / Unlink Family Member
   Future<bool> removeFamilyMember(String memberId) async {
-    final currentId = _profile?.patientId ?? 'ASH-PT-1001';
+    final currentId = _profile?.patientId ?? '14-8832-4512-9018';
     _familyMembers.removeWhere((m) => m.id == memberId);
     await _storageService.saveFamilyMembers(_familyMembers);
     notifyListeners();

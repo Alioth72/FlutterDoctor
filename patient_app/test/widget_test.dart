@@ -396,7 +396,7 @@ void main() {
       final member = FamilyMember(
         id: 'FAM-1234',
         name: 'Pooja Malhotra',
-        patientId: 'ASH-PT-4512',
+        patientId: '14-4512-8821-9012',
         relation: 'Spouse',
         syncedAt: DateTime(2026, 9, 8),
       );
@@ -404,13 +404,13 @@ void main() {
       final json = member.toJson();
       expect(json['id'], 'FAM-1234');
       expect(json['name'], 'Pooja Malhotra');
-      expect(json['patientId'], 'ASH-PT-4512');
+      expect(json['patientId'], '14-4512-8821-9012');
       expect(json['relation'], 'Spouse');
 
       final deserialized = FamilyMember.fromJson(json);
       expect(deserialized.id, 'FAM-1234');
       expect(deserialized.name, 'Pooja Malhotra');
-      expect(deserialized.patientId, 'ASH-PT-4512');
+      expect(deserialized.patientId, '14-4512-8821-9012');
       expect(deserialized.relation, 'Spouse');
     });
 
@@ -421,7 +421,7 @@ void main() {
         age: 32,
         gender: 'Male',
         phoneNumber: '9876501234',
-        patientId: 'ASH-PT-1234',
+        patientId: '14-1234-5678-9012',
       );
       await profileProvider.signup(profile);
 
@@ -451,7 +451,7 @@ void main() {
       expect(find.text('QR Card'), findsOneWidget);
       expect(find.text('Vikram Malhotra'), findsOneWidget);
       expect(find.text('+91 9876501234'), findsOneWidget);
-      expect(find.text('ID: ASH-PT-1234'), findsOneWidget);
+      expect(find.text('ID: 14-1234-5678-9012'), findsOneWidget);
       expect(find.text('FAMILY DATA'), findsOneWidget);
     });
 
@@ -462,7 +462,7 @@ void main() {
         age: 32,
         gender: 'Male',
         phoneNumber: '9876501234',
-        patientId: 'ASH-PT-1234',
+        patientId: '14-1234-5678-9012',
       );
       await profileProvider.signup(profile);
 
@@ -478,7 +478,7 @@ void main() {
       );
 
       expect(find.text('Family Health Data'), findsOneWidget);
-      expect(find.text('ASH-PT-1234'), findsOneWidget);
+      expect(find.text('14-1234-5678-9012'), findsOneWidget);
 
       // Tap Add Member
       await tester.tap(find.text('Add Member'));
@@ -488,14 +488,14 @@ void main() {
 
       // Fill Name and Patient ID
       await tester.enterText(find.widgetWithText(TextFormField, 'Family Member Name'), 'Pooja Malhotra');
-      await tester.enterText(find.widgetWithText(TextFormField, 'Member Patient ID'), 'ASH-PT-4512');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Member Patient ID'), '14-4512-8821-9012');
 
       // Submit
       await tester.tap(find.text('Sync & Link Family Member'));
       await tester.pumpAndSettle();
 
       expect(find.text('Pooja Malhotra'), findsOneWidget);
-      expect(find.text('ID: ASH-PT-4512'), findsOneWidget);
+      expect(find.text('ID: 14-4512-8821-9012'), findsOneWidget);
       expect(find.text('Synced'), findsOneWidget);
     });
   });

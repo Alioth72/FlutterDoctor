@@ -1275,7 +1275,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               const SizedBox(width: 5),
                               Flexible(
                                 child: Text(
-                                  'MRN: ${appt.medicalRecordNumber}',
+                                  'ID: ${appt.medicalRecordNumber}',
                                   style: const TextStyle(
                                     fontSize: 10,
                                     color: AppColors.muted,
@@ -1704,7 +1704,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const Icon(Icons.verified_user_outlined, size: 12, color: Colors.white),
                             const SizedBox(width: 4),
                             Text(
-                              'Lic: ${profile.licenseNumber}',
+                              'Reg: ${profile.licenseNumber}',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,

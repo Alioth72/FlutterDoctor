@@ -783,18 +783,18 @@ class PatientDatabaseService {
 
     String? patientId = await _storageService.getPatientId();
 
-    if (patientId == null || patientId.length < 32) {
+    if (patientId == null || patientId.isEmpty) {
       patientId = _extractPatientIdFromToken(token);
-      if (patientId != null && patientId.length >= 32) {
+      if (patientId != null && patientId.isNotEmpty) {
         await _storageService.savePatientId(patientId);
       }
     }
 
-    if (patientId == null || patientId.length < 32) {
+    if (patientId == null || patientId.isEmpty) {
       try {
         final profile = await fetchMyProfile();
         patientId = profile?.patientId;
-        if (patientId != null && patientId.length >= 32) {
+        if (patientId != null && patientId.isNotEmpty) {
           await _storageService.savePatientId(patientId);
         }
       } catch (_) {}

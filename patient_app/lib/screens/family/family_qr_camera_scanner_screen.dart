@@ -28,28 +28,28 @@ class _FamilyQrCameraScannerScreenState extends State<FamilyQrCameraScannerScree
   final List<Map<String, String>> _sampleFamilyQrs = [
     {
       'name': 'Pooja Malhotra',
-      'id': 'ASH-PT-4512',
+      'id': '14-4512-8821-9012',
       'ageGender': '32 Yrs • Female',
       'blood': 'B+ Positive',
       'phone': '+91 98765 43210',
     },
     {
       'name': 'Rohan Malhotra',
-      'id': 'ASH-PT-8821',
+      'id': '14-8821-3309-7704',
       'ageGender': '8 Yrs • Male',
       'blood': 'O+ Positive',
       'phone': '+91 98765 01234',
     },
     {
       'name': 'Sita Devi',
-      'id': 'ASH-PT-3309',
+      'id': '14-3309-7704-4512',
       'ageGender': '64 Yrs • Female',
       'blood': 'AB+ Positive',
       'phone': '+91 98112 34567',
     },
     {
       'name': 'Amit Malhotra',
-      'id': 'ASH-PT-7704',
+      'id': '14-7704-4512-8821',
       'ageGender': '36 Yrs • Male',
       'blood': 'A+ Positive',
       'phone': '+91 99554 12345',
@@ -123,7 +123,7 @@ class _FamilyQrCameraScannerScreenState extends State<FamilyQrCameraScannerScree
       if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
         final Map<String, dynamic> map = jsonDecode(trimmed) as Map<String, dynamic>;
         final name = map['name'] ?? map['patientName'] ?? 'Family Member';
-        final id = map['id'] ?? map['patientId'] ?? map['patientRef'] ?? 'ASH-PT-0000';
+        final id = map['id'] ?? map['patientId'] ?? map['patientRef'] ?? '14-0000-0000-0000';
         final age = map['age']?.toString() ?? '';
         final gender = map['gender']?.toString() ?? '';
         final blood = map['blood'] ?? map['bloodGroup'] ?? '';
@@ -224,7 +224,7 @@ class _FamilyQrCameraScannerScreenState extends State<FamilyQrCameraScannerScree
 
   void _showRelationshipSelectionSheet(Map<String, String> qrData) {
     final name = qrData['name'] ?? 'Family Member';
-    final id = qrData['id'] ?? 'ASH-PT-0000';
+    final id = qrData['id'] ?? '14-0000-0000-0000';
 
     final relations = [
       {'label': 'Spouse', 'icon': Icons.favorite_rounded, 'color': const Color(0xFFE11D48)},

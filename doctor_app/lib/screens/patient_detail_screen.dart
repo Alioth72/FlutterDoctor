@@ -285,7 +285,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                       ),
                       Text(
-                        'MRN: ${p.medicalRecordNumber ?? "N/A"}',
+                        'Health ID: ${p.medicalRecordNumber ?? "N/A"}',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -1338,7 +1338,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
                               ),
                               Text(
-                                'MRN: ${widget.patient.medicalRecordNumber ?? "N/A"} • Phone: ${widget.patient.phone}',
+                                'Health ID: ${widget.patient.medicalRecordNumber ?? "N/A"} • Phone: ${widget.patient.phone}',
                                 style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                               ),
                             ],

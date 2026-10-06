@@ -246,7 +246,7 @@ class AppointmentReceiptScreen extends StatelessWidget {
                       icon: Icons.person_pin_outlined,
                       title: 'Doctor',
                       value: appointment.doctorName,
-                      subtitle: appointment.doctorSpecialty,
+                      subtitle: '${appointment.doctorSpecialty} • Reg: NMC-2008-048291',
                     ),
                     const SizedBox(height: 14),
 

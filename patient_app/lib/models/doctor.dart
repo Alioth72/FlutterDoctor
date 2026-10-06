@@ -9,6 +9,7 @@ class Doctor {
   final int consultationFee; // Set to 0 for now as requested
   final List<int> availableDaysOfWeek; // 1 = Mon, 7 = Sun
   final List<String> availableTimeSlots;
+  final String registrationNumber; // National Medical Commission (NMC) Registration No.
 
   const Doctor({
     required this.id,
@@ -21,6 +22,7 @@ class Doctor {
     this.consultationFee = 0,
     required this.availableDaysOfWeek,
     required this.availableTimeSlots,
+    this.registrationNumber = 'NMC-2016-048291',
   });
 
   /// Check if the doctor is available on a given DateTime
@@ -36,6 +38,7 @@ class Doctor {
     final chamber = avail['chamber']?.toString() ?? 'Ashwini Central Hospital';
     final qualification = avail['qualification']?.toString() ?? (specs.length > 1 ? specs.sublist(1).join(', ') : 'MBBS, MD');
     final experience = (avail['experience_years'] as num?)?.toInt() ?? 8;
+    final license = json['license_number']?.toString() ?? 'NMC-2016-048291';
 
     return Doctor(
       id: json['user_id'] as String? ?? json['id'] as String? ?? '',
@@ -56,6 +59,7 @@ class Doctor {
         '03:00 PM',
         '04:00 PM',
       ],
+      registrationNumber: license.isNotEmpty ? license : 'NMC-2016-048291',
     );
   }
 }

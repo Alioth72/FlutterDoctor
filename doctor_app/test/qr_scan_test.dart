@@ -109,7 +109,7 @@ void main() {
   group('Online Patient Identity QR Decoding Tests', () {
     const customPatient = PatientRecord(
       patientRef: 'P-98765432',
-      patientId: 'PT-NEW-2026',
+      patientId: '14-2026-4512-8821',
       name: 'Ramesh Patel',
       gender: 'Male',
       bloodGroup: 'O+',
@@ -134,7 +134,7 @@ void main() {
       final p = decodeResult.patient!;
       expect(p.name, equals('Ramesh Patel'));
       expect(p.patientRef, equals('P-98765432'));
-      expect(p.patientId, equals('PT-NEW-2026'));
+      expect(p.patientId, equals('14-2026-4512-8821'));
       expect(p.gender, equals('Male'));
       expect(p.bloodGroup, equals('O+'));
       expect(p.phone, equals('9811223344'));

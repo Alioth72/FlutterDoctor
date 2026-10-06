@@ -266,6 +266,7 @@ class HospitalAdminRepository {
       isOnDuty: true,
       shiftTiming: '08:00 AM - 02:00 PM',
       email: 'rajesh.sharma@ashwinihospital.org',
+      licenseNumber: 'NMC-2008-048291',
     ),
     HospitalAdminStaffDoctor(
       id: 'd7b4e3f1-2856-4c91-9e8a-729938b81002',
@@ -282,6 +283,7 @@ class HospitalAdminRepository {
       isOnDuty: true,
       shiftTiming: '09:00 AM - 03:00 PM',
       email: 'ananya.iyer@ashwinihospital.org',
+      licenseNumber: 'NMC-2010-062819',
     ),
     HospitalAdminStaffDoctor(
       id: '2dfef2f1-ecae-4ece-aed1-cf102412ea20',
@@ -298,6 +300,7 @@ class HospitalAdminRepository {
       isOnDuty: true,
       shiftTiming: '08:00 AM - 02:00 PM',
       email: 'mayank@ashwinihospital.org',
+      licenseNumber: 'NMC-2016-083912',
     ),
   ];
 
@@ -334,7 +337,7 @@ class HospitalAdminRepository {
 
   static final List<HospitalAdminPatient> _patients = [
     HospitalAdminPatient(
-      id: 'b0843210-91ab-4ef1-bb74-001928475001',
+      id: '14-2026-4512-8821',
       name: 'Rajesh Sharma',
       phone: '9988776655',
       password: '1234',
@@ -350,10 +353,11 @@ class HospitalAdminRepository {
       assignedDoctor: 'Dr. Rajesh V. Sharma',
       assignedDoctorUserId: 'd7b4e3f1-2856-4c91-9e8a-729938b81001',
       admissionDate: '02 Sep 2026',
+      medicalRecordNumber: '14-2026-4512-8821',
       vitals: {'BP': '138/88', 'Pulse': '76 bpm', 'SpO2': '98%', 'Temp': '98.4 F'},
     ),
     HospitalAdminPatient(
-      id: 'b0843210-91ab-4ef1-bb74-001928475002',
+      id: '14-2026-8821-3309',
       name: 'Priya Verma',
       phone: '9977665544',
       password: '1234',
@@ -369,6 +373,7 @@ class HospitalAdminRepository {
       assignedDoctor: 'Dr. Rajesh V. Sharma',
       assignedDoctorUserId: 'd7b4e3f1-2856-4c91-9e8a-729938b81001',
       admissionDate: '04 Sep 2026',
+      medicalRecordNumber: '14-2026-8821-3309',
       vitals: {'BP': '118/74', 'Pulse': '88 bpm', 'SpO2': '95%', 'Temp': '98.6 F'},
     ),
   ];

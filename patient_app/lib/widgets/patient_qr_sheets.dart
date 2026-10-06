@@ -14,7 +14,7 @@ class PatientQrSheets {
       patientRef: profile?.patientId != null && profile!.patientId.isNotEmpty
           ? 'P-${profile.patientId.replaceAll(RegExp(r'[^A-Za-z0-9]'), '')}'
           : 'P-7A92F81C',
-      patientId: profile?.patientId ?? 'ASH-PT-1234',
+      patientId: profile?.patientId ?? '14-8832-4512-9018',
       name: profile?.name ?? 'Vikram Malhotra',
       phone: profile?.phoneNumber ?? '9876501234',
       bloodGroup: profile?.bloodGroup ?? 'B+',
@@ -175,9 +175,9 @@ class PatientQrSheets {
                   ),
                   const SizedBox(height: 8),
 
-                  // Status and ABHA
+                  // Status and Health ID
                   Text(
-                    '+91 ${patientRecord.phone} • ABHA Verified • ${patientRecord.bloodGroup}',
+                    '+91 ${patientRecord.phone} • Health ID Verified • ${patientRecord.bloodGroup}',
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

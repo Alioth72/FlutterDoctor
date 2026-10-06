@@ -156,7 +156,7 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
                     textCapitalization: TextCapitalization.characters,
                     decoration: InputDecoration(
                       labelText: lang.tr('member_patient_id'),
-                      hintText: 'e.g. ASH-PT-4512',
+                      hintText: 'e.g. 14-4512-8821-9012',
                       prefixIcon: const Icon(Icons.badge_outlined),
                       prefixText: 'ID: ',
                       filled: true,
@@ -335,7 +335,7 @@ class _FamilyDataScreenState extends State<FamilyDataScreen> {
     final provider = Provider.of<HealthProfileProvider>(context);
     final lang = Provider.of<LanguageProvider>(context);
     final profile = provider.profile;
-    final myPatientId = profile?.patientId ?? 'ASH-PT-1001';
+    final myPatientId = profile?.patientId ?? '14-8832-4512-9018';
     final familyList = provider.familyMembers;
 
     return Scaffold(

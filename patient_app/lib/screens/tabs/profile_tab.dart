@@ -13,7 +13,7 @@ import '../../widgets/dynamic_translated_text.dart';
 import '../../widgets/patient_qr_sheets.dart';
 
 /// Premium, appealing Personal Health Profile Dashboard for Ashwini Patient App.
-/// Features a rich hero header, digital ABHA health pass, health vitals,
+/// Features a rich hero header, digital health pass, health vitals,
 /// offline visit QRs shortcut, family sync, and full profile editing.
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -279,7 +279,7 @@ class _ProfileTabState extends State<ProfileTab> {
     final age = profile?.age ?? 28;
     final gender = profile?.gender ?? 'Other';
     final phone = profile?.phoneNumber ?? '';
-    final mrn = profile?.tier2Data?['medical_record_number'] as String? ?? profile?.patientId ?? 'ASH-PT-1001';
+    final mrn = profile?.tier2Data?['medical_record_number'] as String? ?? profile?.patientId ?? '14-8832-4512-9018';
     final patientId = mrn;
     final residence = profile?.residenceType ?? 'Rural';
 
@@ -298,8 +298,8 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           const SizedBox(height: 16),
 
-          // 2. DIGITAL HEALTH SMART PASS (ABHA CARD)
-          _buildAbhaSmartPassCard(
+          // 2. DIGITAL HEALTH SMART PASS
+          _buildDigitalHealthPassCard(
             name: name,
             patientId: patientId,
             profile: profile,
@@ -442,7 +442,7 @@ class _ProfileTabState extends State<ProfileTab> {
 
                     // Patient ID Chip with Copy button
                     InkWell(
-                      onTap: () => _copyToClipboard(patientId, 'Patient ID'),
+                      onTap: () => _copyToClipboard(patientId, 'Health ID'),
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
@@ -564,9 +564,9 @@ class _ProfileTabState extends State<ProfileTab> {
   }
 
   // =========================================================================
-  // 2. DIGITAL HEALTH SMART PASS (ABHA CARD)
+  // 2. DIGITAL HEALTH SMART PASS
   // =========================================================================
-  Widget _buildAbhaSmartPassCard({
+  Widget _buildDigitalHealthPassCard({
     required String name,
     required String patientId,
     required HealthProfile? profile,
@@ -649,7 +649,7 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           const SizedBox(height: 14),
 
-          // Microchip & ABHA number
+          // Microchip & Health ID number
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -663,16 +663,16 @@ class _ProfileTabState extends State<ProfileTab> {
                     ),
                     const SizedBox(height: 3),
                     InkWell(
-                      onTap: () => _copyToClipboard('91-8765-0123-4567', 'ABHA ID'),
-                      child: const Row(
+                      onTap: () => _copyToClipboard(patientId, 'Health ID'),
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Flexible(
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                '91-8765-0123-4567',
-                                style: TextStyle(
+                                patientId,
+                                style: const TextStyle(
                                   fontSize: 16.5,
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white,
@@ -681,8 +681,8 @@ class _ProfileTabState extends State<ProfileTab> {
                               ),
                             ),
                           ),
-                          SizedBox(width: 6),
-                          Icon(Icons.copy_rounded, size: 13, color: Color(0xFFA78BFA)),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.copy_rounded, size: 13, color: Color(0xFFA78BFA)),
                         ],
                       ),
                     ),

@@ -16,6 +16,19 @@ class HealthProfile {
   /// (e.g. incomeGroup, category, state, chronicConditions, etc.)
   final Map<String, dynamic>? tier2Data;
 
+  /// Generates a standardized 14-digit Health ID in XX-XXXX-XXXX-XXXX format
+  /// based deterministically on the phone number or fallback seed.
+  static String formatDeterministicHealthId(String phone) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length >= 10) {
+      final ten = digits.substring(digits.length - 10);
+      final check = (ten.hashCode.abs() % 90 + 10).toString().padLeft(2, '0');
+      final raw14 = '91$ten$check';
+      return '${raw14.substring(0, 2)}-${raw14.substring(2, 6)}-${raw14.substring(6, 10)}-${raw14.substring(10, 14)}';
+    }
+    return '14-8832-4512-9018';
+  }
+
   HealthProfile({
     required this.name,
     required this.age,
@@ -27,10 +40,9 @@ class HealthProfile {
     this.residenceType = 'Rural',
     DateTime? createdAt,
     this.tier2Data,
-  })  : patientId = patientId ??
-            (phoneNumber.length >= 4
-                ? 'ASH-PT-${phoneNumber.substring(phoneNumber.length - 4)}'
-                : 'ASH-PT-1001'),
+  })  : patientId = (patientId != null && patientId.isNotEmpty && !patientId.startsWith('ASH-PT'))
+            ? patientId
+            : formatDeterministicHealthId(phoneNumber),
         createdAt = createdAt ?? DateTime.now();
 
   /// Create a copy with updated fields
@@ -102,7 +114,9 @@ class HealthProfile {
       age: (json['age'] as num?)?.toInt() ?? 25,
       gender: json['gender'] as String? ?? 'Other',
       phoneNumber: phone,
-      patientId: json['patientId'] as String?,
+      patientId: (json['patientId'] is String && (json['patientId'] as String).isNotEmpty && !(json['patientId'] as String).startsWith('ASH-PT'))
+          ? json['patientId'] as String
+          : formatDeterministicHealthId(phone),
       password: json['password'] as String?,
       location: json['location'] as String? ?? 'New Delhi, Delhi',
       residenceType: json['residenceType'] as String? ?? json['residence_type'] as String? ?? 'Rural',
