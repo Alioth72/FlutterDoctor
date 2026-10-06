@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import '../models/visit_record.dart';
 
 /// Abstract Visit Repository interface.
@@ -341,6 +343,46 @@ class LocalVisitRepository implements VisitRepository {
       return List.unmodifiable(_visits);
     }
     return _visits.map((v) => v.copyWith(patientRef: patientRef)).toList();
+  }
+
+  /// Sets or updates the active in-memory visits list (e.g. from backend database or JSON file)
+  void setVisits(List<VisitRecord> visits) {
+    if (visits.isNotEmpty) {
+      _visits.clear();
+      _visits.addAll(visits);
+    }
+  }
+
+  /// Saves the current visits list to a local JSON file on device storage
+  Future<void> saveVisitsToJsonFile(List<VisitRecord> visits, String filePath) async {
+    try {
+      final file = File(filePath);
+      final jsonList = visits.map((v) => v.toMap()).toList();
+      final jsonStr = jsonEncode(jsonList);
+      await file.writeAsString(jsonStr, flush: true);
+    } catch (_) {}
+  }
+
+  /// Loads visits from a local JSON file on device storage
+  Future<List<VisitRecord>> loadVisitsFromJsonFile(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (await file.exists()) {
+        final jsonStr = await file.readAsString();
+        final decoded = jsonDecode(jsonStr);
+        if (decoded is List) {
+          final loaded = decoded
+              .whereType<Map>()
+              .map((m) => VisitRecord.fromMap(m))
+              .toList();
+          if (loaded.isNotEmpty) {
+            setVisits(loaded);
+            return loaded;
+          }
+        }
+      }
+    } catch (_) {}
+    return List.unmodifiable(_visits);
   }
 
   @override

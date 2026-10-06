@@ -1,9 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:hrx_protocol/hrx_protocol.dart';
 import '../models/appointment.dart';
 import '../models/doctor.dart';
 import '../models/family_member.dart';
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import '../models/health_profile.dart';
 import 'storage_service.dart';
 
@@ -532,6 +535,91 @@ class PatientDatabaseService {
       debugPrint('[PatientDatabaseService] fetchMyPrescriptions error: $e');
     }
     return [];
+  }
+
+  /// Read-only endpoint: Fetch authenticated patient's past visits
+  /// GET /me/past-visits
+  Future<List<VisitRecord>> fetchMyPastVisits() async {
+    String? token = await _storageService.getAuthToken();
+    if (token == null || token.isEmpty) {
+      try {
+        final profile = await _storageService.getProfile();
+        final phone = profile?.phoneNumber.replaceAll(RegExp(r'[^0-9]'), '') ?? '8709098442';
+        await loginUser(
+          name: profile?.name ?? 'Sidharth Bharti',
+          phoneNumber: phone.isNotEmpty ? phone : '8709098442',
+          password: 'Patient@12345',
+        );
+        token = await _storageService.getAuthToken();
+      } catch (authErr) {
+        debugPrint('[PatientDatabaseService] Auto-auth for fetchMyPastVisits failed: $authErr');
+      }
+    }
+    if (token == null || token.isEmpty) return [];
+
+    try {
+      final url = Uri.parse('$apiBaseUrl/me/past-visits');
+      final response = await _httpClient.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(requestTimeout);
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final rawList = body['data'] is List ? body['data'] as List : [];
+        final parsed = <VisitRecord>[];
+        for (final item in rawList) {
+          if (item is Map) {
+            parsed.add(VisitRecord.fromMap(Map<String, dynamic>.from(item)));
+          }
+        }
+        return parsed;
+      }
+    } catch (e) {
+      debugPrint('[PatientDatabaseService] fetchMyPastVisits error: $e');
+    }
+    return [];
+  }
+
+  /// Fetches past visits from database, saves to local JSON file for offline emergency use,
+  /// or loads from the local JSON file when offline.
+  Future<List<VisitRecord>> getOrCachePastVisits() async {
+    String? localJsonPath;
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      localJsonPath = '${docDir.path}/offline_emergency_visits.json';
+    } catch (e) {
+      debugPrint('[PatientDatabaseService] Could not resolve documents directory: $e');
+    }
+
+    // Try fetching from online database
+    try {
+      final liveVisits = await fetchMyPastVisits();
+      if (liveVisits.isNotEmpty) {
+        LocalVisitRepository.instance.setVisits(liveVisits);
+        if (localJsonPath != null) {
+          await LocalVisitRepository.instance.saveVisitsToJsonFile(liveVisits, localJsonPath);
+          debugPrint('[PatientDatabaseService] Saved ${liveVisits.length} visits to JSON file: $localJsonPath');
+        }
+        return liveVisits;
+      }
+    } catch (e) {
+      debugPrint('[PatientDatabaseService] Error fetching live visits, falling back to JSON file: $e');
+    }
+
+    // Fallback: Read from local JSON file
+    if (localJsonPath != null) {
+      final cachedVisits = await LocalVisitRepository.instance.loadVisitsFromJsonFile(localJsonPath);
+      if (cachedVisits.isNotEmpty) {
+        debugPrint('[PatientDatabaseService] Loaded ${cachedVisits.length} visits from JSON file: $localJsonPath');
+        return cachedVisits;
+      }
+    }
+
+    return LocalVisitRepository.instance.getLastFiveVisits('');
   }
 
   /// Open Database Endpoint: Fetch Profile by phone number

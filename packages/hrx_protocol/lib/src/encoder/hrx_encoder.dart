@@ -66,4 +66,41 @@ class HrxEncoder {
       compressionRatio: compressionRatio,
     );
   }
+
+  /// Compresses and encodes the emergency history bundle (e.g. 5 past visits) into a scannable QR payload:
+  /// List of Distilled Visits -> JSON -> Built-in Deflate -> Base64Url -> 'HRX:HIST:' QR payload.
+  HrxEncodeResult encodeEmergencyHistoryBundle(List<VisitRecord> visits) {
+    final listToEncode = visits.map((v) => v.toJson()).toList();
+    final jsonStr = jsonEncode(listToEncode);
+    final originalBytes = utf8.encode(jsonStr);
+
+    final compressedBytes = zlib.encode(originalBytes);
+    final b64 = base64Url.encode(compressedBytes);
+    final qrPayload = '${HrxConstants.qrPrefixEmergencyHistory}$b64';
+
+    final originalSize = originalBytes.length;
+    final compressedSize = compressedBytes.length;
+    final finalPayloadSize = qrPayload.length;
+    final compressionRatio = originalSize > 0 ? (originalSize - compressedSize) / originalSize : 0.0;
+
+    int qrVersion = 12;
+    if (finalPayloadSize < 250) {
+      qrVersion = 10;
+    } else if (finalPayloadSize < 350) {
+      qrVersion = 12;
+    } else {
+      qrVersion = 14;
+    }
+
+    return HrxEncodeResult(
+      qrPayload: qrPayload,
+      qrVersion: qrVersion,
+      originalSize: originalSize,
+      compressedSize: compressedSize,
+      compressionAlgorithm: 'Deflate (Emergency Bundle)',
+      finalPayloadSize: finalPayloadSize,
+      payloadEncoding: 'Base64URL',
+      compressionRatio: compressionRatio,
+    );
+  }
 }

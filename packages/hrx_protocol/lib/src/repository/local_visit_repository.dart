@@ -1,8 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
 import '../models/visit_record.dart';
 
 class LocalVisitRepository {
   LocalVisitRepository._();
   static final LocalVisitRepository instance = LocalVisitRepository._();
+
+  final List<VisitRecord> _dynamicVisits = [];
 
   static final List<VisitRecord> demoVisits = [
     VisitRecord(
@@ -232,13 +236,54 @@ class LocalVisitRepository {
     ),
   ];
 
+  /// Sets or updates the active in-memory visits list (e.g. from backend database or JSON file)
+  void setVisits(List<VisitRecord> visits) {
+    if (visits.isNotEmpty) {
+      _dynamicVisits.clear();
+      _dynamicVisits.addAll(visits);
+    }
+  }
+
+  /// Saves the current visits list to a local JSON file on device storage
+  Future<void> saveVisitsToJsonFile(List<VisitRecord> visits, String filePath) async {
+    try {
+      final file = File(filePath);
+      final jsonList = visits.map((v) => v.toJson()).toList();
+      final jsonStr = jsonEncode(jsonList);
+      await file.writeAsString(jsonStr, flush: true);
+    } catch (_) {}
+  }
+
+  /// Loads visits from a local JSON file on device storage
+  Future<List<VisitRecord>> loadVisitsFromJsonFile(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (await file.exists()) {
+        final jsonStr = await file.readAsString();
+        final decoded = jsonDecode(jsonStr);
+        if (decoded is List) {
+          final loaded = decoded
+              .whereType<Map>()
+              .map((m) => VisitRecord.fromJson(Map<String, dynamic>.from(m)))
+              .toList();
+          if (loaded.isNotEmpty) {
+            setVisits(loaded);
+            return loaded;
+          }
+        }
+      }
+    } catch (_) {}
+    return _dynamicVisits.isNotEmpty ? _dynamicVisits : demoVisits;
+  }
+
   Future<List<VisitRecord>> getLastFiveVisits(String patientRef) async {
-    return demoVisits;
+    return _dynamicVisits.isNotEmpty ? _dynamicVisits : demoVisits;
   }
 
   Future<VisitRecord?> getVisitById(String visitId) async {
+    final list = _dynamicVisits.isNotEmpty ? _dynamicVisits : demoVisits;
     try {
-      return demoVisits.firstWhere((v) => v.visitId == visitId);
+      return list.firstWhere((v) => v.visitId == visitId);
     } catch (_) {
       return null;
     }

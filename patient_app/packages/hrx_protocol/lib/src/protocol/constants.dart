@@ -55,6 +55,9 @@ class HrxConstants {
   /// Prefix for built-in Deflate-compressed Base64Url Visit QR payloads
   static const String qrPrefixCompressedVisit = 'HRX:Z:';
 
+  /// Prefix for Emergency Multi-Visit History QR payloads (5 visits compressed)
+  static const String qrPrefixEmergencyHistory = 'HRX:HIST:';
+
   /// Standard error correction level
   static const String errorCorrectionLevel = 'M';
 }

@@ -161,11 +161,14 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
 
     // Check if HRX-compatible QR payload
     if (HrxDecoder.isHrxPayload(rawCode)) {
-      final isCompressed = rawCode.trim().startsWith(HrxConstants.qrPrefixCompressedVisit);
+      final isEmergency = rawCode.trim().startsWith(HrxConstants.qrPrefixEmergencyHistory);
+      final isCompressed = rawCode.trim().startsWith(HrxConstants.qrPrefixCompressedVisit) || isEmergency;
       await Future.delayed(const Duration(milliseconds: 80));
       setState(() {
         _scannerState = QrScannerState.validating;
-        _statusMessage = isCompressed ? 'Reading offline medical record...' : 'Verifying record integrity...';
+        _statusMessage = isEmergency
+            ? 'Decompressing offline emergency history bundle...'
+            : (isCompressed ? 'Reading offline medical record...' : 'Verifying record integrity...');
       });
 
       if (!isCompressed) {
@@ -183,12 +186,16 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
         HapticFeedback.mediumImpact();
         setState(() {
           _scannerState = QrScannerState.success;
-          _statusMessage = isCompressed
-              ? 'Offline visit record verified!'
-              : 'Medical record verified!';
+          _statusMessage = isEmergency
+              ? 'Emergency history (5 visits) decompressed!'
+              : (isCompressed ? 'Offline visit record verified!' : 'Medical record verified!');
         });
 
-        if (result.isPatient && result.patient != null) {
+        if (result.isEmergencyHistory && result.visits != null && result.visits!.isNotEmpty) {
+          if (mounted) {
+            _showEmergencyHistoryFoundSheet(result.visits!, result.metadata);
+          }
+        } else if (result.isPatient && result.patient != null) {
           final scannedPatient = result.patient!;
           // Look up cached records without replacing scanned patient details
           final cachedPatient = await LocalPatientRepository.instance.getPatient(scannedPatient.patientRef);
@@ -221,8 +228,14 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
         }
       }
     } else {
-      // Online or legacy appointment matching logic
-      await _decodeAndFetchPatient(rawCode);
+      final cleanCode = rawCode.trim();
+      final uuidRegex = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+      if (uuidRegex.hasMatch(cleanCode)) {
+        await _fetchAndShowDatabasePatient(cleanCode);
+      } else {
+        // Online or legacy appointment matching logic
+        await _decodeAndFetchPatient(rawCode);
+      }
     }
   }
 
@@ -439,6 +452,917 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
             child: const Text('Scan Again'),
           ),
         ],
+      ),
+    );
+  Future<void> _fetchAndShowDatabasePatient(String patientUuid) async {
+    setState(() {
+      _scannerState = QrScannerState.processing;
+      _statusMessage = 'Querying database for patient profile & past records...';
+    });
+
+    try {
+      final patientData = await ApiClient.getPatientById(patientUuid);
+      final pastVisits = await ApiClient.getPatientPastVisits(patientUuid);
+      final appts = await ApiClient.getAppointments(patientId: patientUuid);
+      final activeAppt = (appts != null && appts.isNotEmpty) ? appts.first : null;
+
+      if (!mounted) return;
+
+      setState(() {
+        _scannerState = QrScannerState.success;
+        _statusMessage = 'Patient records loaded from database!';
+      });
+
+      _showDatabasePatientFoundSheet(
+        patientUuid: patientUuid,
+        patientData: patientData,
+        pastVisits: pastVisits,
+        activeAppt: activeAppt,
+      );
+    } catch (e) {
+      debugPrint('Error fetching database patient $patientUuid: $e');
+      if (!mounted) return;
+      setState(() {
+        _scannerState = QrScannerState.error;
+        _statusMessage = 'Database lookup error.';
+      });
+      _showErrorDialog('Unable to query patient records for UUID: $patientUuid\n\n$e');
+    }
+  }
+
+  void _showDatabasePatientFoundSheet({
+    required String patientUuid,
+    required Map<String, dynamic>? patientData,
+    required List<Map<String, dynamic>> pastVisits,
+    AppointmentItem? activeAppt,
+  }) {
+    final name = patientData?['full_name']?.toString() ?? 'Patient (${patientUuid.length > 8 ? patientUuid.substring(0, 8) : patientUuid})';
+    final mrn = patientData?['medical_record_number']?.toString() ?? 'ABHA Linked';
+    final phone = patientData?['phone_e164']?.toString() ?? '';
+    final bloodGroup = patientData?['blood_group']?.toString() ?? 'O+';
+    final gender = patientData?['sex_at_birth']?.toString() ?? 'Male';
+
+    int age = 32;
+    if (patientData?['date_of_birth'] != null) {
+      try {
+        final dob = DateTime.parse(patientData!['date_of_birth'].toString());
+        final now = DateTime.now();
+        age = now.year - dob.year;
+        if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
+          age--;
+        }
+      } catch (_) {}
+    }
+
+    List<String> allergies = [];
+    if (patientData?['allergies'] is List) {
+      allergies = (patientData!['allergies'] as List).map((e) => e.toString()).toList();
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.92,
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Drag handle
+                Container(
+                  width: 42,
+                  height: 4.5,
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                ),
+                const SizedBox(height: 14),
+
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFECFDF5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.verified_rounded, color: Color(0xFF059669), size: 24),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Patient Identity Verified',
+                              style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold, color: Color(0xFF1E1B4B)),
+                            ),
+                            Text(
+                              'Database Linked • ${pastVisits.length} Past Records',
+                              style: const TextStyle(fontSize: 11.5, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close, color: Colors.grey, size: 22),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Scrollable Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Patient Profile Card
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFF5F3FF), Color(0xFFEDE9FE)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFDDD6FE)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      name,
+                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1E1B4B)),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF7C3AED),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      mrn,
+                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '$age yrs • $gender • Blood Group: $bloodGroup',
+                                style: const TextStyle(fontSize: 12.5, color: Color(0xFF475569), fontWeight: FontWeight.w600),
+                              ),
+                              if (phone.isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Phone: $phone',
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                              const SizedBox(height: 8),
+                              InkWell(
+                                onTap: () {
+                                  Clipboard.setData(ClipboardData(text: patientUuid));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Patient UUID copied to clipboard'),
+                                      duration: Duration(seconds: 2),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(6),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFC4B5FD)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.fingerprint_rounded, size: 14, color: Color(0xFF7C3AED)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'UUID: ${patientUuid.length > 12 ? "${patientUuid.substring(0, 8)}...${patientUuid.substring(patientUuid.length - 4)}" : patientUuid}',
+                                        style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: Color(0xFF5B21B6), fontWeight: FontWeight.w600),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Icon(Icons.copy_rounded, size: 12, color: Color(0xFF7C3AED)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Allergies warning if any
+                        if (allergies.isNotEmpty) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF2F2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFFECACA)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('KNOWN ALLERGIES', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF991B1B))),
+                                      Text(allergies.join(', '), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFDC2626))),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // Concise Past Visits Section Header
+                        Row(
+                          children: [
+                            const Icon(Icons.dns_rounded, size: 16, color: Color(0xFF7C3AED)),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'CONCISE PAST VISITS (DATABASE STORED)',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF475569),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEDE9FE),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${pastVisits.length} Records',
+                                style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        if (pastVisits.isEmpty) ...[
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: const Center(
+                              child: Text(
+                                'No prior visit records found in database.',
+                                style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          for (int idx = 0; idx < pastVisits.length; idx++) ...[
+                            _buildDatabaseVisitCard(pastVisits[idx], idx + 1),
+                            const SizedBox(height: 8),
+                          ],
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Bottom Action Button
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _startConsultationWithPatient(
+                        patientUuid: patientUuid,
+                        patientData: patientData,
+                        pastVisits: pastVisits,
+                        activeAppt: activeAppt,
+                        age: age,
+                        gender: gender,
+                        bloodGroup: bloodGroup,
+                        phone: phone,
+                        allergies: allergies,
+                      );
+                    },
+                    icon: const Icon(Icons.medical_services_rounded, size: 18),
+                    label: const Text('Start OPD Consultation / Open File'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF7C3AED),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    ).whenComplete(_resumeScanning);
+  }
+
+  Widget _buildDatabaseVisitCard(Map<String, dynamic> visit, int visitNum) {
+    final date = visit['date']?.toString() ?? 'Recent';
+    final doctor = visit['doctor_name']?.toString() ?? 'Attending Doctor';
+    final facility = visit['facility']?.toString() ?? 'Ashwini Hospital';
+    final diagnosis = visit['diagnosis']?.toString() ?? 'Clinical Consultation';
+    final advice = visit['advice']?.toString();
+    final vitals = visit['vitals'] is Map ? visit['vitals'] as Map : {};
+    final prescriptions = visit['prescriptions'] is List ? visit['prescriptions'] as List : [];
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C3AED),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'Visit $visitNum',
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    date,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                  ),
+                ],
+              ),
+              Text(
+                facility,
+                style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            doctor,
+            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDE9FE),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              diagnosis,
+              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF6D28D9)),
+            ),
+          ),
+          if (vitals.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: vitals.entries.map((e) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: Text(
+                    '${e.key.toString().toUpperCase()}: ${e.value}',
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+          if (prescriptions.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: prescriptions.take(2).map((rx) {
+                final rxMap = rx is Map ? rx : {};
+                final name = rxMap['name'] ?? rxMap['medication_name'] ?? 'Medication';
+                final dose = rxMap['dosage'] ?? '1-0-1';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.medication_rounded, size: 12, color: Color(0xFF7C3AED)),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          '$name ($dose)',
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF334155)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+          if (advice != null && advice.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Advice: $advice',
+              style: const TextStyle(fontSize: 10.5, fontStyle: FontStyle.italic, color: Color(0xFF64748B)),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showEmergencyHistoryFoundSheet(List<VisitRecord> visits, Map<String, dynamic> metadata) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          final allAllergies = visits.expand((v) => v.allergies).toSet().toList();
+          final patientRef = visits.isNotEmpty ? visits.first.patientRef : 'Unknown';
+
+          return Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.92,
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Drag handle
+                Container(
+                  width: 42,
+                  height: 4.5,
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                ),
+                const SizedBox(height: 14),
+
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFEF2F2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.emergency_rounded, color: Color(0xFFDC2626), size: 24),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Emergency Clinical History',
+                              style: TextStyle(
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF991B1B),
+                              ),
+                            ),
+                            Text(
+                              'Offline Restored • ${visits.length} Past Visits (${metadata["compressedSize"] ?? "Deflate"})',
+                              style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close, color: Colors.grey, size: 22),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Scrollable Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Verification banner
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFFECACA)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.offline_bolt_rounded, size: 18, color: Color(0xFFDC2626)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'OFFLINE EMERGENCY TRIAGE READY',
+                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF991B1B)),
+                                    ),
+                                    Text(
+                                      'Patient Ref: $patientRef • All 5 records decompressed locally without internet.',
+                                      style: const TextStyle(fontSize: 10.5, color: Color(0xFF7F1D1D)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Critical Allergies if any
+                        if (allAllergies.isNotEmpty) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('KNOWN ALLERGIES IN EMERGENCY BUNDLE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF92400E))),
+                                      Text(allAllergies.join(', '), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFB45309))),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+
+                        // Section Title
+                        Row(
+                          children: [
+                            const Icon(Icons.history_edu_rounded, size: 16, color: Color(0xFFDC2626)),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'LAST 5 VISITS (CHRONOLOGICAL TIMELINE)',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF475569),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEE2E2),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${visits.length} / 5',
+                                style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFFDC2626)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        for (int i = 0; i < visits.length; i++) ...[
+                          _buildEmergencyVisitCard(visits[i], i + 1),
+                          const SizedBox(height: 8),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Bottom Action Button
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _startEmergencyConsultationWithVisits(visits);
+                    },
+                    icon: const Icon(Icons.emergency_rounded, size: 18),
+                    label: const Text('Start Emergency Consultation / Triage'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFDC2626),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    ).whenComplete(_resumeScanning);
+  }
+
+  Widget _buildEmergencyVisitCard(VisitRecord visit, int visitNum) {
+    final date = visit.timestamp.split('T').first;
+    final doctor = visit.doctorName.isNotEmpty ? visit.doctorName : 'Attending Doctor';
+    final facility = visit.facilityName.isNotEmpty ? visit.facilityName : 'Hospital Clinic';
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: visitNum == 1 ? const Color(0xFFDC2626) : const Color(0xFF64748B),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'Visit $visitNum${visitNum == 1 ? " (Latest)" : ""}',
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    date,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                  ),
+                ],
+              ),
+              Text(
+                facility,
+                style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            doctor,
+            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+          ),
+          if (visit.diagnosis.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: visit.diagnosis.map((d) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFFECACA)),
+                  ),
+                  child: Text(
+                    '${d.name}${d.code.isNotEmpty ? " (${d.code})" : ""}',
+                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF991B1B)),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+          if (visit.vitals.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: visit.vitals.entries.map((e) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: Text(
+                    '${e.key.replaceAll('_', ' ').toUpperCase()}: ${e.value}',
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+          if (visit.medications.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: visit.medications.take(3).map((m) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.medication_rounded, size: 12, color: Color(0xFFDC2626)),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          '${m.name} ${m.strength} • ${m.dose} (${m.frequency})',
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF334155)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+          if (visit.notes.isNotEmpty || visit.advice.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              visit.notes.isNotEmpty ? 'Note: ${visit.notes}' : 'Advice: ${visit.advice.join(", ")}',
+              style: const TextStyle(fontSize: 10.5, fontStyle: FontStyle.italic, color: Color(0xFF64748B)),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _startConsultationWithPatient({
+    required String patientUuid,
+    required Map<String, dynamic>? patientData,
+    required List<Map<String, dynamic>> pastVisits,
+    AppointmentItem? activeAppt,
+    required int age,
+    required String gender,
+    required String bloodGroup,
+    required String phone,
+    required List<String> allergies,
+  }) {
+    final apptItem = AppointmentItem(
+      id: activeAppt?.id ?? 'OPD-${DateTime.now().millisecondsSinceEpoch % 10000}',
+      appointmentNo: activeAppt?.appointmentNo ?? 'APT-${patientUuid.length > 8 ? patientUuid.substring(0, 8).toUpperCase() : patientUuid.toUpperCase()}',
+      patientName: patientData?['full_name']?.toString() ?? 'Patient (${patientUuid.length > 8 ? patientUuid.substring(0, 8) : patientUuid})',
+      patientId: patientUuid,
+      medicalRecordNumber: patientData?['medical_record_number']?.toString() ?? patientUuid,
+      bloodGroup: bloodGroup,
+      patientPhone: phone,
+      age: age,
+      gender: gender,
+      timing: activeAppt?.timing ?? 'Live QR Check-in',
+      paymentStatus: activeAppt?.paymentStatus ?? 'Hospital OPD Verified',
+      isPaid: activeAppt?.isPaid ?? true,
+      mode: AppointmentMode.qr,
+      patientHistory: [
+        if (allergies.isNotEmpty) 'Allergies: ${allergies.join(", ")}',
+        for (final pv in pastVisits)
+          if (pv['diagnosis'] != null) '${pv['date'] ?? "Past"}: ${pv['diagnosis']}',
+      ],
+      heightCm: 170.0,
+      weightKg: 70.0,
+      familyHistory: 'Profile linked from Cloud EHR',
+      diagnosis: (pastVisits.isNotEmpty && pastVisits.first['diagnosis'] != null)
+          ? pastVisits.first['diagnosis'].toString()
+          : 'OPD Clinical Consultation',
+      medicines: (pastVisits.isNotEmpty && pastVisits.first['prescriptions'] is List)
+          ? (pastVisits.first['prescriptions'] as List).map<MedicineItem>((rx) {
+              final rxMap = rx is Map ? rx : {};
+              return MedicineItem(
+                name: rxMap['name']?.toString() ?? rxMap['medication_name']?.toString() ?? 'Medication',
+                dosage: rxMap['dosage']?.toString() ?? '1-0-1',
+                duration: rxMap['duration']?.toString() ?? '5 Days',
+                closestClinic: rxMap['closestClinic']?.toString() ?? rxMap['closest_clinic']?.toString() ?? 'Ashwini Pharmacy',
+              );
+            }).toList()
+          : [],
+      isAdmitted: false,
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AppointmentDetailScreen(appointment: apptItem),
+      ),
+    );
+  }
+
+  void _startEmergencyConsultationWithVisits(List<VisitRecord> visits) {
+    if (visits.isEmpty) return;
+    final first = visits.first;
+    final allAllergies = visits.expand((v) => v.allergies).toSet().toList();
+
+    final emergencyAppt = AppointmentItem(
+      id: 'EMR-${DateTime.now().millisecondsSinceEpoch % 10000}',
+      appointmentNo: 'EMR-${first.patientRef}',
+      patientName: 'Emergency Patient (${first.patientRef})',
+      patientId: first.patientRef,
+      medicalRecordNumber: first.patientRef,
+      bloodGroup: 'Emergency Profile',
+      patientPhone: '',
+      age: 40,
+      gender: 'Patient',
+      timing: 'Immediate Emergency Triage',
+      paymentStatus: 'Emergency Admission',
+      isPaid: true,
+      mode: AppointmentMode.qr,
+      patientHistory: [
+        if (allAllergies.isNotEmpty) 'Known Allergies: ${allAllergies.join(", ")}',
+        for (final v in visits)
+          if (v.diagnosis.isNotEmpty) '${v.timestamp.split("T").first}: ${v.diagnosis.first.name}',
+      ],
+      heightCm: 170.0,
+      weightKg: 70.0,
+      familyHistory: 'Offline Emergency Bundle Restored',
+      diagnosis: first.diagnosis.isNotEmpty ? first.diagnosis.first.name : 'Emergency Triage',
+      medicines: first.medications.map((m) {
+        return MedicineItem(
+          name: '${m.name} ${m.strength}',
+          dosage: '${m.dose} (${m.frequency})',
+          duration: '${m.duration} ${m.durationUnit}',
+          closestClinic: first.facilityName.isNotEmpty ? first.facilityName : 'Emergency Pharmacy',
+          instructions: m.instructions,
+        );
+      }).toList(),
+      isAdmitted: true,
+      allergies: allAllergies,
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AppointmentDetailScreen(appointment: emergencyAppt),
       ),
     );
   }
@@ -1285,6 +2209,42 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
               style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
             ),
             const SizedBox(height: 14),
+
+            // Database Patient UUID Check-in QR
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFDCFCE7),
+                child: Icon(Icons.qr_code_2_rounded, color: Color(0xFF16A34A)),
+              ),
+              title: const Text('Live Patient UUID QR (Database Linked)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+              subtitle: const Text('UUID: b0843210-91ab-4ef1-bb74-001928475002 • 5 DB Visits', style: TextStyle(fontSize: 11)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              tileColor: const Color(0xFFF0FDF4),
+              onTap: () {
+                Navigator.pop(ctx);
+                _processScannedCode('b0843210-91ab-4ef1-bb74-001928475002');
+              },
+            ),
+            const SizedBox(height: 8),
+
+            // Emergency History Bundle (All 5 Visits Compressed)
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFFEE2E2),
+                child: Icon(Icons.emergency_rounded, color: Color(0xFFDC2626)),
+              ),
+              title: const Text('Emergency History Bundle (5 Visits Offline)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+              subtitle: const Text('HRX:HIST: Deflate Compressed • Instant Triage', style: TextStyle(fontSize: 11)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              tileColor: const Color(0xFFFEF2F2),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final visits = await LocalVisitRepository.instance.getLastFiveVisits('P-7A92F81C');
+                final bundleQr = HrxEncoder().encodeEmergencyHistoryBundle(visits);
+                _processScannedCode(bundleQr);
+              },
+            ),
+            const SizedBox(height: 8),
 
             // Option 1: Patient Identity QR
             ListTile(

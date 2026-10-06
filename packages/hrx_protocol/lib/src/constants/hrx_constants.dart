@@ -7,6 +7,7 @@ class HrxConstants {
   // QR String Prefixes
   static const String qrPrefixPatient = 'HRX:P:';
   static const String qrPrefixCompressedVisit = 'HRX:Z:';
+  static const String qrPrefixEmergencyHistory = 'HRX:HIST:';
   static const String qrPrefixVisit = 'HRX:V:';
   static const String qrPrefixEncrypted = 'HRX:E:';
 

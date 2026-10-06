@@ -1075,5 +1075,47 @@ class ApiClient {
     }
     return [];
   }
+
+  // ==========================================================
+  // GET PATIENT BY ID (GET /api/patients/{id})
+  // ==========================================================
+  static Future<Map<String, dynamic>?> getPatientById(String patientId) async {
+    try {
+      final uri = Uri.parse('$baseUrl/patients/$patientId');
+      final headers = await _headers();
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] is Map) {
+          return Map<String, dynamic>.from(data['data']);
+        }
+      }
+    } catch (e) {
+      debugPrint('ApiClient.getPatientById error: $e');
+    }
+    return null;
+  }
+
+  // ==========================================================
+  // GET PATIENT PAST VISITS (GET /api/patients/{id}/past-visits)
+  // ==========================================================
+  static Future<List<Map<String, dynamic>>> getPatientPastVisits(String patientId) async {
+    try {
+      final uri = Uri.parse('$baseUrl/patients/$patientId/past-visits');
+      final headers = await _headers();
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] is List) {
+          return List<Map<String, dynamic>>.from(data['data']);
+        }
+      }
+    } catch (e) {
+      debugPrint('ApiClient.getPatientPastVisits error: $e');
+    }
+    return [];
+  }
 }
 

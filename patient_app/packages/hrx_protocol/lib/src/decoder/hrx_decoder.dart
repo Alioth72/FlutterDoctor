@@ -14,6 +14,7 @@ import '../serialization/base45.dart';
 enum HrxDecodeType {
   patient,
   visit,
+  emergencyHistory,
 }
 
 class HrxDecodeResult {
@@ -21,6 +22,7 @@ class HrxDecodeResult {
   final HrxDecodeType? type;
   final PatientRecord? patient;
   final VisitRecord? visit;
+  final List<VisitRecord>? visits;
   final Map<String, dynamic> metadata;
   final String? errorMessage;
   final HrxErrorCode? errorCode;
@@ -30,6 +32,7 @@ class HrxDecodeResult {
     this.type,
     this.patient,
     this.visit,
+    this.visits,
     this.metadata = const {},
     this.errorMessage,
     this.errorCode,
@@ -59,6 +62,19 @@ class HrxDecodeResult {
     );
   }
 
+  factory HrxDecodeResult.emergencyHistorySuccess(
+    List<VisitRecord> visits, {
+    Map<String, dynamic> metadata = const {},
+  }) {
+    return HrxDecodeResult(
+      success: true,
+      type: HrxDecodeType.emergencyHistory,
+      visits: visits,
+      visit: visits.isNotEmpty ? visits.first : null,
+      metadata: metadata,
+    );
+  }
+
   factory HrxDecodeResult.failure(HrxException exception) {
     return HrxDecodeResult(
       success: false,
@@ -70,10 +86,12 @@ class HrxDecodeResult {
 
   bool get isPatient => type == HrxDecodeType.patient;
   bool get isVisit => type == HrxDecodeType.visit;
+  bool get isEmergencyHistory =>
+      type == HrxDecodeType.emergencyHistory || (visits != null && visits!.isNotEmpty);
 
   @override
   String toString() => success
-      ? 'HrxDecodeResult(success: true, type: $type, metadata: $metadata)'
+      ? 'HrxDecodeResult(success: true, type: $type, visits: ${visits?.length}, metadata: $metadata)'
       : 'HrxDecodeResult(success: false, error: $errorCode: $errorMessage)';
 }
 
@@ -90,6 +108,9 @@ class HrxDecoder {
     if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length > 2) {
       trimmed = trimmed.substring(1, trimmed.length - 1).trim();
     }
+    if (trimmed.startsWith(HrxConstants.qrPrefixEmergencyHistory)) return true;
+    if (trimmed.startsWith(HrxConstants.qrPrefixCompressedVisit)) return true;
+    if (trimmed.startsWith(HrxConstants.qrPrefixPatient)) return true;
     if (trimmed.startsWith(HrxConstants.qrPrefix)) return true;
     if (trimmed.startsWith('{') &&
         (trimmed.contains('"protocol"') || trimmed.contains("'protocol'")) &&
@@ -105,6 +126,12 @@ class HrxDecoder {
       var trimmed = rawCode.trim();
       if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length > 2) {
         trimmed = trimmed.substring(1, trimmed.length - 1).trim();
+      }
+
+      // Case 0: Emergency Multi-Visit History QR ('HRX:HIST:...')
+      if (trimmed.startsWith(HrxConstants.qrPrefixEmergencyHistory)) {
+        final base64Payload = trimmed.substring(HrxConstants.qrPrefixEmergencyHistory.length);
+        return _decodeEmergencyHistory(base64Payload);
       }
 
       // Case 1: High-density pipe-delimited Compact Patient QR ('HRX:P|1|...')
@@ -243,6 +270,46 @@ class HrxDecoder {
       final jsonString = utf8.decode(decompressedBytes, allowMalformed: true);
       final decoded = jsonDecode(jsonString);
 
+      if (decoded is List) {
+        final visitList = decoded
+            .whereType<Map>()
+            .map((m) => VisitRecord.fromMap(m))
+            .toList();
+        return HrxDecodeResult.emergencyHistorySuccess(
+          visitList,
+          metadata: {
+            'protocol': HrxConstants.magicString,
+            'version': HrxConstants.protocolVersion,
+            'format': 'DEFLATE_BASE64URL_BUNDLE',
+            'type': 'EMERGENCY_HISTORY',
+            'verified': true,
+            'count': visitList.length,
+            'compressed_size': compressedBytes.length,
+            'decompressed_size': decompressedBytes.length,
+          },
+        );
+      }
+
+      if (decoded is Map && decoded['visits'] is List) {
+        final visitList = (decoded['visits'] as List)
+            .whereType<Map>()
+            .map((m) => VisitRecord.fromMap(m))
+            .toList();
+        return HrxDecodeResult.emergencyHistorySuccess(
+          visitList,
+          metadata: {
+            'protocol': HrxConstants.magicString,
+            'version': HrxConstants.protocolVersion,
+            'format': 'DEFLATE_BASE64URL_BUNDLE',
+            'type': 'EMERGENCY_HISTORY',
+            'verified': true,
+            'count': visitList.length,
+            'compressed_size': compressedBytes.length,
+            'decompressed_size': decompressedBytes.length,
+          },
+        );
+      }
+
       if (decoded is! Map) {
         throw HrxException(
           code: HrxErrorCode.deserializationFailure,
@@ -269,6 +336,88 @@ class HrxDecoder {
       throw HrxException(
         code: HrxErrorCode.deserializationFailure,
         message: 'Failed to decompress and parse visit record: $e',
+      );
+    }
+  }
+
+  HrxDecodeResult _decodeEmergencyHistory(String rawPayload) {
+    try {
+      var clean = rawPayload.trim();
+      if (clean.startsWith('"') && clean.endsWith('"') && clean.length > 2) {
+        clean = clean.substring(1, clean.length - 1).trim();
+      }
+      if (clean.startsWith(HrxConstants.qrPrefixEmergencyHistory)) {
+        clean = clean.substring(HrxConstants.qrPrefixEmergencyHistory.length);
+      }
+      clean = clean.replaceAll(RegExp(r'\s+'), '');
+
+      final remainder = clean.length % 4;
+      if (remainder > 0) {
+        clean += '=' * (4 - remainder);
+      }
+
+      Uint8List compressedBytes;
+      try {
+        compressedBytes = base64Url.decode(clean);
+      } catch (_) {
+        try {
+          final stdB64 = clean.replaceAll('-', '+').replaceAll('_', '/');
+          compressedBytes = base64.decode(stdB64);
+        } catch (_) {
+          try {
+            compressedBytes = base64.decode(clean);
+          } catch (_) {
+            if (clean.startsWith('{') || clean.startsWith('[')) {
+              compressedBytes = Uint8List.fromList(utf8.encode(clean));
+            } else {
+              throw HrxException(
+                code: HrxErrorCode.deserializationFailure,
+                message: 'Invalid Base64 payload in emergency history QR.',
+              );
+            }
+          }
+        }
+      }
+
+      final decompressedBytes = HrxDeflateCompressor.decompress(compressedBytes);
+      final jsonString = utf8.decode(decompressedBytes, allowMalformed: true);
+      final decoded = jsonDecode(jsonString);
+
+      List<VisitRecord> visitList = [];
+      if (decoded is List) {
+        visitList = decoded.whereType<Map>().map((m) => VisitRecord.fromMap(m)).toList();
+      } else if (decoded is Map && decoded['visits'] is List) {
+        visitList = (decoded['visits'] as List).whereType<Map>().map((m) => VisitRecord.fromMap(m)).toList();
+      } else if (decoded is Map) {
+        visitList = [VisitRecord.fromMap(decoded)];
+      }
+
+      if (visitList.isEmpty) {
+        throw HrxException(
+          code: HrxErrorCode.deserializationFailure,
+          message: 'No visit records found in emergency history payload.',
+        );
+      }
+
+      return HrxDecodeResult.emergencyHistorySuccess(
+        visitList,
+        metadata: {
+          'protocol': HrxConstants.magicString,
+          'version': HrxConstants.protocolVersion,
+          'format': 'DEFLATE_BASE64URL_HISTORY',
+          'type': 'EMERGENCY_HISTORY',
+          'verified': true,
+          'count': visitList.length,
+          'compressed_size': compressedBytes.length,
+          'decompressed_size': decompressedBytes.length,
+        },
+      );
+    } on HrxException catch (_) {
+      rethrow;
+    } catch (e) {
+      throw HrxException(
+        code: HrxErrorCode.deserializationFailure,
+        message: 'Failed to decompress and parse emergency history: $e',
       );
     }
   }

@@ -10,6 +10,7 @@ class HrxDecoder {
   static bool isHrxPayload(String rawCode) {
     final trimmed = rawCode.trim();
     return trimmed.startsWith('HRX:') ||
+        trimmed.startsWith(HrxConstants.qrPrefixEmergencyHistory) ||
         trimmed.startsWith(HrxConstants.qrPrefixCompressedVisit) ||
         trimmed.startsWith(HrxConstants.qrPrefixPatient) ||
         trimmed.startsWith(HrxConstants.qrPrefixVisit) ||
@@ -21,6 +22,36 @@ class HrxDecoder {
     final trimmed = rawCode.trim();
 
     try {
+      // 0. Emergency History QR (HRX:HIST:)
+      if (trimmed.startsWith(HrxConstants.qrPrefixEmergencyHistory)) {
+        final b64 = trimmed.substring(HrxConstants.qrPrefixEmergencyHistory.length);
+        final compressedBytes = base64Url.decode(base64Url.normalize(b64));
+        final decompressedBytes = zlib.decode(compressedBytes);
+        final jsonStr = utf8.decode(decompressedBytes);
+        final decoded = jsonDecode(jsonStr);
+        List<VisitRecord> list = [];
+        if (decoded is List) {
+          list = decoded.whereType<Map<String, dynamic>>().map((m) => VisitRecord.fromJson(m)).toList();
+        } else if (decoded is Map<String, dynamic>) {
+          list = [VisitRecord.fromJson(decoded)];
+        }
+        return HrxDecodeResult(
+          success: true,
+          isEmergencyHistory: true,
+          visits: list,
+          visit: list.isNotEmpty ? list.first : null,
+          metadata: {
+            'format': 'DEFLATE_BASE64URL_HIST',
+            'algorithm': 'Deflate',
+            'encoding': 'Base64URL',
+            'compressedSize': '${compressedBytes.length} bytes',
+            'count': list.length,
+            'protocol': 'HRX v1',
+            'source': 'Emergency History Bundle',
+          },
+        );
+      }
+
       // 1. Patient Identity QR (HRX:P:)
       if (trimmed.startsWith(HrxConstants.qrPrefixPatient)) {
         final b64 = trimmed.substring(HrxConstants.qrPrefixPatient.length);
@@ -57,7 +88,26 @@ class HrxDecoder {
         final compressedBytes = base64Url.decode(base64Url.normalize(b64));
         final decompressedBytes = zlib.decode(compressedBytes);
         final jsonStr = utf8.decode(decompressedBytes);
-        final Map<String, dynamic> map = jsonDecode(jsonStr);
+        final decoded = jsonDecode(jsonStr);
+
+        if (decoded is List) {
+          final list = decoded.whereType<Map<String, dynamic>>().map((m) => VisitRecord.fromJson(m)).toList();
+          return HrxDecodeResult(
+            success: true,
+            isEmergencyHistory: true,
+            visits: list,
+            visit: list.isNotEmpty ? list.first : null,
+            metadata: {
+              'format': 'DEFLATE_BASE64URL_BUNDLE',
+              'algorithm': 'Deflate',
+              'encoding': 'Base64URL',
+              'count': list.length,
+              'protocol': 'HRX v1',
+            },
+          );
+        }
+
+        final Map<String, dynamic> map = decoded as Map<String, dynamic>;
         final visit = VisitRecord.fromJson(map);
 
         return HrxDecodeResult(

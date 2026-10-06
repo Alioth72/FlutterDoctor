@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hrx_protocol/hrx_protocol.dart';
 import '../models/health_profile.dart';
+import '../services/patient_database_service.dart';
 import 'dynamic_translated_text.dart';
 
 /// Modal sheets for displaying Patient Identity QR and Offline Visit QRs.
@@ -9,11 +10,15 @@ class PatientQrSheets {
   PatientQrSheets._();
 
   /// Shows the primary Patient Digital Health Identity QR modal.
+  /// Requirement 2: Generates a simple QR which simply contains the UUID of the patient
+  /// for the doctor to scan for offline visits.
   static void showPatientIdentityQrModal(BuildContext context, HealthProfile? profile) {
+    final patientUuid = (profile?.backendPatientId != null && profile!.backendPatientId!.isNotEmpty)
+        ? profile.backendPatientId!
+        : (profile?.tier2Data?['patient_uuid'] as String? ?? 'b0843210-91ab-4ef1-bb74-001928475002');
+
     final patientRecord = PatientRecord(
-      patientRef: profile?.patientId != null && profile!.patientId.isNotEmpty
-          ? 'P-${profile.patientId.replaceAll(RegExp(r'[^A-Za-z0-9]'), '')}'
-          : 'P-7A92F81C',
+      patientRef: patientUuid,
       patientId: (profile?.hasHealthId == true) ? profile!.patientId : '',
       name: profile?.name ?? 'Vikram Malhotra',
       phone: profile?.phoneNumber ?? '9876501234',
@@ -22,7 +27,8 @@ class PatientQrSheets {
       dateOfBirth: profile?.dateOfBirth ?? '1984-06-15',
     );
 
-    final qrPayload = HrxEncoder().encodePatientQr(patientRecord, compact: true);
+    // Simple QR directly encodes the patient's PostgreSQL UUID for offline doctor visits
+    final qrPayload = patientUuid;
 
     showModalBottomSheet(
       context: context,
@@ -180,6 +186,34 @@ class PatientQrSheets {
                     const SizedBox(height: 4),
                   const SizedBox(height: 8),
 
+                  // Patient UUID Chip (for offline doctor scan)
+                  Container(
+                    margin: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F3FF),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFDDD6FE)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.qr_code_rounded, size: 13, color: Color(0xFF7C3AED)),
+                        const SizedBox(width: 5),
+                        Text(
+                          'UUID: $patientUuid',
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF6D28D9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
                   // Status and Health ID
                   Text(
                     '+91 ${patientRecord.phone}${patientRecord.patientId.isNotEmpty ? ' • Health ID Verified' : ''} • ${patientRecord.bloodGroup}',
@@ -205,7 +239,7 @@ class PatientQrSheets {
                         Icon(Icons.verified_rounded, size: 14, color: Color(0xFF059669)),
                         SizedBox(width: 4),
                         Text(
-                          'Verified Health ID • Scannable Offline',
+                          'Offline Patient UUID • Instant Clinic Check-in',
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
                         ),
                       ],
@@ -217,7 +251,7 @@ class PatientQrSheets {
             const SizedBox(height: 16),
 
             const Text(
-              'Show this QR code at hospital reception desk or to your doctor for instantaneous check-in and records lookup.',
+              'Show this simple QR code at clinic reception or to your doctor. Scans your Patient UUID directly for offline visits & instant medical records lookup.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
@@ -264,9 +298,9 @@ class PatientQrSheets {
     );
   }
 
-  /// Displays the 5 offline Visit QRs with full clinical reconstruction and diagnostics.
+  /// Displays the 5 offline Emergency Visit QRs saved in a local JSON file and Deflate-compressed.
   static void showOfflineVisitsQrModal(BuildContext context, HealthProfile? profile) {
-    int selectedIndex = 0;
+    int selectedIndex = 0; // 0 = Emergency Bundle (All 5 Visits), 1..5 = Individual visits
 
     showModalBottomSheet(
       context: context,
@@ -274,13 +308,11 @@ class PatientQrSheets {
       backgroundColor: Colors.transparent,
       builder: (modalCtx) => StatefulBuilder(
         builder: (ctx, setModalState) {
-          final patientRef = profile?.patientId != null && profile!.patientId.isNotEmpty
-              ? 'P-${profile.patientId.replaceAll(RegExp(r'[^A-Za-z0-9]'), '')}'
-              : 'P-7A92F81C';
-          final visits = LocalVisitRepository.instance.getLastFiveVisits(patientRef);
+          // Requirement 1 & 3: Load the patient's concise past visits from database or local JSON file
+          final visitsFuture = PatientDatabaseService().getOrCachePastVisits();
 
           return FutureBuilder<List<VisitRecord>>(
-            future: visits,
+            future: visitsFuture,
             builder: (context, snapshot) {
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return Container(
@@ -289,15 +321,33 @@ class PatientQrSheets {
                     color: Colors.white,
                     borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                   ),
-                  child: const Center(child: CircularProgressIndicator(color: Color(0xFF7C3AED))),
+                  child: const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Color(0xFF7C3AED)),
+                        SizedBox(height: 12),
+                        Text(
+                          'Loading medical history from database & JSON cache...',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               }
 
               final visitList = snapshot.data!;
-              final currentVisit = visitList[selectedIndex.clamp(0, visitList.length - 1)];
+              final isBundle = selectedIndex == 0;
+              final currentVisit = isBundle
+                  ? visitList.first
+                  : visitList[(selectedIndex - 1).clamp(0, visitList.length - 1)];
 
-              // Encode through direct built-in Deflate compression pipeline for maximum camera scannability
-              final encodeResult = HrxEncoder().encodeCompactVisitQr(currentVisit);
+              // Requirement 3: Emergency History QR carries the last 5 visits data,
+              // saved in a JSON file and Deflate compressed.
+              final encodeResult = isBundle
+                  ? HrxEncoder().encodeEmergencyHistoryBundle(visitList)
+                  : HrxEncoder().encodeCompactVisitQr(currentVisit);
 
               return Container(
                 constraints: BoxConstraints(
@@ -331,22 +381,30 @@ class PatientQrSheets {
                             Container(
                               padding: const EdgeInsets.all(7),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEDE9FE),
+                                color: isBundle ? const Color(0xFFFEE2E2) : const Color(0xFFEDE9FE),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF7C3AED), size: 22),
+                              child: Icon(
+                                isBundle ? Icons.emergency_rounded : Icons.qr_code_scanner_rounded,
+                                color: isBundle ? const Color(0xFFDC2626) : const Color(0xFF7C3AED),
+                                size: 22,
+                              ),
                             ),
                             const SizedBox(width: 10),
-                            const Column(
+                            Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Offline Doctor Visit QRs',
-                                  style: TextStyle(
+                                  isBundle ? 'Emergency Past History QR' : 'Offline Doctor Visit QR',
+                                  style: const TextStyle(
                                     fontSize: 16.5,
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFF1E1B4B),
                                   ),
+                                ),
+                                const Text(
+                                  'Database Synced • Deflate Compressed from JSON',
+                                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                                 ),
                               ],
                             ),
@@ -362,36 +420,35 @@ class PatientQrSheets {
                     ),
                     const SizedBox(height: 14),
 
-                    // Visit Selector Tabs (1 to 5)
+                    // Visit Selector Tabs: Tab 0 (Emergency Bundle) + Tabs 1..5 (Visits 1-5)
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
                       child: Row(
-                        children: List.generate(visitList.length, (i) {
-                          final isSelected = i == selectedIndex;
-                          final v = visitList[i];
-                          return Padding(
+                        children: [
+                          // Tab 0: Emergency Bundle (All 5 Visits)
+                          Padding(
                             padding: const EdgeInsets.only(right: 8),
                             child: InkWell(
                               onTap: () {
                                 HapticFeedback.lightImpact();
-                                setModalState(() => selectedIndex = i);
+                                setModalState(() => selectedIndex = 0);
                               },
                               borderRadius: BorderRadius.circular(12),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFFF1F5F9),
+                                  color: isBundle ? const Color(0xFFDC2626) : const Color(0xFFFEF2F2),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFFE2E8F0),
-                                    width: 1,
+                                    color: isBundle ? const Color(0xFFB91C1C) : const Color(0xFFFECACA),
+                                    width: 1.2,
                                   ),
-                                  boxShadow: isSelected
+                                  boxShadow: isBundle
                                       ? [
                                           BoxShadow(
-                                            color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+                                            color: const Color(0xFFDC2626).withValues(alpha: 0.3),
                                             blurRadius: 8,
                                             offset: const Offset(0, 2),
                                           ),
@@ -401,25 +458,81 @@ class PatientQrSheets {
                                 child: Row(
                                   children: [
                                     Icon(
-                                      Icons.receipt_long_rounded,
+                                      Icons.emergency_rounded,
                                       size: 14,
-                                      color: isSelected ? Colors.white : const Color(0xFF64748B),
+                                      color: isBundle ? Colors.white : const Color(0xFFDC2626),
                                     ),
                                     const SizedBox(width: 5),
                                     Text(
-                                      'Visit ${i + 1} (${v.visitId})',
+                                      'Emergency Bundle (${visitList.length} Visits)',
                                       style: TextStyle(
                                         fontSize: 11.5,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                                        color: isSelected ? Colors.white : const Color(0xFF475569),
+                                        fontWeight: isBundle ? FontWeight.bold : FontWeight.w600,
+                                        color: isBundle ? Colors.white : const Color(0xFFDC2626),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-                          );
-                        }),
+                          ),
+
+                          // Tabs 1 to 5: Individual Visits
+                          ...List.generate(visitList.length, (i) {
+                            final tabIndex = i + 1;
+                            final isSelected = selectedIndex == tabIndex;
+                            final v = visitList[i];
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: InkWell(
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  setModalState(() => selectedIndex = tabIndex);
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFFE2E8F0),
+                                      width: 1,
+                                    ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.receipt_long_rounded,
+                                        size: 14,
+                                        color: isSelected ? Colors.white : const Color(0xFF64748B),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Visit ${i + 1} (${v.visitId})',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                          color: isSelected ? Colors.white : const Color(0xFF475569),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -435,13 +548,18 @@ class PatientQrSheets {
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFF5F3FF), Color(0xFFEDE9FE)],
+                                gradient: LinearGradient(
+                                  colors: isBundle
+                                      ? [const Color(0xFFFEF2F2), const Color(0xFFFEE2E2)]
+                                      : [const Color(0xFFF5F3FF), const Color(0xFFEDE9FE)],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: const Color(0xFFDDD6FE), width: 1.2),
+                                border: Border.all(
+                                  color: isBundle ? const Color(0xFFFECACA) : const Color(0xFFDDD6FE),
+                                  width: 1.2,
+                                ),
                               ),
                               child: Column(
                                 children: [
@@ -451,8 +569,12 @@ class PatientQrSheets {
                                       HapticFeedback.lightImpact();
                                       showFullscreenQrDialog(
                                         context,
-                                        title: 'Offline Visit QR (${currentVisit.visitId})',
-                                        subtitle: '${currentVisit.doctorName} • ${currentVisit.facilityName}',
+                                        title: isBundle
+                                            ? 'Offline Emergency History Bundle'
+                                            : 'Offline Visit QR (${currentVisit.visitId})',
+                                        subtitle: isBundle
+                                            ? 'Carries ${visitList.length} Complete Visits • Deflate Compressed'
+                                            : '${currentVisit.doctorName} • ${currentVisit.facilityName}',
                                         qrData: encodeResult.qrPayload,
                                       );
                                     },
@@ -476,8 +598,8 @@ class PatientQrSheets {
                                       child: HrxQrWidget(
                                         data: encodeResult.qrPayload,
                                         size: 206,
-                                        foregroundColor: const Color(0xFF1E1B4B),
-                                        embeddedCenterWidget: null, // Center logo removed for maximum scannability
+                                        foregroundColor: isBundle ? const Color(0xFF991B1B) : const Color(0xFF1E1B4B),
+                                        embeddedCenterWidget: null, // Zero obstruction for instant scan
                                       ),
                                     ),
                                   ),
@@ -485,21 +607,30 @@ class PatientQrSheets {
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.fullscreen_rounded, size: 14, color: Colors.purple.shade600),
+                                      Icon(
+                                        Icons.fullscreen_rounded,
+                                        size: 14,
+                                        color: isBundle ? Colors.red.shade700 : Colors.purple.shade600,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
                                         'Tap to Enlarge for Doctor Scanner',
-                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.purple.shade700),
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: isBundle ? Colors.red.shade800 : Colors.purple.shade700,
+                                        ),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 10),
 
-                                  // Doctor Name & Facility
+                                  // Title & Subtitle
                                   Text(
-                                    currentVisit.doctorName.isNotEmpty
-                                        ? currentVisit.doctorName
-                                        : 'Dr. Consultation',
+                                    isBundle
+                                        ? 'Emergency Medical History (5 Visits)'
+                                        : (currentVisit.doctorName.isNotEmpty ? currentVisit.doctorName : 'Dr. Consultation'),
+                                    textAlign: TextAlign.center,
                                     style: const TextStyle(
                                       fontSize: 17,
                                       fontWeight: FontWeight.w900,
@@ -508,7 +639,10 @@ class PatientQrSheets {
                                   ),
                                   const SizedBox(height: 3),
                                   Text(
-                                    '${currentVisit.facilityName} • ${currentVisit.timestamp.split("T").first}',
+                                    isBundle
+                                        ? 'Saved in local JSON file • Deflate compressed • Scannable offline'
+                                        : '${currentVisit.facilityName} • ${currentVisit.timestamp.split("T").first}',
+                                    textAlign: TextAlign.center,
                                     style: const TextStyle(
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w600,
@@ -517,42 +651,31 @@ class PatientQrSheets {
                                   ),
                                   const SizedBox(height: 8),
 
-                                  // Visit ID Token Pill with Copy
-                                  InkWell(
-                                    onTap: () {
-                                      Clipboard.setData(ClipboardData(text: currentVisit.visitId));
-                                      HapticFeedback.lightImpact();
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Copied Visit ID: ${currentVisit.visitId}'),
-                                          duration: const Duration(seconds: 1),
-                                          behavior: SnackBarBehavior.floating,
-                                          backgroundColor: const Color(0xFF7C3AED),
+                                  // Pill Badge
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: isBundle ? const Color(0xFFDC2626) : const Color(0xFF7C3AED),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          isBundle ? Icons.offline_bolt_rounded : Icons.history_rounded,
+                                          color: Colors.white,
+                                          size: 12,
                                         ),
-                                      );
-                                    },
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF7C3AED),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            'Visit ID: ${currentVisit.visitId}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          isBundle ? 'EMERGENCY BUNDLE • ALL 5 VISITS' : 'Visit ID: ${currentVisit.visitId}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                          const SizedBox(width: 5),
-                                          const Icon(Icons.copy_rounded, color: Colors.white, size: 12),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -560,69 +683,179 @@ class PatientQrSheets {
                             ),
                             const SizedBox(height: 12),
 
-                            // Clinical Details Container
-                            Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                            // If Emergency Bundle (Tab 0): Show 5 Visits Summary Cards
+                            if (isBundle) ...[
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF2F2),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFFECACA)),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.shield_outlined, color: Color(0xFFDC2626), size: 16),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Doctor app scans and decompresses all 5 visits offline without internet for triage.',
+                                        style: TextStyle(fontSize: 11, color: Color(0xFFB91C1C), fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              const SizedBox(height: 10),
+                              ...List.generate(visitList.length, (i) {
+                                final v = visitList[i];
+                                final diag = v.diagnosis.isNotEmpty
+                                    ? '${v.diagnosis.first.name} (${v.diagnosis.first.code})'
+                                    : 'General Checkup';
+                                final date = v.timestamp.contains('T') ? v.timestamp.split('T').first : v.timestamp;
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF7C3AED),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              'Visit ${i + 1} (${v.visitId})',
+                                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                            ),
+                                          ),
+                                          Text(
+                                            date,
+                                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        diag,
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E1B4B)),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${v.doctorName} • ${v.facilityName}',
+                                        style: const TextStyle(fontSize: 11, color: Color(0xFF475569)),
+                                      ),
+                                      if (v.medications.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Rx: ${v.medications.map((m) => m.name).take(3).join(', ')}',
+                                          style: const TextStyle(fontSize: 11, color: Color(0xFF047857), fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ] else ...[
+                              // Single Visit Details Container
+                              Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (currentVisit.diagnosis.isNotEmpty) ...[
+                                      _buildInfoRow(
+                                        Icons.medical_services_outlined,
+                                        'Diagnosis',
+                                        currentVisit.diagnosis.map((d) => '${d.name} (${d.code})').join(', '),
+                                      ),
+                                      const SizedBox(height: 8),
+                                    ],
+                                    if (currentVisit.chiefComplaints.isNotEmpty) ...[
+                                      _buildInfoRow(
+                                        Icons.sick_outlined,
+                                        'Complaints',
+                                        currentVisit.chiefComplaints.join(', '),
+                                      ),
+                                      const SizedBox(height: 8),
+                                    ],
+                                    if (currentVisit.vitals.isNotEmpty) ...[
+                                      _buildInfoRow(
+                                        Icons.monitor_heart_outlined,
+                                        'Vitals',
+                                        currentVisit.vitals.entries.map((e) => '${e.key}: ${e.value}').join(' • '),
+                                      ),
+                                      const SizedBox(height: 8),
+                                    ],
+                                    if (currentVisit.medications.isNotEmpty) ...[
+                                      _buildInfoRow(
+                                        Icons.medication_rounded,
+                                        'Prescriptions',
+                                        currentVisit.medications
+                                            .map((m) => '${m.name} ${m.strength} (${m.frequency})')
+                                            .join('\n'),
+                                      ),
+                                      const SizedBox(height: 8),
+                                    ],
+                                    if (currentVisit.advice.isNotEmpty) ...[
+                                      _buildInfoRow(
+                                        Icons.lightbulb_outline_rounded,
+                                        'Doctor Advice',
+                                        currentVisit.advice.join(' • '),
+                                      ),
+                                      const SizedBox(height: 8),
+                                    ],
+                                    if (currentVisit.notes.isNotEmpty) ...[
+                                      _buildInfoRow(
+                                        Icons.notes_rounded,
+                                        'Clinical Notes',
+                                        currentVisit.notes,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 10),
+
+                            // Offline Notice
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0FDF4),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFFBBF7D0)),
+                              ),
+                              child: const Row(
                                 children: [
-                                  if (currentVisit.diagnosis.isNotEmpty) ...[
-                                    _buildInfoRow(
-                                      Icons.medical_services_outlined,
-                                      'Diagnosis',
-                                      currentVisit.diagnosis.map((d) => '${d.name} (${d.code})').join(', '),
+                                  Icon(Icons.shield_outlined, color: Color(0xFF16A34A), size: 16),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Your doctor can scan this QR code to view this visit record without internet.',
+                                      style: TextStyle(fontSize: 11, color: Color(0xFF15803D), fontWeight: FontWeight.w600),
                                     ),
-                                    const SizedBox(height: 8),
-                                  ],
-                                  if (currentVisit.chiefComplaints.isNotEmpty) ...[
-                                    _buildInfoRow(
-                                      Icons.sick_outlined,
-                                      'Complaints',
-                                      currentVisit.chiefComplaints.join(', '),
-                                    ),
-                                    const SizedBox(height: 8),
-                                  ],
-                                  if (currentVisit.vitals.isNotEmpty) ...[
-                                    _buildInfoRow(
-                                      Icons.monitor_heart_outlined,
-                                      'Vitals',
-                                      currentVisit.vitals.entries.map((e) => '${e.key}: ${e.value}').join(' • '),
-                                    ),
-                                    const SizedBox(height: 8),
-                                  ],
-                                  if (currentVisit.medications.isNotEmpty) ...[
-                                    _buildInfoRow(
-                                      Icons.medication_rounded,
-                                      'Prescriptions',
-                                      currentVisit.medications
-                                          .map((m) => '${m.name} ${m.strength} (${m.frequency})')
-                                          .join('\n'),
-                                    ),
-                                    const SizedBox(height: 8),
-                                  ],
-                                  if (currentVisit.advice.isNotEmpty) ...[
-                                    _buildInfoRow(
-                                      Icons.lightbulb_outline_rounded,
-                                      'Doctor Advice',
-                                      currentVisit.advice.join(' • '),
-                                    ),
-                                    const SizedBox(height: 8),
-                                  ],
-                                  if (currentVisit.notes.isNotEmpty) ...[
-                                    _buildInfoRow(
-                                      Icons.notes_rounded,
-                                      'Clinical Notes',
-                                      currentVisit.notes,
-                                    ),
-                                  ],
+                                  ),
                                 ],
                               ),
                             ),
+                          ],
+                        ),
+                      ),
+                    ),
                             const SizedBox(height: 10),
 
                             // Offline Notice
