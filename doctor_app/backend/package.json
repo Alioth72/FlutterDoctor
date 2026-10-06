@@ -10,6 +10,9 @@
     "prestart": "npm run build",
     "start": "func start"
   },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "dependencies": {
     "@azure/functions": "^4.6.0",
     "bcryptjs": "^3.0.3",
