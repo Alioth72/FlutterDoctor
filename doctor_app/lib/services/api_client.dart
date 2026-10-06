@@ -9,7 +9,7 @@ import '../screens/pharmacy_stock_screen.dart';
 
 class ApiClient {
   /// Deployed Azure Function App Base URL for Staging/Demo
-  static const String azureStagingBaseUrl = 'https://fn-rural-healthcare-3357.azurewebsites.net/api';
+  static const String azureStagingBaseUrl = 'https://fn-ashwini-health-b5246f.azurewebsites.net/api';
 
   /// Toggle for local vs Azure backend. Defaults to true (deployed Azure backend).
   /// To use local development backend, pass: --dart-define=USE_AZURE_STAGING=false
