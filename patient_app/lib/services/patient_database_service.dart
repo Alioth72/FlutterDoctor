@@ -605,12 +605,24 @@ class PatientDatabaseService {
           debugPrint('[PatientDatabaseService] Saved ${liveVisits.length} visits to JSON file: $localJsonPath');
         }
         return liveVisits;
+      } else {
+        // Database has 0 past records for this patient
+        LocalVisitRepository.instance.setVisits([]);
+        if (localJsonPath != null) {
+          try {
+            final f = File(localJsonPath);
+            if (await f.exists()) {
+              await f.delete();
+            }
+          } catch (_) {}
+        }
+        return [];
       }
     } catch (e) {
-      debugPrint('[PatientDatabaseService] Error fetching live visits, falling back to JSON file: $e');
+      debugPrint('[PatientDatabaseService] Error fetching live visits, falling back to local JSON cache: $e');
     }
 
-    // Fallback: Read from local JSON file
+    // Fallback: Read from local JSON file if offline
     if (localJsonPath != null) {
       final cachedVisits = await LocalVisitRepository.instance.loadVisitsFromJsonFile(localJsonPath);
       if (cachedVisits.isNotEmpty) {
@@ -619,7 +631,7 @@ class PatientDatabaseService {
       }
     }
 
-    return LocalVisitRepository.instance.getLastFiveVisits('');
+    return [];
   }
 
   /// Open Database Endpoint: Fetch Profile by phone number

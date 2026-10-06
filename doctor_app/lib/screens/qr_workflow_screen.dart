@@ -568,7 +568,9 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
                               style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold, color: Color(0xFF1E1B4B)),
                             ),
                             Text(
-                              'Database Linked • ${pastVisits.length} Past Records',
+                              pastVisits.isNotEmpty
+                                  ? 'Database Linked • ${pastVisits.length} Past Records'
+                                  : 'Database Linked • No Past Records',
                               style: const TextStyle(fontSize: 11.5, color: Color(0xFF059669), fontWeight: FontWeight.w600),
                             ),
                           ],
@@ -740,17 +742,28 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
 
                         if (pastVisits.isEmpty) ...[
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
                               border: Border.all(color: const Color(0xFFE2E8F0)),
                             ),
-                            child: const Center(
-                              child: Text(
-                                'No prior visit records found in database.',
-                                style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-                              ),
+                            child: const Column(
+                              children: [
+                                Icon(Icons.folder_off_outlined, size: 36, color: Color(0xFF94A3B8)),
+                                SizedBox(height: 10),
+                                Text(
+                                  'No Past Records Found',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'No clinical visit history or prescriptions are recorded in the database for this patient.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), height: 1.4),
+                                ),
+                              ],
                             ),
                           ),
                         ] else ...[
@@ -2217,7 +2230,7 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
                 child: Icon(Icons.qr_code_2_rounded, color: Color(0xFF16A34A)),
               ),
               title: const Text('Live Patient UUID QR (Database Linked)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-              subtitle: const Text('UUID: b0843210-91ab-4ef1-bb74-001928475002 • 5 DB Visits', style: TextStyle(fontSize: 11)),
+              subtitle: const Text('UUID: b0843210-91ab-4ef1-bb74-001928475002 • Live DB Query', style: TextStyle(fontSize: 11)),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               tileColor: const Color(0xFFF0FDF4),
               onTap: () {

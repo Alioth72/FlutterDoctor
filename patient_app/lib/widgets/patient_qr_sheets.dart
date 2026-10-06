@@ -314,7 +314,7 @@ class PatientQrSheets {
           return FutureBuilder<List<VisitRecord>>(
             future: visitsFuture,
             builder: (context, snapshot) {
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
                 return Container(
                   padding: const EdgeInsets.all(32),
                   decoration: const BoxDecoration(
@@ -328,7 +328,7 @@ class PatientQrSheets {
                         CircularProgressIndicator(color: Color(0xFF7C3AED)),
                         SizedBox(height: 12),
                         Text(
-                          'Loading medical history from database & JSON cache...',
+                          'Loading medical history from database...',
                           style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                         ),
                       ],
@@ -337,7 +337,60 @@ class PatientQrSheets {
                 );
               }
 
-              final visitList = snapshot.data!;
+              final visitList = snapshot.data ?? [];
+              if (visitList.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 4.5,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF1F5F9),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.folder_off_rounded, size: 40, color: Color(0xFF64748B)),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'No Past Records Found',
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF1E1B4B)),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'There are no past clinical consultation records stored in the database for this patient.\n\nOnce you complete a consultation at a clinic or hospital, your records will be saved here automatically for offline emergency use.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B), height: 1.4),
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton.icon(
+                        onPressed: () => Navigator.pop(modalCtx),
+                        icon: const Icon(Icons.check_rounded, size: 18),
+                        label: const Text('Close'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF7C3AED),
+                          minimumSize: const Size.fromHeight(46),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
               final isBundle = selectedIndex == 0;
               final currentVisit = isBundle
                   ? visitList.first

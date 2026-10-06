@@ -579,8 +579,8 @@ export async function updateMyHealthId(request: HttpRequest, context: Invocation
     }
 }
 
-// Helper: Fetch concise past visits for a patient (seeds 5 concise clinical records into PostgreSQL if none exist)
-export async function getOrSeedConcisePastVisits(patientId: string, context?: InvocationContext): Promise<any[]> {
+// Helper: Fetch concise past visits for a patient from database. Returns empty array if none exist.
+export async function getConcisePastVisits(patientId: string, context?: InvocationContext): Promise<any[]> {
     // 1. Check if patient exists
     const patientRes = await query(`
         SELECT p.patient_id, p.user_id, p.medical_record_number, p.blood_group, p.allergies, u.full_name
@@ -599,7 +599,7 @@ export async function getOrSeedConcisePastVisits(patientId: string, context?: In
             mr.medical_record_id,
             mr.patient_id,
             mr.author_user_id,
-            COALESCE(au.full_name, 'Dr. Rajesh Verma') AS doctor_name,
+            COALESCE(au.full_name, 'Attending Physician') AS doctor_name,
             mr.appointment_id,
             mr.record_type,
             mr.recorded_at,
@@ -615,168 +615,10 @@ export async function getOrSeedConcisePastVisits(patientId: string, context?: In
         LIMIT 5;
     `, [patientId]);
 
-    // 3. If fewer than 5 records exist, seed concise realistic records into the database
-    if (recordsRes.rows.length < 5) {
-        const docUserRes = await query(`
-            SELECT user_id, full_name FROM health.users WHERE role IN ('doctor', 'staff', 'admin') LIMIT 3;
-        `);
-        const fallbackDoctorId = docUserRes.rows.length > 0 ? docUserRes.rows[0].user_id : patientRow.user_id;
-
-        const seedRecordsData = [
-            {
-                diagnosis: "Acute Upper Respiratory Infection (J06.9)",
-                diagnosisCode: "J06.9",
-                diagnosisName: "Acute Upper Respiratory Infection",
-                symptoms: ["High fever for 3 days", "Severe dry cough", "Sore throat"],
-                vitals: { blood_pressure: "120/80", pulse: 84, temperature: 38.4, spo2: 98 },
-                facility: "City Care Hospital",
-                doctor: "Dr. Anjali Sharma",
-                daysAgo: 25,
-                advice: ["Hydrate well (minimum 3L/day)", "Complete antibiotic course", "Steam inhalation twice daily"],
-                notes: "Patient responded well to initial examination. Chest clear, no wheezing.",
-                medications: [
-                    { name: "Paracetamol", strength: "650mg", dose: "1 tablet", frequency: "1-0-1", duration: 5, duration_unit: "days", instructions: "After meals with water" },
-                    { name: "Azithromycin", strength: "500mg", dose: "1 tablet", frequency: "1-0-0", duration: 3, duration_unit: "days", instructions: "1 hour before food" }
-                ]
-            },
-            {
-                diagnosis: "Essential (Primary) Hypertension (I10)",
-                diagnosisCode: "I10",
-                diagnosisName: "Essential (Primary) Hypertension",
-                symptoms: ["Routine Hypertension Follow-up", "Mild occipital headache"],
-                vitals: { blood_pressure: "138/88", pulse: 76, weight: 78.0, spo2: 98 },
-                facility: "Apex Heart & Health Clinic",
-                doctor: "Dr. Rajesh Verma",
-                daysAgo: 45,
-                advice: ["Low salt diet (<5g/day)", "Daily 30 min brisk walk", "Avoid stress and caffeine"],
-                notes: "Blood pressure slightly elevated compared to target 125/80. Titrated amlodipine.",
-                medications: [
-                    { name: "Telmisartan", strength: "40mg", dose: "1 tablet", frequency: "1-0-0", duration: 30, duration_unit: "days", instructions: "Daily morning at 8 AM" },
-                    { name: "Amlodipine", strength: "5mg", dose: "1 tablet", frequency: "0-0-1", duration: 30, duration_unit: "days", instructions: "Before bedtime" }
-                ]
-            },
-            {
-                diagnosis: "Type 2 Diabetes Mellitus (E11.9)",
-                diagnosisCode: "E11.9",
-                diagnosisName: "Type 2 Diabetes Mellitus",
-                symptoms: ["Quarterly Glycemic Review", "Occasional afternoon fatigue"],
-                vitals: { blood_pressure: "124/82", pulse: 72, fasting_glucose: 126, spo2: 98 },
-                facility: "Metro Diabetes Care",
-                doctor: "Dr. Sunita Rao",
-                daysAgo: 85,
-                advice: ["Strict diabetic diet", "Avoid sugary beverages", "Monitor foot hygiene"],
-                notes: "HbA1c stable at 6.9%. Good compliance with dietary modifications.",
-                medications: [
-                    { name: "Metformin", strength: "500mg", dose: "1 tablet", frequency: "1-0-1", duration: 60, duration_unit: "days", instructions: "With breakfast and dinner" },
-                    { name: "Glimepiride", strength: "1mg", dose: "1 tablet", frequency: "1-0-0", duration: 60, duration_unit: "days", instructions: "15 mins before breakfast" }
-                ]
-            },
-            {
-                diagnosis: "Bronchial Asthma - Mild Persistent (J45.909)",
-                diagnosisCode: "J45.909",
-                diagnosisName: "Bronchial Asthma (Mild Persistent)",
-                symptoms: ["Wheezing on exertion", "Seasonal nocturnal cough"],
-                vitals: { blood_pressure: "118/76", pulse: 88, spo2: 96 },
-                facility: "Pulmonary Care Institute",
-                doctor: "Dr. Manoj Kapoor",
-                daysAgo: 125,
-                advice: ["Avoid dust and pollen exposure", "Keep emergency inhaler handy", "Use spacer with inhaler"],
-                notes: "Bilateral expiratory rhonchi heard. Significant improvement post bronchodilator challenge.",
-                medications: [
-                    { name: "Budesonide + Formoterol Inhaler", strength: "200/6mcg", dose: "2 puffs", frequency: "1-0-1", duration: 30, duration_unit: "days", instructions: "Rinse mouth with water after inhalation" },
-                    { name: "Montelukast", strength: "10mg", dose: "1 tablet", frequency: "0-0-1", duration: 30, duration_unit: "days", instructions: "At bedtime" }
-                ]
-            },
-            {
-                diagnosis: "Infectious Gastroenteritis (A09)",
-                diagnosisCode: "A09",
-                diagnosisName: "Infectious Gastroenteritis",
-                symptoms: ["Crampy abdominal pain", "Watery diarrhea x 4 episodes", "Nausea"],
-                vitals: { blood_pressure: "110/70", pulse: 92, temperature: 37.4, spo2: 99 },
-                facility: "Gastro Care Centre",
-                doctor: "Dr. Priya Nair",
-                daysAgo: 170,
-                advice: ["BRAT diet (banana, rice, applesauce, toast)", "Strictly boiled/filtered water", "No dairy or spicy foods"],
-                notes: "Abdomen soft, diffuse mild tenderness in umbilical region. No guarding or rigidity.",
-                medications: [
-                    { name: "Oral Rehydration Salts (ORS)", strength: "Standard WHO Sachet", dose: "1 liter solution", frequency: "Frequent sips", duration: 3, duration_unit: "days", instructions: "Drink after each loose stool" },
-                    { name: "Ondansetron", strength: "4mg", dose: "1 tablet", frequency: "SOS", duration: 3, duration_unit: "days", instructions: "For nausea/vomiting" }
-                ]
-            }
-        ];
-
-        const neededCount = 5 - recordsRes.rows.length;
-        for (let i = 0; i < neededCount; i++) {
-            const seed = seedRecordsData[i];
-            const date = new Date(Date.now() - seed.daysAgo * 86400000);
-            const clinicalData = {
-                vitals: seed.vitals,
-                chief_complaints: seed.symptoms,
-                facility_name: seed.facility,
-                doctor_name: seed.doctor,
-                advice: seed.advice,
-                notes: seed.notes,
-                diagnosis_items: [{ code: seed.diagnosisCode, name: seed.diagnosisName }],
-                medications: seed.medications,
-            };
-
-            await query(`
-                INSERT INTO health.medical_records (
-                    patient_id, author_user_id, record_type, recorded_at, diagnosis, symptoms, clinical_data, confidence, is_preliminary
-                ) VALUES (
-                    $1::uuid, $2::uuid, 'diagnosis', $3, $4, $5::jsonb, $6::jsonb, 0.95, false
-                );
-            `, [
-                patientId,
-                fallbackDoctorId,
-                date.toISOString(),
-                seed.diagnosis,
-                JSON.stringify(seed.symptoms),
-                JSON.stringify(clinicalData)
-            ]);
-
-            for (const med of seed.medications) {
-                await query(`
-                    INSERT INTO health.prescriptions (
-                        patient_id, prescriber_user_id, medication_name, dosage, route, frequency, duration_days, instructions, status, created_at
-                    ) VALUES (
-                        $1::uuid, $2::uuid, $3, $4, 'oral', $5, $6, $7, 'active', $8
-                    );
-                `, [
-                    patientId,
-                    fallbackDoctorId,
-                    med.name,
-                    med.strength || med.dose,
-                    med.frequency,
-                    med.duration,
-                    med.instructions,
-                    date.toISOString()
-                ]);
-            }
-        }
+    // If no past records exist, do not seed - simply return empty list
+    if (recordsRes.rows.length === 0) {
+        return [];
     }
-
-    // Re-query top 5 records from database
-    const finalRecords = await query(`
-        SELECT 
-            mr.medical_record_id,
-            mr.patient_id,
-            mr.author_user_id,
-            COALESCE(au.full_name, 'Dr. Rajesh Verma') AS doctor_name,
-            mr.appointment_id,
-            mr.record_type,
-            mr.recorded_at,
-            mr.diagnosis,
-            mr.symptoms,
-            mr.clinical_data,
-            mr.confidence,
-            mr.is_preliminary
-        FROM health.medical_records mr
-        LEFT JOIN health.users au ON mr.author_user_id = au.user_id
-        WHERE mr.patient_id = $1::uuid
-        ORDER BY mr.recorded_at DESC
-        LIMIT 5;
-    `, [patientId]);
 
     const rxRes = await query(`
         SELECT 
@@ -792,7 +634,7 @@ export async function getOrSeedConcisePastVisits(patientId: string, context?: In
         ORDER BY rx.created_at DESC;
     `, [patientId]);
 
-    const pastVisits = finalRecords.rows.map((row: any, idx: number) => {
+    const pastVisits = recordsRes.rows.map((row: any, idx: number) => {
         const cData = (row.clinical_data && typeof row.clinical_data === 'object') ? row.clinical_data : {};
         const vitals = cData.vitals || {};
         const complaints = Array.isArray(cData.chief_complaints) && cData.chief_complaints.length > 0 
@@ -827,8 +669,8 @@ export async function getOrSeedConcisePastVisits(patientId: string, context?: In
             visit_id: `V100${idx + 1}`,
             record_id: row.medical_record_id,
             patient_ref: patientId,
-            doctor_name: cData.doctor_name || row.doctor_name || "Dr. Rajesh Verma",
-            facility_name: cData.facility_name || "Community Health Center",
+            doctor_name: cData.doctor_name || row.doctor_name || "Attending Physician",
+            facility_name: cData.facility_name || "Hospital Clinic",
             timestamp: row.recorded_at ? new Date(row.recorded_at).toISOString() : new Date().toISOString(),
             chief_complaints: complaints,
             symptoms: symptoms,
@@ -837,7 +679,7 @@ export async function getOrSeedConcisePastVisits(patientId: string, context?: In
             medications: meds,
             lab_tests: cData.lab_tests || [],
             allergies: Array.isArray(patientRow.allergies) ? patientRow.allergies : (patientRow.allergies ? [patientRow.allergies] : []),
-            advice: Array.isArray(cData.advice) ? cData.advice : ["Follow prescribed diet & medication"],
+            advice: Array.isArray(cData.advice) ? cData.advice : ["Follow prescribed clinical instructions"],
             follow_up: cData.follow_up || { required: idx < 2, date: "" },
             notes: cData.notes || `Clinical assessment recorded in database. Confidence: ${row.confidence ?? 1.0}`,
         };
@@ -859,7 +701,7 @@ export async function getMyPastVisits(request: HttpRequest, context: InvocationC
     }
 
     try {
-        const visits = await getOrSeedConcisePastVisits(targetPatientId, context);
+        const visits = await getConcisePastVisits(targetPatientId, context);
         return jsonResponse(200, {
             success: true,
             count: visits.length,
@@ -889,7 +731,17 @@ export async function getPatientPastVisits(request: HttpRequest, context: Invoca
     }
 
     try {
-        const visits = await getOrSeedConcisePastVisits(patientId, context);
+        const visits = await getConcisePastVisits(patientId, context);
+        return jsonResponse(200, {
+            success: true,
+            count: visits.length,
+            data: visits,
+        });
+    } catch (err: any) {
+        context.error("Error in getPatientPastVisits:", err);
+        return errorResponse(500, "Internal server error fetching patient past visits.");
+    }
+}
         return jsonResponse(200, {
             success: true,
             count: visits.length,
