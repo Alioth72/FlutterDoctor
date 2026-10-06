@@ -454,6 +454,8 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
         ],
       ),
     );
+  }
+
   Future<void> _fetchAndShowDatabasePatient(String patientUuid) async {
     setState(() {
       _scannerState = QrScannerState.processing;
@@ -2254,7 +2256,7 @@ class _QrWorkflowScreenState extends State<QrWorkflowScreen> with SingleTickerPr
                 Navigator.pop(ctx);
                 final visits = await LocalVisitRepository.instance.getLastFiveVisits('P-7A92F81C');
                 final bundleQr = HrxEncoder().encodeEmergencyHistoryBundle(visits);
-                _processScannedCode(bundleQr);
+                _processScannedCode(bundleQr.qrPayload);
               },
             ),
             const SizedBox(height: 8),
