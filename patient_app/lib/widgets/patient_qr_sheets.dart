@@ -62,8 +62,8 @@ class PatientQrSheets {
                   children: [
                     Icon(Icons.qr_code_2_rounded, color: Color(0xFF7C3AED), size: 24),
                     SizedBox(width: 8),
-                    Text(
-                      'Patient Digital Health QR',
+                    DynamicTranslatedText(
+                      text: 'Patient Digital Health QR',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E1B4B)),
                     ),
                   ],
@@ -145,9 +145,10 @@ class PatientQrSheets {
                     children: [
                       Icon(Icons.zoom_in_rounded, size: 14, color: Colors.purple.shade600),
                       const SizedBox(width: 4),
-                      Text(
-                        'Tap QR for Fullscreen Scan Mode',
+                      DynamicTranslatedText(
+                        text: 'Tap QR for Fullscreen Scan Mode',
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.purple.shade700),
+                        enableHoldToSpeak: false,
                       ),
                     ],
                   ),
@@ -172,14 +173,15 @@ class PatientQrSheets {
                         color: const Color(0xFF7C3AED),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(
-                        'ID: ${patientRecord.patientId}',
+                      child: DynamicTranslatedText(
+                        text: 'ID: ${patientRecord.patientId}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,
                         ),
+                        enableHoldToSpeak: false,
                       ),
                     )
                   else
@@ -215,13 +217,38 @@ class PatientQrSheets {
                   const SizedBox(height: 8),
 
                   // Status and Health ID
-                  Text(
-                    '+91 ${patientRecord.phone}${patientRecord.patientId.isNotEmpty ? ' • Health ID Verified' : ''} • ${patientRecord.bloodGroup}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF64748B),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '+91 ${patientRecord.phone}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      if (patientRecord.patientId.isNotEmpty) ...[
+                        const Text(' • ', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                        const DynamicTranslatedText(
+                          text: 'Health ID Verified',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B),
+                          ),
+                          enableHoldToSpeak: false,
+                        ),
+                      ],
+                      Text(
+                        ' • ${patientRecord.bloodGroup}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
 
@@ -238,9 +265,10 @@ class PatientQrSheets {
                       children: [
                         Icon(Icons.verified_rounded, size: 14, color: Color(0xFF059669)),
                         SizedBox(width: 4),
-                        Text(
-                          'Offline Patient UUID • Instant Clinic Check-in',
+                        DynamicTranslatedText(
+                          text: 'Offline Patient UUID • Instant Clinic Check-in',
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                          enableHoldToSpeak: false,
                         ),
                       ],
                     ),
@@ -250,8 +278,8 @@ class PatientQrSheets {
             ),
             const SizedBox(height: 16),
 
-            const Text(
-              'Show this simple QR code at clinic reception or to your doctor. Scans your Patient UUID directly for offline visits & instant medical records lookup.',
+            const DynamicTranslatedText(
+              text: 'Show this simple QR code at clinic reception or to your doctor. Scans your Patient UUID directly for offline visits & instant medical records lookup.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
@@ -268,9 +296,10 @@ class PatientQrSheets {
                 showOfflineVisitsQrModal(context, profile);
               },
               icon: const Icon(Icons.history_edu_rounded, size: 20, color: Color(0xFF7C3AED)),
-              label: const Text(
-                'Offline Visit QRs (Last 5 Visits)',
+              label: const DynamicTranslatedText(
+                text: 'Offline Visit QRs (Last 5 Visits)',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                enableHoldToSpeak: false,
               ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF7C3AED),
@@ -285,7 +314,11 @@ class PatientQrSheets {
             FilledButton.icon(
               onPressed: () => Navigator.pop(ctx),
               icon: const Icon(Icons.check_circle_outline, size: 18),
-              label: const Text('Done'),
+              label: const DynamicTranslatedText(
+                text: 'Done',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                enableHoldToSpeak: false,
+              ),
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF7C3AED),
                 minimumSize: const Size.fromHeight(46),
@@ -327,9 +360,10 @@ class PatientQrSheets {
                       children: [
                         CircularProgressIndicator(color: Color(0xFF7C3AED)),
                         SizedBox(height: 12),
-                        Text(
-                          'Loading medical history from database...',
+                        DynamicTranslatedText(
+                          text: 'Loading medical history from database...',
                           style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                          enableHoldToSpeak: false,
                         ),
                       ],
                     ),
@@ -366,13 +400,19 @@ class PatientQrSheets {
                         child: const Icon(Icons.folder_off_rounded, size: 40, color: Color(0xFF64748B)),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'No Past Records Found',
+                      const DynamicTranslatedText(
+                        text: 'No Past Records Found',
                         style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF1E1B4B)),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'There are no past clinical consultation records stored in the database for this patient.\n\nOnce you complete a consultation at a clinic or hospital, your records will be saved here automatically for offline emergency use.',
+                      const DynamicTranslatedText(
+                        text: 'There are no past clinical consultation records stored in the database for this patient.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B), height: 1.4),
+                      ),
+                      const SizedBox(height: 8),
+                      const DynamicTranslatedText(
+                        text: 'Once you complete a consultation at a clinic or hospital, your records will be saved here automatically for offline emergency use.',
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B), height: 1.4),
                       ),
@@ -380,7 +420,11 @@ class PatientQrSheets {
                       FilledButton.icon(
                         onPressed: () => Navigator.pop(modalCtx),
                         icon: const Icon(Icons.check_rounded, size: 18),
-                        label: const Text('Close'),
+                        label: const DynamicTranslatedText(
+                          text: 'Close',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          enableHoldToSpeak: false,
+                        ),
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFF7C3AED),
                           minimumSize: const Size.fromHeight(46),
@@ -447,17 +491,18 @@ class PatientQrSheets {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  isBundle ? 'Emergency Past History QR' : 'Offline Doctor Visit QR',
+                                DynamicTranslatedText(
+                                  text: isBundle ? 'Emergency Past History QR' : 'Offline Doctor Visit QR',
                                   style: const TextStyle(
                                     fontSize: 16.5,
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFF1E1B4B),
                                   ),
                                 ),
-                                const Text(
-                                  'Database Synced • Deflate Compressed from JSON',
+                                const DynamicTranslatedText(
+                                  text: 'Database Synced • Deflate Compressed from JSON',
                                   style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  enableHoldToSpeak: false,
                                 ),
                               ],
                             ),
@@ -516,13 +561,14 @@ class PatientQrSheets {
                                       color: isBundle ? Colors.white : const Color(0xFFDC2626),
                                     ),
                                     const SizedBox(width: 5),
-                                    Text(
-                                      'Emergency Bundle (${visitList.length} Visits)',
+                                    DynamicTranslatedText(
+                                      text: 'Emergency Bundle (${visitList.length} Visits)',
                                       style: TextStyle(
                                         fontSize: 11.5,
                                         fontWeight: isBundle ? FontWeight.bold : FontWeight.w600,
                                         color: isBundle ? Colors.white : const Color(0xFFDC2626),
                                       ),
+                                      enableHoldToSpeak: false,
                                     ),
                                   ],
                                 ),
@@ -571,13 +617,14 @@ class PatientQrSheets {
                                         color: isSelected ? Colors.white : const Color(0xFF64748B),
                                       ),
                                       const SizedBox(width: 5),
-                                      Text(
-                                        'Visit ${i + 1} (${v.visitId})',
+                                      DynamicTranslatedText(
+                                        text: 'Visit ${i + 1} (${v.visitId})',
                                         style: TextStyle(
                                           fontSize: 11.5,
                                           fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                                           color: isSelected ? Colors.white : const Color(0xFF475569),
                                         ),
+                                        enableHoldToSpeak: false,
                                       ),
                                     ],
                                   ),
@@ -666,21 +713,22 @@ class PatientQrSheets {
                                         color: isBundle ? Colors.red.shade700 : Colors.purple.shade600,
                                       ),
                                       const SizedBox(width: 4),
-                                      Text(
-                                        'Tap to Enlarge for Doctor Scanner',
+                                      DynamicTranslatedText(
+                                        text: 'Tap to Enlarge for Doctor Scanner',
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,
                                           color: isBundle ? Colors.red.shade800 : Colors.purple.shade700,
                                         ),
+                                        enableHoldToSpeak: false,
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 10),
 
                                   // Title & Subtitle
-                                  Text(
-                                    isBundle
+                                  DynamicTranslatedText(
+                                    text: isBundle
                                         ? 'Emergency Medical History (5 Visits)'
                                         : (currentVisit.doctorName.isNotEmpty ? currentVisit.doctorName : 'Dr. Consultation'),
                                     textAlign: TextAlign.center,
@@ -691,8 +739,8 @@ class PatientQrSheets {
                                     ),
                                   ),
                                   const SizedBox(height: 3),
-                                  Text(
-                                    isBundle
+                                  DynamicTranslatedText(
+                                    text: isBundle
                                         ? 'Saved in local JSON file • Deflate compressed • Scannable offline'
                                         : '${currentVisit.facilityName} • ${currentVisit.timestamp.split("T").first}',
                                     textAlign: TextAlign.center,
@@ -720,13 +768,14 @@ class PatientQrSheets {
                                           size: 12,
                                         ),
                                         const SizedBox(width: 4),
-                                        Text(
-                                          isBundle ? 'EMERGENCY BUNDLE • ALL 5 VISITS' : 'Visit ID: ${currentVisit.visitId}',
+                                        DynamicTranslatedText(
+                                          text: isBundle ? 'EMERGENCY BUNDLE • ALL 5 VISITS' : 'Visit ID: ${currentVisit.visitId}',
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,
                                           ),
+                                          enableHoldToSpeak: false,
                                         ),
                                       ],
                                     ),
@@ -750,8 +799,8 @@ class PatientQrSheets {
                                     Icon(Icons.shield_outlined, color: Color(0xFFDC2626), size: 16),
                                     SizedBox(width: 8),
                                     Expanded(
-                                      child: Text(
-                                        'Doctor app scans and decompresses all 5 visits offline without internet for triage.',
+                                      child: DynamicTranslatedText(
+                                        text: 'Doctor app scans and decompresses all 5 visits offline without internet for triage.',
                                         style: TextStyle(fontSize: 11, color: Color(0xFFB91C1C), fontWeight: FontWeight.bold),
                                       ),
                                     ),
@@ -797,19 +846,19 @@ class PatientQrSheets {
                                         ],
                                       ),
                                       const SizedBox(height: 6),
-                                      Text(
-                                        diag,
+                                      DynamicTranslatedText(
+                                        text: diag,
                                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E1B4B)),
                                       ),
                                       const SizedBox(height: 2),
-                                      Text(
-                                        '${v.doctorName} • ${v.facilityName}',
+                                      DynamicTranslatedText(
+                                        text: '${v.doctorName} • ${v.facilityName}',
                                         style: const TextStyle(fontSize: 11, color: Color(0xFF475569)),
                                       ),
                                       if (v.medications.isNotEmpty) ...[
                                         const SizedBox(height: 4),
-                                        Text(
-                                          'Rx: ${v.medications.map((m) => m.name).take(3).join(', ')}',
+                                        DynamicTranslatedText(
+                                          text: 'Rx: ${v.medications.map((m) => m.name).take(3).join(', ')}',
                                           style: const TextStyle(fontSize: 11, color: Color(0xFF047857), fontWeight: FontWeight.w600),
                                         ),
                                       ],
@@ -897,8 +946,8 @@ class PatientQrSheets {
                                   Icon(Icons.shield_outlined, color: Color(0xFF16A34A), size: 16),
                                   SizedBox(width: 8),
                                   Expanded(
-                                    child: Text(
-                                      'Your doctor can scan this QR code to view this visit record without internet.',
+                                    child: DynamicTranslatedText(
+                                      text: 'Your doctor can scan this QR code to view this visit record without internet.',
                                       style: TextStyle(fontSize: 11, color: Color(0xFF15803D), fontWeight: FontWeight.w600),
                                     ),
                                   ),
@@ -921,7 +970,11 @@ class PatientQrSheets {
                               showPatientIdentityQrModal(context, profile);
                             },
                             icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                            label: const Text('Back to Main QR'),
+                            label: const DynamicTranslatedText(
+                              text: 'Back to Main QR',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                              enableHoldToSpeak: false,
+                            ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF7C3AED),
                               side: const BorderSide(color: Color(0xFFCBD5E1)),
@@ -935,7 +988,11 @@ class PatientQrSheets {
                           child: FilledButton.icon(
                             onPressed: () => Navigator.pop(modalCtx),
                             icon: const Icon(Icons.check_rounded, size: 16),
-                            label: const Text('Done'),
+                            label: const DynamicTranslatedText(
+                              text: 'Done',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              enableHoldToSpeak: false,
+                            ),
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFF7C3AED),
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -963,27 +1020,28 @@ class PatientQrSheets {
         Icon(icon, size: 15, color: const Color(0xFF7C3AED)),
         const SizedBox(width: 8),
         Expanded(
-          child: RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: '$title: ',
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF334155),
-                  ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DynamicTranslatedText(
+                text: title,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF334155),
                 ),
-                TextSpan(
-                  text: value,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF64748B),
-                  ),
+                enableHoldToSpeak: false,
+              ),
+              const SizedBox(height: 2),
+              DynamicTranslatedText(
+                text: value,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF64748B),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],
@@ -1031,8 +1089,8 @@ class PatientQrSheets {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            title,
+                          DynamicTranslatedText(
+                            text: title,
                             style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.bold,
@@ -1040,8 +1098,8 @@ class PatientQrSheets {
                             ),
                           ),
                           if (subtitle.isNotEmpty)
-                            Text(
-                              subtitle,
+                            DynamicTranslatedText(
+                              text: subtitle,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -1094,13 +1152,14 @@ class PatientQrSheets {
                       Icon(Icons.brightness_high_rounded, size: 16, color: Color(0xFF16A34A)),
                       SizedBox(width: 8),
                       Flexible(
-                        child: Text(
-                          'High-contrast mode • Turn up screen brightness for instant scanning',
+                        child: DynamicTranslatedText(
+                          text: 'High-contrast mode • Turn up screen brightness for instant scanning',
                           style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w600,
                             color: Color(0xFF15803D),
                           ),
+                          enableHoldToSpeak: false,
                         ),
                       ),
                     ],
@@ -1111,7 +1170,11 @@ class PatientQrSheets {
                 FilledButton.icon(
                   onPressed: () => Navigator.pop(ctx),
                   icon: const Icon(Icons.check, size: 18),
-                  label: const Text('Done'),
+                  label: const DynamicTranslatedText(
+                    text: 'Done',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    enableHoldToSpeak: false,
+                  ),
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF7C3AED),
                     minimumSize: const Size.fromHeight(44),
